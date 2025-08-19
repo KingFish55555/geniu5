@@ -428,9 +428,9 @@ body {
 /* Input Area */
 .input-area {
   display: flex;
+  /* ✨ 核心修改：從 center 改為 flex-end ✨ */
+  align-items: flex-end; /* 讓所有東西底部對齊 */
   padding: 15px;
-  background: var(--background-color);
-  border-top: 1px solid var(--border-color);
   gap: 10px;
 }
 
@@ -444,6 +444,12 @@ body {
   transition: border-color 0.3s ease;
   background: var(--surface-color);
   color: var(--text-primary);
+  /* ✨ 以下是為 textarea 新增的樣式 ✨ */
+  font-family: inherit; /* 確保字體和頁面一致 */
+  resize: none; /* 禁用使用者手動調整大小的功能 */
+  line-height: 1.4; /* 設定一個舒適的行高 */
+  max-height: 150px; /* 設定一個最大高度，避免無限增高，超過會出現捲軸 */
+  overflow-y: auto; /* 當內容超過最大高度時，顯示捲軸 */
 }
 
 .send-button {
@@ -1672,17 +1678,6 @@ body {
 .greeting-option.active p {
   color: var(--text-primary);
   font-weight: 500;
-}
-
-.start-chat-btn {
-  width: 100%;
-  height: 44px;
-  font-size: 1em;
-  background-color: #3b82f6;
-  color: white;
-}
-.start-chat-btn:hover {
-  background-color: #2563eb;
 }
 
 /* World Book Section */

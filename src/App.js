@@ -248,37 +248,24 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   );
 };
 
+// --- 全新！精簡版角色預覽組件 ---
 const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => {
-  const [selectedGreeting, setSelectedGreeting] = useState(null);
-
-  useEffect(() => {
-    if (character) {
-      const allGreetings = [
-        character.firstMessage,
-        ...(character.alternateGreetings || [])
-      ].filter(Boolean).map(g => applyPlaceholders(g, character, userSettings));
-      setSelectedGreeting(allGreetings.length > 0 ? allGreetings[0] : '你好！');
-    }
-  }, [character, userSettings]);
+  
+  // 我們不再需要 selectedGreeting 這個 state 了
+  // useEffect 也可以移除了
 
   if (!character) {
-    return null;
+    return null; // 如果沒有 character 資料，就什麼都不顯示
   }
 
-  const allGreetingsForRender = [
-    character.firstMessage,
-    ...(character.alternateGreetings || [])
-  ].filter(Boolean).map(g => applyPlaceholders(g, character, userSettings));
-
+  // 我們依然需要處理佔位符
   const processedDescription = applyPlaceholders(character.description || '這個角色沒有描述。', character, userSettings);
   
   const handleStartChat = () => {
-    const originalGreeting = 
-      [character.firstMessage, ...(character.alternateGreetings || [])]
-      .find(g => applyPlaceholders(g, character, userSettings) === selectedGreeting) 
-      || selectedGreeting; 
-
-    onStartChat(character, originalGreeting);
+    // ✨ 核心修改：我們不再需要關心使用者選了哪一句 ✨
+    // 直接將「主要開場白」(firstMessage) 作為預設的第一句話傳遞過去
+    const initialGreeting = character.firstMessage || '你好！';
+    onStartChat(character, initialGreeting);
   };
 
   return (
@@ -289,6 +276,7 @@ const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => 
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body preview-body">
+          {/* 上半部：這部分完全不變 */}
           <div className="preview-top-section">
             <div className="preview-character-image">
               {character.avatar?.type === 'image' ? (
@@ -301,23 +289,18 @@ const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => 
               <p>{processedDescription}</p>
             </div>
           </div>
-          <div className="preview-greetings">
-            <h4>選擇一句開場白：</h4>
-            <div className="greetings-list">
-              {allGreetingsForRender.map((greeting, index) => (
-                <div
-                  key={index}
-                  className={`greeting-option ${selectedGreeting && selectedGreeting === greeting ? 'active' : ''}`}
-                  onClick={() => setSelectedGreeting(greeting)}
-                >
-                  <p>{greeting}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+
+          {/* ✨ 核心修改：下半部的開場白選擇區塊，整個被移除了！ ✨ */}
+          {/* 
+            <div className="preview-greetings">
+              ...
+            </div> 
+          */}
+
         </div>
         <div className="modal-footer">
-          <button onClick={handleStartChat} disabled={!selectedGreeting} className="footer-btn start-chat-btn">
+          {/* ✨ 核心修改：按鈕不再有 disabled 狀態 ✨ */}
+          <button onClick={handleStartChat} className="footer-btn save-btn">
             開始聊天
           </button>
         </div>
@@ -489,26 +472,27 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
             </button>
           )}
 
+          {/* --- 版本切換器 (AI 訊息且有多個版本時顯示) --- */}
           {msg.sender === 'ai' && msg.contents.length > 1 && showActions && (
-            <div className="message-actions-toolbar">
-              <button 
-                className="action-btn"
-                disabled={msg.activeContentIndex === 0}
-                onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'prev'); }}
-              >
-                ‹
-              </button>
-              <span className="version-indicator">
-                {msg.activeContentIndex + 1} / {msg.contents.length}
-              </span>
-              <button 
-                className="action-btn"
-                disabled={msg.activeContentIndex === msg.contents.length - 1}
-                onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'next'); }}
-              >
-                ›
-              </button>
-            </div>
+              <div className="message-actions-toolbar">
+                  <button 
+                  className="action-btn"
+                  disabled={msg.activeContentIndex === 0}
+                  onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'prev'); }}
+                  >
+                  ‹
+                  </button>
+                  <span className="version-indicator">
+                  {msg.activeContentIndex + 1} / {msg.contents.length}
+                  </span>
+                  <button 
+                  className="action-btn"
+                  disabled={msg.activeContentIndex === msg.contents.length - 1}
+                  onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'next'); }}
+                  >
+                  ›
+                  </button>
+              </div>
           )}
           
           {isLastMessage && msg.sender === 'ai' && showActions && (
@@ -567,6 +551,21 @@ const MessageEditorModal = ({ editingMessage, onSave, onClose }) => {
 
 const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, editingMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel }) => {
   
+  // ✨ 新增一個 ref 來抓取 textarea 元素 ✨
+  const textareaRef = useRef(null);
+
+  // ✨ 新增 useEffect 來處理自動增高 ✨
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // 先將高度重設為 auto，這樣它才能正確計算 scrollHeight
+      textarea.style.height = 'auto';
+      // 將高度設定為內容的實際高度
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  }, [inputMessage]); // 每當輸入內容改變時，就重新計算一次高度
+
+  // 總控函式 (決定是"發送"還是"繼續")
   const handleSend = () => {
     if (inputMessage.trim()) {
       sendMessage();
@@ -577,10 +576,12 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
 
   // Enter 鍵發送的處理函式
   const handleKeyPress = (e) => {
+    // ✨ 核心修改：現在只有在「沒有」按住 Shift 的情況下，Enter 鍵才會發送 ✨
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+      e.preventDefault(); // 阻止 Enter 的預設行為 (換行)
       handleSend();
     }
+    // 如果按住了 Shift + Enter，就會觸發 textarea 預設的換行行為
   };
 
   // 判斷按鈕是否應該被禁用
@@ -588,7 +589,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
 
   return (
     <div className="page-content">
-      {/* --- 頂部標題列 --- */}
+      {/* --- 頂部標題列 (保持不變) --- */}
       <div className="chat-header">
         <div className="chat-info">
           {currentCharacter && ( <span className="current-character">與 {currentCharacter.name} 對話</span> )}
@@ -596,9 +597,6 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
         </div>
         <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
           {isApiConnected ? (
-            // ✨ 全新的顯示邏輯 ✨
-            // 如果有已載入的配置名稱，就顯示 "配置名稱 (模型)"
-            // 否則，就退回顯示 "API 供應商名稱"
             <span>
               {loadedConfigName 
                 ? `${loadedConfigName} (${apiModel})` 
@@ -610,7 +608,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
         </div>
       </div>
   
-      {/* --- 中間的訊息顯示區 --- */}
+      {/* --- 中間的訊息顯示區 (保持不變) --- */}
       <div className="messages-area">
         {messages.length === 0 ? (
           <div className="welcome-message">
@@ -653,17 +651,16 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <div className="loading-dots">
               <span></span><span></span><span></span>
             </div>
-            <p>AI 正在思考中...</p>
+            <p>${currentCharacter.name} 正在思考中...</p>
           </div>
         )}
         
         <div ref={messagesEndRef} />
       </div>
   
-      {/* --- 底部的輸入區 (全新版本，包含選單) --- */}
+      {/* --- 底部的輸入區 (全新版本) --- */}
       <div className="input-area-wrapper">
         
-        {/* 選單本體 (條件渲染) */}
         {isInputMenuOpen && (
           <div className="input-menu">
             <button className="input-menu-item">
@@ -678,7 +675,6 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
         )}
 
         <div className="input-area">
-          {/* + 按鈕 */}
           <button 
             className={`input-menu-btn ${isInputMenuOpen ? 'open' : ''}`}
             onClick={() => setIsInputMenuOpen(!isInputMenuOpen)}
@@ -686,15 +682,19 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <Plus size={22} />
           </button>
 
-          <input
-            type="text"
+          {/* ✨✨✨ 核心修改：將 input 換成 textarea ✨✨✨ */}
+          <textarea
+            ref={textareaRef}
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress} // 注意：對於 textarea，使用 onKeyDown 會更可靠
             placeholder={currentCharacter ? `向 ${currentCharacter.name} 說話...` : "輸入訊息..."}
             className="message-input"
             disabled={isLoading}
+            rows={1} // 初始顯示為 1 行
           />
+          {/* ✨✨✨ 修改結束 ✨✨✨ */}
+          
           <button 
             onClick={handleSend}
             disabled={isButtonDisabled}
@@ -1751,14 +1751,24 @@ const ChatApp = () => {
   const handleStartChat = useCallback((character, greeting) => {
     setCurrentCharacter(character);
     
-    const processedGreeting = applyPlaceholders(greeting, character, userSettings);
+    // ✨ 核心修改：準備好所有的開場白 ✨
+    const allGreetings = [
+      character.firstMessage,
+      ...(character.alternateGreetings || [])
+    ].filter(Boolean).map(g => applyPlaceholders(g, character, userSettings));
+
+    // 找到使用者在預覽時選擇的那句開場白的索引
+    const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, userSettings));
+
     const newChatId = `chat_${Date.now()}`;
 
     const firstMessage = {
       id: Date.now(),
       sender: 'ai',
-      contents: [processedGreeting],
-      activeContentIndex: 0,
+      // ✨ 核心修改：將所有開場白放進 contents 陣列 ✨
+      contents: allGreetings.length > 0 ? allGreetings : ['你好！'], 
+      // ✨ 核心修改：將當前顯示的索引設為使用者選擇的那一句 ✨
+      activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, 
       timestamp: getFormattedTimestamp(),
     };
 
@@ -1785,7 +1795,7 @@ const ChatApp = () => {
 
     closePreview();
     navigateToPage('chat');
-  }, [navigateToPage, userSettings]);
+  }, [navigateToPage, userSettings, getFormattedTimestamp]); // getFormattedTimestamp 也加入依賴項
 
   const testApiConnection = useCallback(async () => {
     if (!apiKey.trim()) {
