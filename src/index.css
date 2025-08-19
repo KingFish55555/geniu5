@@ -918,6 +918,41 @@ body {
   .characters-grid {
     grid-template-columns: 1fr;
   }
+
+
+  /* 【解決問題 #2: 提示詞頁面排版】 */
+  /* 讓左右佈局變成垂直堆疊 */
+  .content-area.prompts-page-layout {
+    flex-direction: column;
+  }
+  /* 讓列表和編輯器都佔滿寬度 */
+  .prompts-list-panel,
+  .prompt-editor-panel {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  /* 【解決問題 #3: 角色預覽頁面排版】 */
+  /* 讓上方的「左圖右文」變成「上圖下文」 */
+  .preview-top-section {
+    flex-direction: column;
+  }
+  /* 讓圖片寬度自動填滿，高度會根據 3:4 的比例自動調整 */
+  .preview-character-image {
+    width: 100%;
+  }
+  /* 讓描述區塊的高度限制取消，內容多長就多高 */
+  .preview-description {
+    max-height: none;
+  }
+
+  /* 【解決問題 #4: 空白角色頁的按鈕排版】 */
+  /* 讓按鈕垂直堆疊 */
+  .empty-state-buttons {
+    flex-direction: column;
+    /* 順便讓按鈕靠左對齊，而不是置中 */
+    align-items: stretch; 
+  }  
 }
 
 /* 配置管理相關樣式 */

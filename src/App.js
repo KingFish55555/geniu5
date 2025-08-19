@@ -1286,6 +1286,16 @@ Do not include any other text outside the tags.
 ];
 
 const ChatApp = () => {
+  // ✨ 全新的時間格式化輔助函式 ✨
+  const getFormattedTimestamp = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份是從 0 開始的
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    return `${year}/${month}/${day} ${hours}:${minutes}`;
+  };
   const [currentPage, setCurrentPage] = useState('characters');
   const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
 
@@ -1444,7 +1454,7 @@ const ChatApp = () => {
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistories, activeChatCharacterId]);
+  }, [chatHistories, activeChatCharacterId, activeChatId]);
 
   const navigateToPage = useCallback((page) => {
     if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
@@ -1715,7 +1725,7 @@ const ChatApp = () => {
       sender: 'ai',
       contents: [processedGreeting],
       activeContentIndex: 0,
-      timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
+      timestamp: getFormattedTimestamp(),
     };
 
     setChatHistories(prev => {
@@ -1942,7 +1952,7 @@ const ChatApp = () => {
       sender: 'user',
       contents: [inputMessage],
       activeContentIndex: 0,
-      timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+      timestamp: getFormattedTimestamp(),
     };
     
     const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
@@ -1979,7 +1989,7 @@ const ChatApp = () => {
           sender: 'ai',
           contents: [finalAiText],
           activeContentIndex: 0,
-          timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+          timestamp: getFormattedTimestamp(),
         };
 
         setChatHistories(prev => {
@@ -2009,7 +2019,7 @@ const ChatApp = () => {
           sender: 'system',
           contents: ['發生錯誤：' + error.message],
           activeContentIndex: 0,
-          timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+          timestamp: getFormattedTimestamp(),
         };
         setChatHistories(prev => {
             const historyForChar = prev[activeChatCharacterId] || {};
@@ -2056,7 +2066,7 @@ const ChatApp = () => {
           sender: 'ai',
           contents: [finalAiText],
           activeContentIndex: 0,
-          timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+          timestamp: getFormattedTimestamp(),
         };
 
         setChatHistories(prev => {
@@ -2086,7 +2096,7 @@ const ChatApp = () => {
           sender: 'system',
           contents: ['發生錯誤：' + error.message],
           activeContentIndex: 0,
-          timestamp: new Date().toLocaleTimeString('zh-TW', { hour12: false })
+          timestamp: getFormattedTimestamp(),
         };
         setChatHistories(prev => {
             const historyForChar = prev[activeChatCharacterId] || {};
@@ -2291,7 +2301,7 @@ const ChatApp = () => {
             const [, timestamp, sender, text] = messageMatch;
             importedMessages.push({
               id: Date.now() + Math.random(),
-              timestamp: timestamp,
+              timestamp: timestamp || getFormattedTimestamp(),
               sender: sender === (userSettings.name || '用戶') ? 'user' : 'ai',
               contents: [text],
               activeContentIndex: 0
