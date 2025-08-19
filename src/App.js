@@ -1372,13 +1372,13 @@ const SettingsPage = ({
                 </div>
                 <div className="about-links">
                   <a
-                    href="https://marshmallow-qa.com/io1f0b8ji1zrtvv"
+                    href="https://www.notion.so/2547bc2e84ff8094a9d8f591005de532?source=copy_link"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="about-btn"
                   >
                     <FileText size={16} />
-                    意見回饋（棉花糖）
+                    說明與回饋
                   </a>
                 </div>
               </div>
