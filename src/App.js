@@ -372,7 +372,8 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
   );
 };
 
-const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin }) => {
+const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat }) => {
+
   const allChats = [];
   for (const char of characters) {
     const charId = char.id;
@@ -399,32 +400,73 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
     return b.sortKey - a.sortKey;
   });
 
+  const handleSwipeToggle = (chatId, event) => {
+    event.stopPropagation();
+    setSwipedChatId(prevId => (prevId === chatId ? null : chatId));
+  };
+  
+  // ✨ 核心修改：刪除按鈕現在直接呼叫從外部傳進來的 onDeleteChat 函式 ✨
+  const handleDeleteChat = (charId, chatId, event) => {
+    event.stopPropagation();
+    onDeleteChat(charId, chatId); // 呼叫真正的刪除函式
+    setSwipedChatId(null); // 關閉滑動選單
+  };
+  
+  const handlePinChat = (charId, chatId, event) => {
+      event.stopPropagation();
+      onTogglePin(charId, chatId);
+      setSwipedChatId(null);
+  };
+
   return (
-    <div className="page-content">
+    <div className="page-content" onClick={() => setSwipedChatId(null)}>
       <div className="content-area character-list-page">
         {allChats.length === 0 ? (
           <div className="empty-state">點選角色開始聊天吧</div>
         ) : (
           <div className="character-list">
             {allChats.map(({ char, chatId, lastMessage, isPinned }) => (
-              <div key={chatId} className="character-list-item">
-                <div className="character-select-area" onClick={() => onSelectChat(char.id, chatId)}>
-                  <div className="character-avatar-large">
-                    {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
-                  </div>
-                  <div className="character-info">
-                    <h4>{char.name}</h4>
-                    {/* 修正：從多版本結構中讀取文字 */}
-                    <p>{lastMessage.sender === 'user' ? '你: ' : ''}{lastMessage.contents[lastMessage.activeContentIndex]}</p>
-                  </div>
+              <div key={chatId} className="swipe-item-wrapper">
+                <div className="swipe-actions">
+                   <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
+                     {isPinned ? '取消釘選' : '釘選'}
+                   </button>
+                   {/* ✨ 這裡的 onClick 已經更新了 ✨ */}
+                   <button className="swipe-action-btn delete" onClick={(e) => handleDeleteChat(char.id, chatId, e)}>
+                     刪除
+                   </button>
                 </div>
-                <button 
-                  className={`pin-chat-btn ${isPinned ? 'active' : ''}`}
-                  onClick={() => onTogglePin(char.id, chatId)}
-                  title={isPinned ? '取消置頂' : '置頂對話'}
+
+                <div 
+                  className={`character-list-item swipe-content ${swipedChatId === chatId ? 'swiped' : ''}`}
+                  onClick={(e) => {
+                    if (swipedChatId === chatId) {
+                        handleSwipeToggle(chatId, e);
+                    } else {
+                        onSelectChat(char.id, chatId);
+                    }
+                  }}
                 >
-                  <Pin size={16} />
-                </button>
+                  <div className="character-select-area">
+                    <div className="avatar-wrapper">
+                        <div className="character-avatar-large">
+                        {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
+                        </div>
+                        {isPinned && (
+                            <div className="pin-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                            </div>
+                        )}
+                    </div>
+                    <div className="character-info">
+                      <h4>{char.name}</h4>
+                      <p>{lastMessage.sender === 'user' ? '你: ' : ''}{lastMessage.contents[lastMessage.activeContentIndex]}</p>
+                    </div>
+                  </div>
+                  <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -1343,6 +1385,7 @@ const ChatApp = () => {
   const [showActionsMessageId, setShowActionsMessageId] = useState(null);
   const messagesEndRef = useRef(null);
   const [isInputMenuOpen, setIsInputMenuOpen] = useState(false);
+  const [swipedChatId, setSwipedChatId] = useState(null);
 
   const [characters, setCharacters] = useState([]);
   const [currentCharacter, setCurrentCharacter] = useState(null);
@@ -2275,6 +2318,44 @@ const ChatApp = () => {
     });
   }, []);
 
+  const handleDeleteChat = useCallback((charId, chatId) => {
+    // 步驟 1：彈出確認視窗，防止誤刪
+    if (window.confirm('您確定要刪除這個對話嗎？此操作無法復原！')) {
+      
+      // 步驟 2：從聊天歷史中刪除
+      setChatHistories(prev => {
+        // 為了安全地修改 state，我們先深度複製一份
+        const newHistories = JSON.parse(JSON.stringify(prev));
+        
+        // 檢查該角色的聊天記錄是否存在
+        if (newHistories[charId]) {
+          // 使用 delete 關鍵字，刪除指定的 chatId
+          delete newHistories[charId][chatId];
+        }
+        
+        return newHistories;
+      });
+
+      // 步驟 3：從 metadata (釘選狀態) 中刪除
+      setChatMetadatas(prev => {
+        const newMetadatas = JSON.parse(JSON.stringify(prev));
+        
+        if (newMetadatas[charId]) {
+          delete newMetadatas[charId][chatId];
+        }
+
+        return newMetadatas;
+      });
+      
+      // (可選) 如果刪除的是當前正在聊天的對話，則跳轉回聊天列表
+      if (activeChatId === chatId) {
+          setActiveChatCharacterId(null);
+          setActiveChatId(null);
+          setCurrentCharacter(null);
+      }
+    }
+  }, [activeChatId]); // 依賴 activeChatId 以便正確跳轉
+
   const exportChatHistory = useCallback(() => {
     const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
     if (currentMessages.length === 0) {
@@ -2407,6 +2488,9 @@ const ChatApp = () => {
                 setActiveChatId(chatId);
               }}
               onTogglePin={handleTogglePinChat}
+              swipedChatId={swipedChatId}
+              setSwipedChatId={setSwipedChatId}
+              onDeleteChat={handleDeleteChat}
             />
           ) : (
             <ChatPage

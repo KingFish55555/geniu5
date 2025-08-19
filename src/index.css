@@ -2118,3 +2118,137 @@ select:focus {
   background-color: var(--surface-color);
   color: var(--text-primary);
 }
+
+/* =================================== */
+/*  聊天室列表滑動操作樣式             */
+/* =================================== */
+
+.swipe-item-wrapper {
+  position: relative;
+  overflow: hidden; /* 隱藏超出範圍的操作按鈕 */
+  border-radius: 12px; /* 讓 wrapper 也有圓角 */
+}
+
+.swipe-content {
+  position: relative; /* 讓內容層在最上面 */
+  z-index: 2;
+  width: 100%;
+  background: var(--background-color); /* 必須有背景色才能蓋住底下的按鈕 */
+  transition: transform 0.3s ease-in-out; /* 核心！滑動的動畫效果 */
+}
+
+/* 當內容層被滑開時的樣式 */
+.swipe-content.swiped {
+  /* 向左滑動 140px，這個寬度等於兩個按鈕的總寬度 */
+  transform: translateX(-140px); 
+}
+
+/* 操作按鈕的容器 */
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  z-index: 1; /* 在內容層的底下 */
+  display: flex;
+}
+
+/* 單一操作按鈕的樣式 */
+.swipe-action-btn {
+  border: none;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  width: 70px; /* 每個按鈕寬 70px */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.swipe-action-btn.pin {
+  background-color: #f59e0b; /* 橘色 */
+}
+.swipe-action-btn.pin:hover {
+  background-color: #d97706;
+}
+
+.swipe-action-btn.delete {
+  background-color: #ef4444; /* 紅色 */
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+.swipe-action-btn.delete:hover {
+  background-color: #dc2626;
+}
+
+/* "更多" 按鈕 (...) 的樣式 */
+.more-actions-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 8px;
+  margin-left: auto; /* 讓它自動靠到最右邊 */
+  margin-right: 8px;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.more-actions-btn:hover {
+  background-color: var(--surface-color);
+}
+
+/* 最後，我們需要稍微調整一下 character-list-item 的樣式 */
+/* 讓它不再有自己的邊線和 padding，這些都交給 wrapper 處理 */
+.swipe-item-wrapper .character-list-item {
+  border: none;
+  padding: 8px 0 8px 8px; /* 移除右邊的 padding，給 "..." 按鈕留空間 */
+}
+
+/* =================================== */
+/*  聊天室釘選徽章樣式 (Pin Badge)    */
+/* =================================== */
+
+/* 頭像的包裹容器，這是定位的基準 */
+.avatar-wrapper {
+  position: relative;
+  /* 讓 flexbox 佈局不受影響 */
+  flex-shrink: 0; 
+}
+
+/* 釘選徽章 (小星星) 的樣式 */
+.pin-badge {
+  position: absolute;
+  right: -2px;  /* 稍微向內調整位置 */
+  bottom: -6px; /* 稍微向內調整位置 */
+  
+  /* ✨ 核心修改：移除背景和邊框相關的所有樣式 ✨ */
+  width: auto; /* 寬度由內容決定 */
+  height: auto; /* 高度由內容決定 */
+  background-color: transparent; /* 背景設為透明 */
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+
+  /* ✨ 核心修改：直接設定 SVG 圖示本身的顏色 ✨ */
+  /* color 屬性會被 SVG 的 fill="currentColor" 或 stroke="currentColor" 繼承 */
+  color: #ff69b4; /* 金黃色，您可以換成您喜歡的任何顏色，例如粉紅色 #ff69b4 */
+  
+  /* 為了讓圖示更清晰，我們可以加一點點描邊或陰影 */
+  /* 方案A: 描邊 (效果較明顯) */
+  -webkit-text-stroke: 1px white; /* 針對 Webkit 瀏覽器 (Chrome, Safari) */
+  paint-order: stroke fill; /* 讓描邊在填充色的底下，效果更好 */
+
+  /* 方案B: 文字陰影 (效果較柔和) - 如果您使用方案A，可以註解掉這行 */
+  /* text-shadow: 0px 0px 3px rgba(0,0,0,0.5); */
+
+  /* 我們不再需要 flex 佈局了，因為沒有背景需要置中 */
+}
+
+/* 順便微調一下 SVG 的尺寸，讓它看起來更適中 */
+.pin-badge svg {
+    width: 18px;
+    height: 18px;
+}
