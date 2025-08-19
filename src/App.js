@@ -1372,7 +1372,7 @@ const SettingsPage = ({
                 </div>
                 <div className="about-links">
                   <a
-                    href="https://www.notion.so/2547bc2e84ff8094a9d8f591005de532?source=copy_link"
+                    href="https://www.notion.so/GENIU5-2547bc2e84ff80aa8024d28b1c964afe?source=copy_link"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="about-btn"
