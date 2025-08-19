@@ -1,6 +1,6 @@
 /* CSS Variables for Theme System */
 :root[data-theme="light"] {
-  --primary-color: #6b7280;      /* 中性灰 */
+  --primary-color: #cfd8e7;      /* 中性灰 */
   --accent-color: #4b5563;       /* 深灰 */
   --background-color: #f9fafb;   /* 極淺灰白 */
   --surface-color: #f3f4f6;      /* 淺灰 */
@@ -11,6 +11,7 @@
   --shadow-light: rgba(0, 0, 0, 0.05);
   --shadow-medium: rgba(0, 0, 0, 0.1);
   --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  --quote-text-color: #587c9a;
 }
 
 :root[data-theme="dark"] {
@@ -18,13 +19,19 @@
   --accent-color: #272727;
   --background-color: #222222;
   --surface-color: #202020;
-  --border-color: #4e4e4e;
+  --border-color: #5a5a5a;
   --text-primary: #f9fafb;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
   --shadow-light: rgba(0, 0, 0, 0.4);
   --shadow-medium: rgba(0, 0, 0, 0.6);
   --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  --quote-text-color: #8ac2e6;
+}
+
+/* 引號內文字的專屬樣式 */
+.quoted-text {
+  color: var(--quote-text-color);
 }
 
 /* Reset and Base Styles */
@@ -349,28 +356,26 @@ body {
   display: flex;
 }
 
-.user-message {
-  justify-content: flex-end;
-}
-
-.ai-message {
-  justify-content: flex-start;
-}
-
 .system-message {
   justify-content: center;
 }
 
 .message-content {
-  max-width: 70%;
-  padding: 12px 16px;
+  max-width: 88%;
+  padding: 12px 20px;
   border-radius: 18px;
   position: relative;
 }
 
+.message-content p {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
 .user-message .message-content {
   background: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
   border-bottom-right-radius: 4px;
 }
 
@@ -422,11 +427,11 @@ body {
 .loading-dots span:nth-child(3) { animation-delay: 0s; }
 
 @keyframes loading {
-  0%, 80%, 100% { 
+  0%, 80%, 100% {
     transform: scale(0);
     opacity: 0.5;
-  } 
-  40% { 
+  }
+  40% {
     transform: scale(1);
     opacity: 1;
   }
@@ -451,10 +456,6 @@ body {
   transition: border-color 0.3s ease;
   background: var(--surface-color);
   color: var(--text-primary);
-}
-
-.message-input:focus {
-  border-color: var(--primary-color);
 }
 
 .send-button {
@@ -583,12 +584,6 @@ body {
   background: var(--background-color);
   color: var(--text-primary);
   font-family: inherit;
-}
-
-.setting-input:focus,
-.setting-textarea:focus,
-.setting-select:focus {
-  border-color: var(--primary-color);
 }
 
 .setting-textarea {
@@ -975,52 +970,11 @@ body {
   border-top: 1px solid var(--border-color);
   margin: 16px 0;
 }
-/* 配置管理相關樣式 */
-.config-management {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.config-management .setting-select {
-  flex: 1;
-}
-
-.delete-btn {
-  background: #ef4444;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.delete-btn:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.delete-btn:disabled {
-  background: var(--text-muted);
-  cursor: not-allowed;
-}
-
-.divider {
-  border: none;
-  border-top: 1px solid var(--border-color);
-  margin: 16px 0;
-}
-/* =================================== */
-/*  新的提示詞頁面樣式 (Prompts Page)  */
-/* =================================== */
-
+/* Prompts Page */
 .content-area.prompts-page-layout {
   display: flex;
   gap: 0px;
-  padding: 0; /* 讓子元素自己控制 padding */
+  padding: 0;
   height: 100%;
 }
 
@@ -1113,22 +1067,22 @@ body {
   gap: 8px;
 }
 
-.save-btn {
+.editor-buttons .save-btn {
   background-color: #10b981;
   color: white;
 }
-.save-btn:hover {
+.editor-buttons .save-btn:hover {
   background-color: #059669;
 }
 
-.delete-btn {
+.editor-buttons .delete-btn {
   background-color: #ef4444;
   color: white;
 }
-.delete-btn:hover:not(:disabled) {
+.editor-buttons .delete-btn:hover:not(:disabled) {
   background-color: #dc2626;
 }
-.delete-btn:disabled {
+.editor-buttons .delete-btn:disabled {
   background-color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -1163,7 +1117,7 @@ body {
   padding: 4px 10px;
   font-size: 0.8em;
   background-color: transparent;
-  color: var(--text-muted); /* <--- 改成更柔和的提示文字顏色 */
+  color: var(--text-muted);
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
@@ -1175,11 +1129,7 @@ body {
   color: white;
   border-color: var(--primary-color);
 }
-
-/* =================================== */
-/*  角色編輯器彈窗樣式 (Modal)        */
-/* =================================== */
-
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1196,12 +1146,12 @@ body {
 
 .modal-content {
   background: var(--background-color);
-  padding: 24px;
+  padding: 22px;
   border-radius: 16px;
   box-shadow: 0 10px 30px var(--shadow-medium);
   width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
+  max-width: 640px;
+  max-height: 93vh;
   display: flex;
   flex-direction: column;
   animation: slideInUp 0.3s ease-out;
@@ -1223,13 +1173,19 @@ body {
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
-  padding-bottom: 16px;
-  margin-bottom: 16px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: var(--primary-color);
+  padding: 0;
+  font-size: 1.5em;
+  line-height: 1.3;
+  color: var(--text-primary);
+  position: relative;
+  top: -7px;
 }
 
 .close-btn {
@@ -1237,7 +1193,7 @@ body {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 4px;
+  padding: 1px;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
@@ -1250,10 +1206,9 @@ body {
 .modal-body {
   overflow-y: auto;
   flex: 1;
-  padding-right: 10px; /* for scrollbar */
+  padding-right: 10px;
 }
 
-/* 複用設定頁面的表單樣式 */
 .modal-body .form-group {
   margin-bottom: 16px;
 }
@@ -1277,7 +1232,6 @@ body {
   resize: vertical;
 }
 
-/* 頭像編輯的特殊樣式 */
 .avatar-form-group .avatar-editor {
   display: flex;
   align-items: center;
@@ -1293,6 +1247,7 @@ body {
   justify-content: center;
   overflow: hidden;
   background: var(--surface-color);
+  flex-shrink: 0;
 }
 .avatar-preview-large img {
   width: 100%;
@@ -1307,35 +1262,122 @@ body {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  transition: all 0.2s ease;
 }
 .upload-btn:hover {
   border-color: var(--primary-color);
 }
-
+.delete-character-icon-btn {
+  margin-left: auto;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: var(--background-color);
+  color: #ef4444;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+.delete-character-icon-btn:hover {
+  background-color: #ef4444;
+  color: white;
+}
 
 .modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
   border-top: 1px solid var(--border-color);
   padding-top: 16px;
   margin-top: 16px;
 }
 
-.footer-btn {
-  padding: 10px 20px;
+.footer-btn.save-btn {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
   border-radius: 8px;
   font-weight: 600;
+  font-size: 1em;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: #10b981;
+  color: white;
 }
-.footer-btn.delete-btn {
-  margin-right: auto; /* 把刪除按鈕推到最左邊 */
+.footer-btn.save-btn:hover {
+  background-color: #059669;
 }
-/* =================================== */
-/*  角色列表頁面樣式 (CharactersPage)  */
-/* =================================== */
+
+.form-label-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.form-label-group label {
+  margin-bottom: 0;
+}
+.add-greeting-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8em;
+}
+.add-greeting-btn:hover {
+  background: var(--surface-color);
+  color: var(--text-primary);
+}
+
+.alternate-greetings-group {
+  border-top: 1px dashed var(--border-color);
+  padding-top: 16px;
+}
+
+.greeting-input-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.greeting-input-group textarea {
+  flex: 1;
+}
+.remove-greeting-btn {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.remove-greeting-btn:hover {
+  background-color: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
+/* CharactersPage */
 .character-list-page {
-  position: relative; /* 為了讓浮動按鈕可以定位 */
+  position: relative;
 }
 
 .character-list {
@@ -1374,7 +1416,7 @@ body {
   height: 50px;
   border-radius: 50%;
   overflow: hidden;
-  flex-shrink: 0; /* 防止頭像被壓縮 */
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1398,7 +1440,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 250px; /* 避免文字過長撐開版面 */
+  max-width: 250px;
 }
 
 .active-check-icon {
@@ -1427,10 +1469,6 @@ body {
   border-color: var(--primary-color);
 }
 
-/* =================================== */
-/*  角色頁面匯入按鈕的額外樣式        */
-/* =================================== */
-
 .empty-state-buttons {
   display: flex;
   gap: 12px;
@@ -1453,16 +1491,11 @@ body {
 }
 
 .import-button:hover {
-  background: var(--primary-color); /* <--- 這裡也要改 */
+  background: var(--primary-color);
   color: white;
   border-color: var(--primary-color);
 }
 
-/* =================================== */
-/*  真正最終完美浮動操作選單樣式      */
-/* =================================== */
-
-/* 主按鈕的樣式，擁有自己的絕對定位 */
 .floating-add-button {
   position: absolute;
   bottom: 20px;
@@ -1479,7 +1512,7 @@ body {
   box-shadow: 0 4px 12px var(--shadow-medium);
   cursor: pointer;
   transition: all 0.3s ease;
-  z-index: 101; /* 確保它在最上層 */
+  z-index: 101;
 }
 
 .floating-add-button:hover {
@@ -1491,21 +1524,16 @@ body {
   background-color: var(--accent-color);
 }
 
-/* 選單容器的樣式，也擁有自己的絕對定位 */
 .floating-options-container {
   position: absolute;
-  bottom: 92px; /* 距離底部的位置 */
-  right: 20px;  /* 讓它和主按鈕的右邊緣對齊 */
+  bottom: 92px;
+  right: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 16px;
   z-index: 100;
   animation: fadeIn 0.2s ease-in-out;
-  
-  /* --- 這就是精準微調的魔法 --- */
-  /* 先把它往右移動 50% (相對於主按鈕的寬度) */
-  /* 然後再把它往左移動 50% (相對於自己的寬度) */
   transform: translateX(calc(56px / 2)) translateX(-50%);
 }
 
@@ -1514,13 +1542,561 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 這是讓小按鈕變成圓形的樣式 */
 .floating-add-button.mini {
   width: 56px;
   height: 56px;
   background-color: var(--surface-color);
   color: var(--primary-color);
   border: 1px solid var(--border-color);
-  /* 移除 position, bottom, right，因為它們由容器管理 */
-  position: static; 
+  position: static;
+}
+
+/* Character Preview Modal */
+.modal-content.character-preview-modal {
+  max-width: 720px;
+}
+
+.character-preview-modal .modal-header h3 {
+  padding-right: 16px;
+}
+
+.character-preview-modal .preview-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.preview-top-section {
+  display: flex;
+  gap: 24px;
+}
+
+.preview-character-image {
+  width: 240px;
+  flex-shrink: 0;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--surface-color);
+}
+.preview-character-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.preview-character-image .image-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.preview-description {
+  flex: 1;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 12px;
+  background-color: var(--surface-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  white-space: pre-wrap;
+  color: var(--text-secondary);
+}
+.preview-description p {
+  margin: 0;
+}
+
+.preview-greetings h4 {
+  font-size: 0.9em;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.greetings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 270px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.greeting-option {
+  padding: 12px;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.greeting-option p {
+  margin: 0;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.greeting-option:hover {
+  border-color: var(--primary-color);
+  background-color: var(--surface-color);
+}
+
+.greeting-option.active {
+  border-color: var(--text-primary);
+  background-color: var(--surface-color);
+}
+.greeting-option.active p {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.start-chat-btn {
+  width: 100%;
+  height: 44px;
+  font-size: 1em;
+  background-color: #3b82f6;
+  color: white;
+}
+.start-chat-btn:hover {
+  background-color: #2563eb;
+}
+
+/* World Book Section */
+.world-book-section {
+  border-top: 1px dashed var(--border-color);
+  border-bottom: 1px dashed var(--border-color);
+  padding: 16px 0;
+}
+
+.world-book-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 12px !important;
+}
+
+.world-book-entries {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.world-book-entry {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 0.9em;
+}
+
+.world-book-entry:last-child {
+  margin-bottom: 0;
+}
+
+.wb-keys {
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  font-size: 0.9em;
+}
+
+.wb-keys strong {
+  color: var(--text-secondary);
+}
+
+.wb-content {
+  color: var(--text-primary);
+  white-space: pre-wrap;
+}
+
+.wb-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.wb-keys {
+  flex: 1;
+  margin-bottom: 0;
+  padding-right: 10px;
+}
+
+.wb-entry-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.wb-entry-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--border-color);
+  transition: .4s;
+  border-radius: 22px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #10b981;
+}
+
+input:checked + .slider:before {
+  transform: translateX(18px);
+}
+
+.message {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 15px;
+  max-width: 100%;
+}
+
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 2px solid var(--border-color);
+}
+
+.message-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-message {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.ai-message {
+  align-self: flex-start;
+}
+
+/* --- 訊息編輯功能樣式 --- */
+.message-content {
+  position: relative; /* 為了讓編輯按鈕可以定位 */
+}
+
+/* 新增一個 wrapper，讓它可以接收點擊事件，並且相對定位 */
+.bubble-wrapper {
+  position: relative;
+  cursor: pointer; /* 讓滑鼠移上去時顯示手指圖示，提示可以點擊 */
+}
+
+.edit-message-btn {
+  position: absolute;
+  /* ✨ 核心修改：從底部改到頂部對齊 ✨ */
+  bottom: 45px; 
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0; /* 平時透明 */
+  visibility: hidden; /* 平時隱藏，無法點擊 */
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.edit-message-btn.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.user-message .edit-message-btn {
+  left: -40px;
+}
+
+.ai-message .edit-message-btn {
+  right: -40px;
+}
+
+.edit-container {
+  width: 100%;
+}
+
+.edit-textarea {
+  width: 100%;
+  min-height: 150px;
+  border: 2px solid var(--primary-color);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: inherit;
+  background-color: var(--background-color);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.edit-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.edit-btn.save {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.edit-btn.cancel {
+  background-color: var(--surface-color);
+  color: var(--text-secondary);
+}
+
+/* Custom Focus Styles */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: 0 0 0 0.5px var(--accent-color); 
+  border-color: var(--accent-color); 
+}
+
+/* Pin Chat Button */
+.pin-chat-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.2s ease;
+  padding: 8px;
+}
+.pin-chat-btn:hover {
+  opacity: 1;
+  transform: scale(1.2);
+}
+.pin-chat-btn.active {
+  opacity: 1;
+  color: #ffc107;
+}
+
+/* Version Control & Action Toolbar Styles */
+.message-actions-toolbar {
+  position: absolute;
+  bottom: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px var(--shadow-light);
+  transition: all 0.2s ease;
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.bubble-wrapper .message-actions-toolbar {
+    opacity: 1;
+    visibility: visible;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+  background: var(--background-color);
+  color: var(--text-primary);
+}
+
+.action-btn:disabled {
+  color: var(--border-color);
+  cursor: not-allowed;
+}
+
+.version-indicator {
+  font-size: 0.75em;
+  color: var(--text-muted);
+  padding: 0 4px;
+  user-select: none;
+}
+
+.regenerate-btn {
+  position: absolute;
+  bottom: 4px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  font-size: 14px;
+  right: -40px;
+}
+
+.regenerate-btn.visible,
+.bubble-wrapper .regenerate-btn {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+/* =================================== */
+/*  輸入框選單樣式 (Input Menu)       */
+/* =================================== */
+
+/* 使用 wrapper 來做相對定位，這樣選單才能正確地顯示在輸入框上方 */
+.input-area-wrapper {
+  position: relative;
+  /* 讓 wrapper 的背景和邊線與 input-area 保持一致 */
+  background: var(--background-color);
+  border-top: 1px solid var(--border-color);
+}
+
+/* 我們把原本 input-area 的 padding 和 gap 移到 wrapper 裡的 input-area */
+.input-area {
+  display: flex;
+  align-items: center; /* 讓所有東西垂直置中 */
+  padding: 15px;
+  gap: 10px;
+}
+
+/* ✨ 關鍵修改：移除 input-area 的背景和邊線，避免重複 ✨ */
+.input-area-wrapper .input-area {
+  background: none;
+  border-top: none;
+  padding: 0; /* 內部的 padding 也由 wrapper 控制 */
+}
+.input-area-wrapper {
+    padding: 15px;
+}
+
+
+/* + 按鈕的樣式 */
+.input-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  flex-shrink: 0; /* 防止按鈕被壓縮 */
+}
+
+.input-menu-btn:hover {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+}
+
+/* 當選單打開時，+ 按鈕的樣式 */
+.input-menu-btn.open {
+  transform: rotate(45deg);
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* 選單本體的樣式 */
+.input-menu {
+  position: absolute;
+  bottom: 80px; /* 顯示在輸入框區域的上方，80px 是一個起始值，可以微調 */
+  left: 15px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--shadow-medium);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+  animation: slideInUp 0.2s ease-out; /* 重複利用您寫好的動畫 */
+}
+
+.input-menu-item {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+  font-size: 0.9em;
+  width: 100%; /* 讓按鈕填滿選單寬度 */
+}
+
+.input-menu-item:hover {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
 }
