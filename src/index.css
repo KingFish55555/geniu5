@@ -12,6 +12,7 @@
   --shadow-medium: rgba(0, 0, 0, 0.1);
   --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   --quote-text-color: #587c9a;
+  --middle-color: #dddddd;
 }
 
 :root[data-theme="dark"] {
@@ -27,6 +28,7 @@
   --shadow-medium: rgba(0, 0, 0, 0.6);
   --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   --quote-text-color: #8ac2e6;
+  --middle-color: #505050;
 }
 
 /* 引號內文字的專屬樣式 */
@@ -1421,6 +1423,7 @@ body {
 
 .character-select-area {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1429,9 +1432,14 @@ body {
   border-radius: 8px;
 }
 
+.character-info {
+  flex: 1;      /* 告訴文字區塊：請填滿所有剩餘空間 */
+  min-width: 0; /* 允許你在空間不夠時被壓縮，這樣文字的 ... 才會生效 */
+}
+
 .character-avatar-large {
-  width: 50px;
-  height: 50px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -1458,7 +1466,6 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 250px;
 }
 
 .active-check-icon {
@@ -2184,17 +2191,18 @@ select:focus {
 
 /* "更多" 按鈕 (...) 的樣式 */
 .more-actions-btn {
-  background: none;
+  background: var(--middle-color);
   border: none;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   padding: 8px;
   margin-left: auto; /* 讓它自動靠到最右邊 */
-  margin-right: 8px;
+  margin-right: 15px;
   cursor: pointer;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 .more-actions-btn:hover {
   background-color: var(--surface-color);
