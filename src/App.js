@@ -79,7 +79,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   };
 
   const handleDelete = () => {
-    if (character && window.confirm(`您確定要刪除角色「${character.name}」嗎？`)) {
+    if (character && window.confirm(`您確定要刪除角色「${character.name}」嗎？\n\n🥺確定嗎？\n\n(${character.name}正在看著你的手)`)) {
       onDelete(character.id);
     }
   };
@@ -591,7 +591,71 @@ const MessageEditorModal = ({ editingMessage, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, editingMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel }) => {
+// ==================== 全新！長期記憶編輯 Modal 元件 ====================
+const LongTermMemoryModal = ({ memory, onSave, onUpdate, onClose, isLoading }) => {
+  // 用一個 state 來記住使用者在 Modal 輸入框裡的文字
+  const [memoryText, setMemoryText] = useState('');
+  
+  // 當 Modal 彈出時，將外部傳入的 memory 設為初始值
+  useEffect(() => {
+    setMemoryText(memory || ''); // 如果 memory 是 null 或 undefined，就顯示空字串
+  }, [memory]);
+
+  // 如果沒有觸發這個 Modal (外部傳進來的 memory 是 null)，就不顯示任何東西
+  if (memory === null) {
+    return null;
+  }
+
+  // 處理手動儲存
+  const handleSave = () => {
+    onSave(memoryText);
+  };
+  
+  // 處理點擊「AI 自動更新」
+  const handleUpdate = () => {
+    // 呼叫外部傳進來的 onUpdate 函式，它會觸發 AI 運算
+    onUpdate(); 
+  };
+
+  return (
+    // 我們可以重用大部分 modal 的樣式
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>長期記憶摘要</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="setting-label" style={{ marginBottom: '12px' }}>
+            AI 會在每次對話時參考這份摘要。您可以手動編輯，或讓 AI 根據最近的對話自動更新。
+          </p>
+          <textarea
+            value={memoryText}
+            onChange={(e) => setMemoryText(e.target.value)}
+            className="edit-textarea" // 重用編輯訊息的樣式
+            style={{ minHeight: '250px' }}
+            placeholder="目前沒有任何記憶摘要..."
+          />
+        </div>
+        <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+           <button 
+             onClick={handleUpdate} 
+             className="edit-btn secondary" // 使用次要按鈕樣式
+             disabled={isLoading}
+            >
+             {isLoading ? '更新中...' : '由 AI 自動更新'}
+           </button>
+          <div>
+            <button onClick={onClose} className="edit-btn cancel">取消</button>
+            <button onClick={handleSave} className="edit-btn save">儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, editingMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen }) => {
   
   // ✨ 新增一個 ref 來抓取 textarea 元素 ✨
   const textareaRef = useRef(null);
@@ -705,7 +769,10 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
         
         {isInputMenuOpen && (
           <div className="input-menu">
-            <button className="input-menu-item">
+            <button className="input-menu-item" onClick={() => {
+                setIsMemoryModalOpen(true); // ✨ 打開記憶 Modal
+                setIsInputMenuOpen(false); // 順便關閉 "+" 號選單
+            }}>
               <BookOpen size={20} />
               <span>長期記憶</span>
             </button>
@@ -1377,6 +1444,7 @@ const ChatApp = () => {
 
   const [chatHistories, setChatHistories] = useState({});
   const [chatMetadatas, setChatMetadatas] = useState({});
+  const [longTermMemories, setLongTermMemories] = useState({});
   const [activeChatCharacterId, setActiveChatCharacterId] = useState(null);
   const [activeChatId, setActiveChatId] = useState(null);
   const [inputMessage, setInputMessage] = useState('');
@@ -1416,6 +1484,7 @@ const ChatApp = () => {
 
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewingCharacter, setPreviewingCharacter] = useState(null);
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
 
   const apiProviders = {
     openai: {
@@ -1473,6 +1542,7 @@ const ChatApp = () => {
       const savedCharacters = JSON.parse(localStorage.getItem('app_characters')) || [];
       const savedChatHistories = JSON.parse(localStorage.getItem('app_chat_histories')) || {};
       const savedChatMetadatas = JSON.parse(localStorage.getItem('app_chat_metadatas')) || {};
+      const savedLongTermMemories = JSON.parse(localStorage.getItem('app_long_term_memories')) || {};
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
       const savedActiveChatId = localStorage.getItem('app_active_chat_id');
 
@@ -1489,6 +1559,7 @@ const ChatApp = () => {
       setCharacters(savedCharacters);
       setChatHistories(savedChatHistories);
       setChatMetadatas(savedChatMetadatas);
+      setLongTermMemories(savedLongTermMemories);
       
       const savedPrompts = JSON.parse(localStorage.getItem('app_prompts')) || BUILT_IN_PROMPTS;
       setPrompts(savedPrompts);
@@ -1528,6 +1599,13 @@ const ChatApp = () => {
       localStorage.setItem('app_characters', JSON.stringify(characters));
     }
   }, [characters]);
+
+  useEffect(() => {
+  // 我們要避免在程式第一次載入時就儲存空資料
+  if (Object.keys(longTermMemories).length > 0) {
+    localStorage.setItem('app_long_term_memories', JSON.stringify(longTermMemories));
+  }
+}, [longTermMemories]);
   
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1927,6 +2005,9 @@ const ChatApp = () => {
       injectedWorldInfo = [...triggeredEntries].join('\n\n');
     }
 
+    // ✨✨✨ 核心修改：注入長期記憶 ✨✨✨
+    const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+
     try {
       const provider = apiProviders[apiProvider];
       const headers = provider.headers(apiKey);
@@ -1944,14 +2025,17 @@ const ChatApp = () => {
         currentCharacter,
         userSettings
       );
+
+      // ✨ 核心修改：將長期記憶和世界書資訊組合到最終提示詞中 ✨
       const finalSystemPrompt = [
+        activeMemory ? `[先前對話的記憶摘要]\n${activeMemory}` : '',
         systemPromptContent,
         `角色設定:\n${characterDescription}`,
         (userSettings.name || userSettings.description) 
           ? `你的設定 (使用者):\n姓名: ${userSettings.name || '未設定'}\n描述: ${userSettings.description || '未設定'}`
           : '',
         injectedWorldInfo ? `補充資訊:\n${injectedWorldInfo}` : '',
-      ].filter(Boolean).join('\n\n');
+      ].filter(Boolean).join('\n\n---\n'); // 用分隔線讓結構更清晰
       
       const maxOutputTokens = currentPrompt?.maxTokens || 800;
       const temperature = currentPrompt?.temperature || 0.7;
@@ -2029,7 +2113,7 @@ const ChatApp = () => {
       console.error("sendToAI 函式發生錯誤:", error);
       throw error;
     }
-  }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, userSettings]);
+  }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, userSettings, longTermMemories, activeChatCharacterId, activeChatId]); // ✨ 將新依賴項加入陣列
 
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
@@ -2307,6 +2391,67 @@ const ChatApp = () => {
     setEditingMessage(null);
   }, []);
 
+  // ==================== 全新！自動更新長期記憶的函式 ====================
+  const handleUpdateMemory = useCallback(async () => {
+    if (!activeChatCharacterId || !activeChatId) {
+      alert('請先選擇一個對話。');
+      return;
+    }
+    const history = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    if (history.length < 4) { // 對話太短可能無法生成有意義的摘要
+      alert('對話長度不足，無法生成有意義的記憶摘要。');
+      return;
+    }
+
+    setIsLoading(true); // 讓 Modal 內的按鈕也顯示讀取中
+    try {
+      // 組合對話歷史給 AI 參考
+      const conversationText = history.map(m => `${m.sender === 'user' ? (userSettings.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
+      
+      // 使用一個固定的、高效的摘要提示詞
+      const summaryPrompt = `請將以下對話的關鍵事實、事件、使用者偏好和角色行為，精簡總結成一段第三人稱的摘要，以便在未來的對話中能回憶起重點。\n\n對話內容：\n${conversationText}`;
+      
+      const summaryMessages = [{ role: 'user', content: summaryPrompt }];
+      
+      // 呼叫 AI，並特別標記這次呼叫是為了生成摘要
+      const summary = await sendToAI(summaryPrompt, []); // 第二個參數傳空陣列，因為我們在提示詞中已經提供了完整上下文
+
+      // 更新 state
+      setLongTermMemories(prev => {
+        const newMemories = JSON.parse(JSON.stringify(prev));
+        if (!newMemories[activeChatCharacterId]) {
+          newMemories[activeChatCharacterId] = {};
+        }
+        newMemories[activeChatCharacterId][activeChatId] = summary;
+        return newMemories;
+      });
+      
+      alert('長期記憶已由 AI 自動更新！');
+
+    } catch (error) {
+      alert(`記憶更新失敗: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, userSettings.name, currentCharacter]);  
+
+// ==================== 全新！手動儲存長期記憶的函式 ====================
+  const handleSaveMemory = useCallback((newMemoryText) => {
+    if (!activeChatCharacterId || !activeChatId) return;
+
+    setLongTermMemories(prev => {
+      const newMemories = JSON.parse(JSON.stringify(prev));
+      if (!newMemories[activeChatCharacterId]) {
+        newMemories[activeChatCharacterId] = {};
+      }
+      newMemories[activeChatCharacterId][activeChatId] = newMemoryText;
+      return newMemories;
+    });
+
+    setIsMemoryModalOpen(false); // 儲存後自動關閉 Modal
+    alert('長期記憶已儲存！');
+  }, [activeChatCharacterId, activeChatId]);
+
   const handleTogglePinChat = useCallback((charId, chatId) => {
     setChatMetadatas(prev => {
       const newMetas = JSON.parse(JSON.stringify(prev));
@@ -2319,42 +2464,46 @@ const ChatApp = () => {
   }, []);
 
   const handleDeleteChat = useCallback((charId, chatId) => {
-    // 步驟 1：彈出確認視窗，防止誤刪
-    if (window.confirm('您確定要刪除這個對話嗎？此操作無法復原！')) {
+    // 步驟 1：彈出確認視窗，保持不變
+    if (window.confirm('確定要永久刪除這段對話紀錄嗎？\n\n無法復原喔！\n\n確定喔？')) {
       
-      // 步驟 2：從聊天歷史中刪除
+      // 步驟 2：從聊天歷史中刪除，保持不變
       setChatHistories(prev => {
-        // 為了安全地修改 state，我們先深度複製一份
         const newHistories = JSON.parse(JSON.stringify(prev));
-        
-        // 檢查該角色的聊天記錄是否存在
         if (newHistories[charId]) {
-          // 使用 delete 關鍵字，刪除指定的 chatId
           delete newHistories[charId][chatId];
         }
-        
         return newHistories;
       });
 
-      // 步驟 3：從 metadata (釘選狀態) 中刪除
+      // 步驟 3：從 metadata (釘選狀態) 中刪除，保持不變
       setChatMetadatas(prev => {
         const newMetadatas = JSON.parse(JSON.stringify(prev));
-        
         if (newMetadatas[charId]) {
           delete newMetadatas[charId][chatId];
         }
-
         return newMetadatas;
       });
       
-      // (可選) 如果刪除的是當前正在聊天的對話，則跳轉回聊天列表
+      // ✨✨✨ 步驟 4 (全新！)：從長期記憶中刪除 ✨✨✨
+      setLongTermMemories(prev => {
+        const newMemories = JSON.parse(JSON.stringify(prev));
+        // 同樣檢查該角色的記憶物件是否存在
+        if (newMemories[charId]) {
+          // 只刪除與這個被刪除的 chatId 對應的那一份記憶
+          delete newMemories[charId][chatId];
+        }
+        return newMemories;
+      });
+      
+      // 步驟 5：跳轉邏輯，保持不變
       if (activeChatId === chatId) {
           setActiveChatCharacterId(null);
           setActiveChatId(null);
           setCurrentCharacter(null);
       }
     }
-  }, [activeChatId]); // 依賴 activeChatId 以便正確跳轉
+  }, [activeChatId]);
 
   const exportChatHistory = useCallback(() => {
     const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
@@ -2517,6 +2666,7 @@ const ChatApp = () => {
               onChangeVersion={handleChangeVersion}
               isInputMenuOpen={isInputMenuOpen}
               setIsInputMenuOpen={setIsInputMenuOpen}
+              setIsMemoryModalOpen={setIsMemoryModalOpen}
               loadedConfigName={loadedConfigName}
               apiModel={apiModel}
             />
@@ -2584,6 +2734,18 @@ const ChatApp = () => {
           editingMessage={editingMessage}
           onSave={handleUpdateMessage}
           onClose={() => setEditingMessage(null)}
+        />
+      )}
+
+      {/* ✨✨✨ 在這裡渲染我們的長期記憶 Modal ✨✨✨ */}
+      {isMemoryModalOpen && (
+        <LongTermMemoryModal
+          // 傳入當前對話的記憶內容
+          memory={longTermMemories[activeChatCharacterId]?.[activeChatId] || ''}
+          onSave={handleSaveMemory}
+          onUpdate={handleUpdateMemory}
+          onClose={() => setIsMemoryModalOpen(false)}
+          isLoading={isLoading} // 共用聊天的 loading 狀態
         />
       )}
     </div>
