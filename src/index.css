@@ -919,19 +919,6 @@ body {
     grid-template-columns: 1fr;
   }
 
-
-  /* 【解決問題 #2: 提示詞頁面排版】 */
-  /* 讓左右佈局變成垂直堆疊 */
-  .content-area.prompts-page-layout {
-    flex-direction: column;
-  }
-  /* 讓列表和編輯器都佔滿寬度 */
-  .prompts-list-panel,
-  .prompt-editor-panel {
-    width: 100%;
-    min-width: 100%;
-  }
-
   /* 【解決問題 #3: 角色預覽頁面排版】 */
   /* 讓上方的「左圖右文」變成「上圖下文」 */
   .preview-top-section {
@@ -952,6 +939,8 @@ body {
     flex-direction: column;
     /* 順便讓按鈕靠左對齊，而不是置中 */
     align-items: stretch; 
+    /* 加大按鈕之間的垂直間距 */
+      gap: 16px;
   }  
 }
 
@@ -1589,19 +1578,27 @@ body {
   gap: 24px;
 }
 
+/* --- 上半部：上圖下文的佈局 --- */
 .preview-top-section {
   display: flex;
-  gap: 24px;
+  /* ✨ 核心修改：將主軸改為垂直方向 ✨ */
+  flex-direction: column; 
+  /* ✨ 新增：讓圖片和文字都置中對齊 ✨ */
+  align-items: center; 
+  gap: 16px; /* 稍微縮小圖片和描述之間的距離 */
 }
 
 .preview-character-image {
-  width: 240px;
+  /* ✨ 核心修改：寬度改為百分比，並設定最大寬度 ✨ */
+  width: 60%; /* 佔用容器 60% 的寬度 */
+  max-width: 240px; /* 但最寬不超過 240px，避免在電腦上太大 */
   flex-shrink: 0;
   aspect-ratio: 3 / 4;
   border-radius: 8px;
   overflow: hidden;
   background-color: var(--surface-color);
 }
+
 .preview-character-image img {
   width: 100%;
   height: 100%;
@@ -1616,10 +1613,13 @@ body {
   color: var(--text-muted);
 }
 
+/* --- 中間：角色描述 --- */
 .preview-description {
   flex: 1;
-  max-height: 320px;
-  overflow-y: auto;
+  /* ✨ 核心修改：取消最大高度限制，讓它可以自由延伸 ✨ */
+  max-height: none; 
+  overflow-y: visible; /* 內容由整個 modal-body 來滾動，而不是自己滾動 */
+  width: 100%; /* 確保描述區塊佔滿寬度 */
   padding: 12px;
   background-color: var(--surface-color);
   border-radius: 8px;
