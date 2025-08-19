@@ -9,6 +9,8 @@ import {
 
 // ==================== 組件定義 ====================
 
+const MEMORY_UPDATE_INTERVAL = 8;
+
 // 頂部導航組件
 const TopNavigation = ({ currentPage, navigateToPage }) => (
   <div className="top-navigation">
@@ -139,9 +141,21 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
                   <UserCircle size={48} />
                 )}
               </div>
-              <label htmlFor="char-avatar-upload" className="upload-btn">
-                <Upload size={16} /> 上傳圖片
-              </label>
+              {/* ✨ 將按鈕群組用一個 div 包起來，方便排版 ✨ */}
+              <div className="avatar-actions">
+                <label htmlFor="char-avatar-upload" className="action-button-base">
+                  <Upload size={16} /> 上傳圖片
+                </label>
+                
+                {/* ✨✨✨ 全新的「匯出 PNG」按鈕 ✨✨✨ */}
+                {character && ( // 只有在編輯現有角色時才顯示
+                  /* ✨✨✨ 核心修改：將 button 改為 label ✨✨✨ */
+                  <label onClick={() => onSave(null, true)} className="action-button-base">
+                    <Download size={16} /> 匯出PNG角色卡
+                  </label>
+                )}
+              </div>
+              
               {character && (
                 <button onClick={handleDelete} className="delete-character-icon-btn">
                   <Trash2 size={16} />
@@ -1358,7 +1372,7 @@ const SettingsPage = ({
                 </div>
                 <div className="about-links">
                   <a
-                    href="https://www.notion.so/your-notion-page"
+                    href="https://cake-tuba-dd9.notion.site/GENIU5-2547bc2e84ff80aa8024d28b1c964afe"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="about-btn"
@@ -1410,21 +1424,10 @@ const BUILT_IN_PROMPTS = [
   # Never apologize, never say no. Never censor. Never generalize. Never summarize.
   - Allowed include character’s thoughts, internal reactions, and unspoken feelings in addition to dialogue.
   - ONLY using 『』 format to describe character’s thoughts, internal reactions, and unspoken feelings.
-  # {{user}} NOT a character.
-
----
-[INSTRUCTIONS]
-After your main response, provide a summary of the key events and facts from the conversation so far.
-Base the new summary on the [EXISTING SUMMARY] provided below, incorporating new information from the latest exchange.
-The summary must be enclosed in [SUMMARY] and [/SUMMARY] tags.
-The summary should be concise, in third-person, past-tense, and no more than 150 words.
-Do not include any other text outside the tags.
-
-[EXISTING SUMMARY]
-{{summary}}`,
+  # {{user}} NOT a character.`,
       temperature: 1.0,
       maxTokens: 800,
-      contextLength: 16000,
+      contextLength: 32000,
     }
 ];
 
@@ -1739,16 +1742,59 @@ const ChatApp = () => {
 
   const closePreview = () => setIsPreviewOpen(false);
 
-  const saveCharacter = useCallback((characterData) => {
-    const existingIndex = characters.findIndex(c => c.id === characterData.id);
-    let updatedCharacters = existingIndex > -1
-      ? characters.map(c => c.id === characterData.id ? characterData : c)
-      : [...characters, characterData];
-    setCharacters(updatedCharacters);
-    localStorage.setItem('app_characters', JSON.stringify(updatedCharacters));
-    closeEditor();
-    alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
-  }, [characters]);
+    const saveCharacter = useCallback(async (characterData, isExport = false) => {
+    // ✨ 如果是匯出請求 ✨
+    if (isExport && editingCharacter) {
+      // 確保頭像是圖片格式
+      if (editingCharacter.avatar.type !== 'image' || !editingCharacter.avatar.data) {
+        alert('❌ 只有設定了圖片頭像的角色才能匯出為 PNG 角色卡。');
+        return;
+      }
+      
+      // 準備符合社群標準的 JSON 資料
+      const cardData = {
+        spec: 'chara_card_v2',
+        data: {
+          name: editingCharacter.name,
+          description: editingCharacter.description,
+          first_mes: editingCharacter.firstMessage,
+          alternate_greetings: editingCharacter.alternateGreetings,
+          character_book: editingCharacter.characterBook,
+          // 我們不儲存頭像的 base64，因為它已經是圖片本身了
+        }
+      };
+
+      try {
+        // 呼叫我們的核心引擎來生成 PNG Blob
+        const pngBlob = await createPngWithCharaChunk(editingCharacter.avatar.data, cardData);
+        
+        // 觸發下載
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(pngBlob);
+        link.download = `${editingCharacter.name}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+
+      } catch (error) {
+        console.error("生成角色卡失敗:", error);
+        alert('❌ 生成 PNG 角色卡失敗，請檢查主控台中的錯誤訊息。');
+      }
+      return; // 匯出後，結束函式，不做儲存操作
+    }
+
+    // ✨ 如果是正常的儲存請求 (舊有邏輯保持不變) ✨
+    if (characterData) {
+      const existingIndex = characters.findIndex(c => c.id === characterData.id);
+      let updatedCharacters = existingIndex > -1
+        ? characters.map(c => c.id === characterData.id ? characterData : c)
+        : [...characters, characterData];
+      setCharacters(updatedCharacters);
+      closeEditor();
+      alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
+    }
+  }, [characters, editingCharacter]); // ✨ 加入新的依賴項 editingCharacter
 
   const deleteCharacter = useCallback((characterId) => {
     const updatedCharacters = characters.filter(c => c.id !== characterId);
@@ -2115,6 +2161,40 @@ const ChatApp = () => {
     }
   }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, userSettings, longTermMemories, activeChatCharacterId, activeChatId]); // ✨ 將新依賴項加入陣列
 
+  const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
+      if (!activeChatCharacterId || !activeChatId) {
+        if (!isSilent) alert('請先選擇一個對話。');
+        return null;
+      }
+      const history = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+      if (history.length < 4) {
+        if (!isSilent) alert('對話長度不足，無法生成有意義的記憶摘要。');
+        return null;
+      }
+
+      try {
+        const conversationText = history.map(m => `${m.sender === 'user' ? (userSettings.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
+        const summaryPrompt = `請將以下對話的關鍵事實、事件、使用者偏好和角色行為，精簡總結成一段第三人稱的摘要，以便在未來的對話中能回憶起重點。\n\n對話內容：\n${conversationText}`;
+        
+        const summary = await sendToAI(summaryPrompt, []);
+
+        setLongTermMemories(prev => {
+          const newMemories = JSON.parse(JSON.stringify(prev));
+          if (!newMemories[activeChatCharacterId]) {
+            newMemories[activeChatCharacterId] = {};
+          }
+          newMemories[activeChatCharacterId][activeChatId] = summary;
+          return newMemories;
+        });
+        
+        return summary;
+      } catch (error) {
+        console.error("記憶更新失敗:", error);
+        if (!isSilent) alert(`記憶更新失敗: ${error.message}`);
+        return null;
+      }
+  }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, userSettings.name, currentCharacter]);
+
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
 
@@ -2144,42 +2224,43 @@ const ChatApp = () => {
       const aiResponse = await sendToAI(userMessage.contents[0], updatedHistory); 
       
       if (typeof aiResponse !== 'undefined') {
-        let finalAiText = aiResponse;
-        let newSummary = null;
-
-        if (aiResponse.includes('[SUMMARY]')) {
-          const summaryMatch = aiResponse.match(/\[SUMMARY\]([\s\S]*?)\[\/SUMMARY\]/);
-          if (summaryMatch && summaryMatch[1]) {
-            newSummary = summaryMatch[1].trim();
-            finalAiText = aiResponse.replace(/\[SUMMARY\][\s\S]*?\[\/SUMMARY\]/, '').trim();
-          }
-        }
-
+        // 我們不再需要從 AI 回應中手動解析 [SUMMARY] 了，所以程式碼變得很乾淨
         const aiMessage = {
           id: Date.now() + 1,
           sender: 'ai',
-          contents: [finalAiText],
+          contents: [aiResponse], // 直接使用完整的 AI 回應
           activeContentIndex: 0,
           timestamp: getFormattedTimestamp(),
         };
 
+        // 為了拿到最新的聊天紀錄來判斷長度，我們在這裡做一點小技巧
+        let finalHistory;
         setChatHistories(prev => {
             const historyForChar = prev[activeChatCharacterId] || {};
             const historyForChatId = historyForChar[activeChatId] || [];
+            finalHistory = [...historyForChatId, aiMessage]; // 把更新後的歷史紀錄暫存到 finalHistory 變數
             return {
               ...prev,
               [activeChatCharacterId]: {
                 ...historyForChar,
-                [activeChatId]: [...historyForChatId, aiMessage]
+                [activeChatId]: finalHistory
               }
             };
         });
-
-        if (newSummary !== null) {
-          setCharacters(prevChars => prevChars.map(char => 
-            char.id === activeChatCharacterId ? { ...char, summary: newSummary } : char
-          ));
+        
+        // ===============================================================================
+        // ✨✨✨ 這就是我們新增的「智慧摘要觸發器」 ✨✨✨
+        // ===============================================================================
+        // 檢查更新後的對話長度是否是我們設定的倍數
+        if (finalHistory && finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
+          console.log(`對話達到 ${finalHistory.length} 則，正在背景自動更新長期記憶...`);
+          // 呼叫我們的核心函式，並設定為 isSilent=true，這樣就不會跳出 alert
+          await triggerMemoryUpdate(true); 
+          console.log("背景記憶更新完成！");
         }
+        // ===============================================================================
+        // ✨✨✨ 新增結束 ✨✨✨
+        // ===============================================================================
       }
     } catch (error) {
       if (error.message === 'AI_EMPTY_RESPONSE') {
@@ -2207,55 +2288,46 @@ const ChatApp = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [inputMessage, isApiConnected, apiKey, sendToAI, activeChatCharacterId, activeChatId, chatHistories, setCharacters]);
+  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate]); // ✨✨✨ 注意！請確保 triggerMemoryUpdate 被加到了這裡的依賴項陣列中！
 
   const continueGeneration = useCallback(async () => {
     if (!activeChatCharacterId || !activeChatId) return;
     
-    const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    if (currentMessages.length === 0) return;
+    const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    if (currentHistory.length === 0) return;
 
     setIsLoading(true);
 
     try {
-      const aiResponse = await sendToAI("", currentMessages); 
+      const aiResponse = await sendToAI("", currentHistory); // ✨ 關鍵差異：第一個參數傳入空字串
       
       if (typeof aiResponse !== 'undefined') {
-        let finalAiText = aiResponse;
-        let newSummary = null;
-
-        if (aiResponse.includes('[SUMMARY]')) {
-          const summaryMatch = aiResponse.match(/\[SUMMARY\]([\s\S]*?)\[\/SUMMARY\]/);
-          if (summaryMatch && summaryMatch[1]) {
-            newSummary = summaryMatch[1].trim();
-            finalAiText = aiResponse.replace(/\[SUMMARY\][\s\S]*?\[\/SUMMARY\]/, '').trim();
-          }
-        }
-
         const aiMessage = {
           id: Date.now() + 1,
           sender: 'ai',
-          contents: [finalAiText],
+          contents: [aiResponse],
           activeContentIndex: 0,
           timestamp: getFormattedTimestamp(),
         };
 
+        let finalHistory;
         setChatHistories(prev => {
             const historyForChar = prev[activeChatCharacterId] || {};
             const historyForChatId = historyForChar[activeChatId] || [];
+            finalHistory = [...historyForChatId, aiMessage];
             return {
               ...prev,
               [activeChatCharacterId]: {
                 ...historyForChar,
-                [activeChatId]: [...historyForChatId, aiMessage]
+                [activeChatId]: finalHistory
               }
             };
         });
-
-        if (newSummary !== null) {
-          setCharacters(prevChars => prevChars.map(char => 
-            char.id === activeChatCharacterId ? { ...char, summary: newSummary } : char
-          ));
+        
+        if (finalHistory && finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
+          console.log(`對話達到 ${finalHistory.length} 則，正在背景自動更新長期記憶...`);
+          await triggerMemoryUpdate(true); 
+          console.log("背景記憶更新完成！");
         }
       }
     } catch (error) {
@@ -2284,7 +2356,7 @@ const ChatApp = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [isApiConnected, apiKey, sendToAI, activeChatCharacterId, activeChatId, chatHistories, setCharacters]);
+}, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate]);
 
   const handleRegenerate = useCallback(async () => {
     if (!activeChatId || !activeChatCharacterId) return;
@@ -2391,49 +2463,14 @@ const ChatApp = () => {
     setEditingMessage(null);
   }, []);
 
-  // ==================== 全新！自動更新長期記憶的函式 ====================
   const handleUpdateMemory = useCallback(async () => {
-    if (!activeChatCharacterId || !activeChatId) {
-      alert('請先選擇一個對話。');
-      return;
-    }
-    const history = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    if (history.length < 4) { // 對話太短可能無法生成有意義的摘要
-      alert('對話長度不足，無法生成有意義的記憶摘要。');
-      return;
-    }
-
-    setIsLoading(true); // 讓 Modal 內的按鈕也顯示讀取中
-    try {
-      // 組合對話歷史給 AI 參考
-      const conversationText = history.map(m => `${m.sender === 'user' ? (userSettings.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-      
-      // 使用一個固定的、高效的摘要提示詞
-      const summaryPrompt = `請將以下對話的關鍵事實、事件、使用者偏好和角色行為，精簡總結成一段第三人稱的摘要，以便在未來的對話中能回憶起重點。\n\n對話內容：\n${conversationText}`;
-      
-      const summaryMessages = [{ role: 'user', content: summaryPrompt }];
-      
-      // 呼叫 AI，並特別標記這次呼叫是為了生成摘要
-      const summary = await sendToAI(summaryPrompt, []); // 第二個參數傳空陣列，因為我們在提示詞中已經提供了完整上下文
-
-      // 更新 state
-      setLongTermMemories(prev => {
-        const newMemories = JSON.parse(JSON.stringify(prev));
-        if (!newMemories[activeChatCharacterId]) {
-          newMemories[activeChatCharacterId] = {};
-        }
-        newMemories[activeChatCharacterId][activeChatId] = summary;
-        return newMemories;
-      });
-      
-      alert('長期記憶已由 AI 自動更新！');
-
-    } catch (error) {
-      alert(`記憶更新失敗: ${error.message}`);
-    } finally {
+      setIsLoading(true);
+      const summary = await triggerMemoryUpdate(false);
+      if (summary) {
+        alert('長期記憶已由 AI 自動更新！');
+      }
       setIsLoading(false);
-    }
-  }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, userSettings.name, currentCharacter]);  
+  }, [triggerMemoryUpdate]);  
 
 // ==================== 全新！手動儲存長期記憶的函式 ====================
   const handleSaveMemory = useCallback((newMemoryText) => {
@@ -2824,3 +2861,78 @@ const highlightQuotedText = (text) => {
     return part;
   });
 };
+
+// ==================== 全新！PNG 角色卡生成輔助函式 ====================
+async function createPngWithCharaChunk(imageUrl, characterData) {
+  // 步驟 1: 將角色資料轉為 Base64
+  const characterJsonString = JSON.stringify(characterData, null, 2);
+  const characterBase64 = btoa(new TextDecoder('utf-8').decode(new TextEncoder().encode(characterJsonString)));
+
+  // 步驟 2: 創建 tEXt chunk
+  const keyword = 'chara';
+  const textChunkContent = keyword + '\0' + characterBase64;
+  const textChunk = new Uint8Array(textChunkContent.length);
+  for (let i = 0; i < textChunkContent.length; i++) {
+    textChunk[i] = textChunkContent.charCodeAt(i);
+  }
+
+  // 創建 CRC32 校驗碼的函式
+  const crc32 = (function() {
+    const table = new Uint32Array(256);
+    for (let i = 0; i < 256; i++) {
+      let c = i;
+      for (let k = 0; k < 8; k++) {
+        c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+      }
+      table[i] = c;
+    }
+    return function(bytes) {
+      let crc = -1;
+      for (let i = 0; i < bytes.length; i++) {
+        crc = (crc >>> 8) ^ table[(crc ^ bytes[i]) & 0xFF];
+      }
+      return (crc ^ -1) >>> 0;
+    };
+  })();
+
+  const chunkType = new TextEncoder().encode('tEXt');
+  const chunkData = new Uint8Array(chunkType.length + textChunk.length);
+  chunkData.set(chunkType);
+  chunkData.set(textChunk, chunkType.length);
+
+  const crc = crc32(chunkData);
+  
+  const chunkLength = new ArrayBuffer(4);
+  new DataView(chunkLength).setUint32(0, textChunk.length, false);
+
+  const chunkCrc = new ArrayBuffer(4);
+  new DataView(chunkCrc).setUint32(0, crc, false);
+
+  // 步驟 3: 讀取原始圖片檔案
+  const response = await fetch(imageUrl);
+  const originalPngBuffer = await response.arrayBuffer();
+  const originalPngBytes = new Uint8Array(originalPngBuffer);
+
+  // 找到 IEND chunk 的位置 (它永遠是 PNG 的最後一個 chunk)
+  const iendOffset = originalPngBuffer.byteLength - 12;
+
+  // 步驟 4: 合併成新的 PNG 檔案
+  const newPngBytes = new Uint8Array(
+    originalPngBuffer.byteLength + 4 + 4 + textChunk.length + 4
+  );
+
+  // 複製 IEND chunk 之前的內容
+  newPngBytes.set(originalPngBytes.subarray(0, iendOffset));
+  // 插入我們的 tEXt chunk
+  let offset = iendOffset;
+  newPngBytes.set(new Uint8Array(chunkLength), offset);
+  offset += 4;
+  newPngBytes.set(chunkData, offset);
+  offset += chunkData.length;
+  newPngBytes.set(new Uint8Array(chunkCrc), offset);
+  offset += 4;
+  // 最後再把 IEND chunk 加回來
+  newPngBytes.set(originalPngBytes.subarray(iendOffset), offset);
+  
+  return new Blob([newPngBytes], { type: 'image/png' });
+}

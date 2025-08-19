@@ -12,7 +12,7 @@
   --shadow-medium: rgba(0, 0, 0, 0.1);
   --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   --quote-text-color: #587c9a;
-  --middle-color: #dddddd;
+  --middle-color: #e7e7e7;
 }
 
 :root[data-theme="dark"] {
@@ -949,7 +949,14 @@ body {
     align-items: stretch; 
     /* 加大按鈕之間的垂直間距 */
       gap: 16px;
-  }  
+  }
+  /* ✨ 讓角色編輯器中的操作按鈕在手機上垂直堆疊 ✨ */
+  .avatar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px; /* 設定垂直間距 */
+    align-items: flex-start; /* 讓按鈕靠左對齊 */
+  }    
 }
 
 /* 配置管理相關樣式 */
@@ -1274,21 +1281,29 @@ body {
   height: 100%;
   object-fit: cover;
 }
-.upload-btn {
+.action-button-base {
   padding: 10px 15px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--background-color);
+  /* ✨✨✨ 核心修改：明確指定文字顏色 ✨✨✨ */
+  /* 這裡我們使用 --text-primary，它會根據淺色/暗色主題自動變化 */
+  color: var(--text-primary); 
+  font-size: 1rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
-.upload-btn:hover {
+
+.action-button-base:hover {
   border-color: var(--primary-color);
+  background-color: var(--surface-color); /* ✨ 新增：更細微的 hover 效果 */
 }
+
 .delete-character-icon-btn {
   margin-left: auto;
   width: 38px;
