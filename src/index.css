@@ -830,7 +830,7 @@ body {
 
 .about-info h4 {
   margin: 0 0 8px 0;
-  color: var(--primary-color);
+  color: var(--text-muted);
 }
 
 .about-info p {

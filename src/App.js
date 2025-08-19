@@ -1367,18 +1367,18 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.0</p>
+                  <p>版本：0.2.1</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
                   <a
-                    href="https://cake-tuba-dd9.notion.site/GENIU5-2547bc2e84ff80aa8024d28b1c964afe"
+                    href="https://marshmallow-qa.com/io1f0b8ji1zrtvv"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="about-btn"
                   >
                     <FileText size={16} />
-                    使用說明
+                    意見回饋（棉花糖）
                   </a>
                 </div>
               </div>
