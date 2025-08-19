@@ -151,7 +151,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
                 {character && ( // 只有在編輯現有角色時才顯示
                   /* ✨✨✨ 核心修改：將 button 改為 label ✨✨✨ */
                   <label onClick={() => onSave(null, true)} className="action-button-base">
-                    <Download size={16} /> 匯出PNG角色卡
+                    <Download size={16} /> 匯出.png卡
                   </label>
                 )}
               </div>
@@ -1367,7 +1367,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.1</p>
+                  <p>版本：0.2.2</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
