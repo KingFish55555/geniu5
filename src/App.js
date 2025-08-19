@@ -565,7 +565,7 @@ const MessageEditorModal = ({ editingMessage, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, editingMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen }) => {
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, editingMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel }) => {
   
   const handleSend = () => {
     if (inputMessage.trim()) {
@@ -595,7 +595,18 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
           {currentPrompt && ( <span className="current-prompt">使用「{currentPrompt.name}」提示詞</span> )}
         </div>
         <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
-          {isApiConnected ? ( <><Check size={12} /><span>{apiProviders[apiProvider]?.name}</span></> ) : ( <><X size={12} /><span>未連接</span></> )}
+          {isApiConnected ? (
+            // ✨ 全新的顯示邏輯 ✨
+            // 如果有已載入的配置名稱，就顯示 "配置名稱 (模型)"
+            // 否則，就退回顯示 "API 供應商名稱"
+            <span>
+              {loadedConfigName 
+                ? `${loadedConfigName} (${apiModel})` 
+                : apiProviders[apiProvider]?.name}
+            </span>
+          ) : (
+            <span>未連接</span>
+          )}
         </div>
       </div>
   
@@ -1039,7 +1050,7 @@ const SettingsPage = ({
                   </div>
                 </div>
                 <div className="setting-group">
-                  <label className="setting-label">API 金鑰</label>
+                  <label className="setting-label">API 金鑰 (輸入完成之後，請按【連線】)</label>
                   <div className="api-key-input">
                     <input
                       type="password"
@@ -1053,7 +1064,7 @@ const SettingsPage = ({
                       disabled={apiTestLoading || !apiKey.trim()}
                       className="test-btn"
                     >
-                      {apiTestLoading ? '測試中...' : <Check size={16} />}
+                      {apiTestLoading ? '測試中...' : '連線'}
                     </button>
                   </div>
                 </div>
@@ -1311,6 +1322,7 @@ const ChatApp = () => {
 
   const [apiConfigs, setApiConfigs] = useState([]);
   const [configName, setConfigName] = useState('');
+  const [loadedConfigName, setLoadedConfigName] = useState('');
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState(null);
@@ -1457,11 +1469,13 @@ const ChatApp = () => {
     setApiProvider(provider);
     setApiModel(apiProviders[provider].models[0]);
     setIsApiConnected(false);
+    setLoadedConfigName('');
   }, [apiProviders]);
 
   const handleApiKeyChange = useCallback((value) => {
     setApiKey(value);
     setIsApiConnected(false);
+    setLoadedConfigName('');
   }, []);
 
   const saveApiConfiguration = useCallback(() => {
@@ -1480,7 +1494,11 @@ const ChatApp = () => {
     const updatedConfigs = [...apiConfigs, newConfig];
     setApiConfigs(updatedConfigs);
     localStorage.setItem('app_api_configs', JSON.stringify(updatedConfigs));
-    setConfigName('');
+    
+    // ✨ 核心修改：儲存新配置時，也把它設為當前載入的配置 ✨
+    setLoadedConfigName(configName);
+    
+    setConfigName(''); // 清空輸入框
     alert(`✅ 已儲存配置：「${configName}」`);
   }, [configName, apiKey, apiProvider, apiModel, apiConfigs]);
 
@@ -1491,6 +1509,9 @@ const ChatApp = () => {
       setApiKey(configToLoad.apiKey);
       setApiModel(configToLoad.model);
       setIsApiConnected(false);
+      // ✨ 核心修改：記住被載入的配置名稱 ✨
+      setLoadedConfigName(configToLoad.name); 
+      setConfigName(configToLoad.name); // 順便也更新輸入框，方便使用者修改
       alert(`✅ 已載入配置：「${configToLoad.name}」`);
     }
   }, [apiConfigs]);
@@ -2358,6 +2379,8 @@ const ChatApp = () => {
               onChangeVersion={handleChangeVersion}
               isInputMenuOpen={isInputMenuOpen}
               setIsInputMenuOpen={setIsInputMenuOpen}
+              loadedConfigName={loadedConfigName}
+              apiModel={apiModel}
             />
           )
         )}
