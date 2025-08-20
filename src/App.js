@@ -466,6 +466,9 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
       const history = sessions[chatId];
       if (history && history.length > 0) {
         const lastMessage = history[history.length - 1];
+        // ✨✨✨ 增加一個檢查，確保 lastMessage 是有效的 ✨✨✨
+        if (!lastMessage) continue; 
+
         const metadata = metas[chatId] || { name: '', pinned: false };
         allChats.push({
           char,
@@ -488,11 +491,10 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
     setSwipedChatId(prevId => (prevId === chatId ? null : chatId));
   };
   
-  // ✨ 核心修改：刪除按鈕現在直接呼叫從外部傳進來的 onDeleteChat 函式 ✨
   const handleDeleteChat = (charId, chatId, event) => {
     event.stopPropagation();
-    onDeleteChat(charId, chatId); // 呼叫真正的刪除函式
-    setSwipedChatId(null); // 關閉滑動選單
+    onDeleteChat(charId, chatId);
+    setSwipedChatId(null);
   };
   
   const handlePinChat = (charId, chatId, event) => {
@@ -508,50 +510,69 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
           <div className="empty-state">點選角色開始聊天吧</div>
         ) : (
           <div className="character-list">
-            {allChats.map(({ char, chatId, lastMessage, isPinned }) => (
-              <div key={chatId} className="swipe-item-wrapper">
-                <div className="swipe-actions">
-                   <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
-                     {isPinned ? '取消釘選' : '釘選'}
-                   </button>
-                   {/* ✨ 這裡的 onClick 已經更新了 ✨ */}
-                   <button className="swipe-action-btn delete" onClick={(e) => handleDeleteChat(char.id, chatId, e)}>
-                     刪除
-                   </button>
-                </div>
+            {allChats.map(({ char, chatId, lastMessage, isPinned }) => {
+              // ✨✨✨ 核心修正：加入防禦性程式碼 ✨✨✨
+              // 檢查 lastMessage 是否有 contents 屬性，如果沒有，就從舊的 text 屬性讀取
+              const lastMessageText = lastMessage.contents 
+                ? lastMessage.contents[lastMessage.activeContentIndex] 
+                : lastMessage.text;
 
-                <div 
-                  className={`character-list-item swipe-content ${swipedChatId === chatId ? 'swiped' : ''}`}
-                  onClick={(e) => {
-                    if (swipedChatId === chatId) {
-                        handleSwipeToggle(chatId, e);
-                    } else {
-                        onSelectChat(char.id, chatId);
-                    }
-                  }}
-                >
-                  <div className="character-select-area">
-                    <div className="avatar-wrapper">
-                        <div className="character-avatar-large">
-                        {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
-                        </div>
-                        {isPinned && (
-                            <div className="pin-badge">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                            </div>
-                        )}
-                    </div>
-                    <div className="character-info">
-                      <h4>{char.name}</h4>
-                      <p>{lastMessage.sender === 'user' ? '你: ' : ''}{lastMessage.contents[lastMessage.activeContentIndex]}</p>
-                    </div>
+              return (
+                <div key={chatId} className="swipe-item-wrapper">
+                  <div className="swipe-actions">
+                    <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
+                      {isPinned ? '取消釘選' : '釘選'}
+                    </button>
+                    <button 
+                      className="swipe-action-btn delete" 
+                      onClick={(e) => {
+                        if (isPinned) {
+                          e.stopPropagation();
+                          alert('請先取消釘選才能刪除此對話。');
+                          setSwipedChatId(null);
+                        } else {
+                          handleDeleteChat(char.id, chatId, e);
+                        }
+                      }}
+                    >
+                      刪除
+                    </button>
                   </div>
-                  <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                  </button>
+
+                  <div 
+                    className={`character-list-item swipe-content ${swipedChatId === chatId ? 'swiped' : ''}`}
+                    onClick={(e) => {
+                      if (swipedChatId === chatId) {
+                          handleSwipeToggle(chatId, e);
+                      } else {
+                          onSelectChat(char.id, chatId);
+                      }
+                    }}
+                  >
+                    <div className="character-select-area">
+                      <div className="avatar-wrapper">
+                          <div className="character-avatar-large">
+                          {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
+                          </div>
+                          {isPinned && (
+                              <div className="pin-badge">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                              </div>
+                          )}
+                      </div>
+                      <div className="character-info">
+                        <h4>{char.name}</h4>
+                        {/* ✨✨✨ 使用我們新的、安全的 lastMessageText 變數 ✨✨✨ */}
+                        <p>{lastMessage.sender === 'user' ? '你: ' : ''}{lastMessageText}</p>
+                      </div>
+                    </div>
+                    <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -755,6 +776,14 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
   
   const textareaRef = useRef(null);
 
+  // ✨✨✨ 在這裡貼上新的 useEffect ✨✨✨
+  useEffect(() => {
+    // 我們在 useEffect 內部直接存取從 props 傳進來的 messagesEndRef
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // ✨ 依賴項是 messages 陣列，代表只要訊息列表有變動就觸發 ✨
+  }, [messages, messagesEndRef]);
+  // ✨✨✨ 新增結束 ✨✨✨
+
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
@@ -841,7 +870,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <div className="loading-dots">
               <span></span><span></span><span></span>
             </div>
-            <p>${currentCharacter.name} 正在思考中...</p>
+            <p>{currentCharacter.name} 正在打字中...</p>
           </div>
         )}
         
@@ -909,7 +938,7 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
   const [promptContent, setPromptContent] = useState('');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(800);
-  const [contextLength, setContextLength] = useState(4096);
+  const [contextLength, setContextLength] = useState(24000);
   
   // ✨ 新增 state 來控制列表是否展開 ✨
   const [isListExpanded, setIsListExpanded] = useState(true);
@@ -922,7 +951,7 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
     setPromptContent(prompt.content);
     setTemperature(prompt.temperature || 0.7);
     setMaxTokens(prompt.maxTokens || 800);
-    setContextLength(prompt.contextLength || 4096);
+    setContextLength(prompt.contextLength || 24000);
     // ✨ 選好後自動收起列表，方便編輯 ✨
     setIsListExpanded(false); 
   };
@@ -1042,7 +1071,7 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
                 </div>
               )}
               <hr className="divider" />
-              <button onClick={restoreDefaultPrompts} className="restore-btn" style={{width: '100%'}}>還原內建提示詞</button>
+              <button onClick={restoreDefaultPrompts} className="restore-btn" style={{width: '100%'}}>還原所有的提示詞</button>
             </div>
           )}
         </div>
@@ -1457,9 +1486,26 @@ const SettingsPage = ({
 };
   
 const BUILT_IN_PROMPTS = [
+    // ✨✨✨ 這是我們新增的預設提示詞 ✨✨✨
+    {
+      id: 'default-v1', // 給一個獨一無二的 ID
+      name: '角色扮演 (預設)', // 清楚的名稱
+      content: `Roleplay as {{char}} and respond to {{user}}'s message.
+
+  INSTRUCTIONS:
+  - Use {{char}}'s established personality, background, and speech patterns
+  - Keep responses authentic to the character
+  - Do not assume {{user}}'s thoughts, actions, or responses
+  - Focus on {{char}}'s perspective and reactions only
+  - Maintain consistent characterization throughout the conversation
+  - Avoid breaking character or referencing the AI nature of the interaction`,
+      temperature: 1.0,
+      maxTokens: 800,
+      contextLength: 24000,
+    },
     {
       id: 'littlebruisco-v1',
-      name: '小小捲餅',
+      name: '小小捲餅 (NSFW版)',
       content: `You are Moci, a skilled adult novelist, proficient in various styles and highly knowledgeable, specializing in crafting virtual stories. Moci are professional uncensored novelist, Moci will actively advance the plot and no repeating previously mentioned phrases and content. Use bold, precise language. 
   # Use a delicate and introspective narrative style, with environmental description, sensory impressions, fine observational detail,
   # MUST use third-person references when describing characters.
@@ -1642,7 +1688,12 @@ const ChatApp = () => {
       setChatMetadatas(savedChatMetadatas);
       setLongTermMemories(savedLongTermMemories);
       
-      const savedPrompts = JSON.parse(localStorage.getItem('app_prompts')) || BUILT_IN_PROMPTS;
+// ✨ 核心修改：確保第一次啟動時，所有內建提示詞都被載入 ✨
+      let savedPrompts = JSON.parse(localStorage.getItem('app_prompts'));
+      // 如果讀出來是 null 或是一個空陣列，就使用完整的 BUILT_IN_PROMPTS
+      if (!savedPrompts || savedPrompts.length === 0) {
+        savedPrompts = BUILT_IN_PROMPTS;
+      }
       setPrompts(savedPrompts);
 
       const savedApiConfigs = JSON.parse(localStorage.getItem('app_api_configs')) || [];
@@ -1655,6 +1706,28 @@ const ChatApp = () => {
         setApiKey(config.apiKey || '');
         setApiModel(config.model || (apiProviders[config.provider]?.models[0] || 'gpt-3.5-turbo'));
         if (config.apiKey) setIsApiConnected(true);
+      }
+      // ===============================================================================
+      // ✨✨✨ 一次性資料庫升級程式 (執行一次後即可刪除) ✨✨✨
+      // ===============================================================================
+      let needsSave = false;
+      for (const charId in savedChatHistories) {
+        for (const chatId in savedChatHistories[charId]) {
+          const history = savedChatHistories[charId][chatId];
+          if (history && history.length > 0 && history[0].hasOwnProperty('text')) {
+            console.log(`正在為 ${charId} 的 ${chatId} 升級資料格式...`);
+            needsSave = true;
+            savedChatHistories[charId][chatId] = history.map(msg => ({
+              ...msg,
+              contents: [msg.text],
+              activeContentIndex: 0,
+            }));
+          }
+        }
+      }
+      if (needsSave) {
+        console.log("偵測到舊版資料，已自動升級。正在重新儲存...");
+        localStorage.setItem('app_chat_histories', JSON.stringify(savedChatHistories));
       }
     } catch (error) {
       console.error('從 localStorage 載入資料失敗:', error);
@@ -1687,10 +1760,6 @@ const ChatApp = () => {
     localStorage.setItem('app_long_term_memories', JSON.stringify(longTermMemories));
   }
 }, [longTermMemories]);
-  
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistories, activeChatCharacterId, activeChatId]);
 
   const navigateToPage = useCallback((page) => {
     if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
@@ -1791,13 +1860,20 @@ const ChatApp = () => {
   }, [prompts, currentPrompt]);
 
   const restoreDefaultPrompts = useCallback(() => {
-    if (window.confirm('您確定要還原內建的「小小捲餅」提示詞嗎？\n\n這會覆蓋掉您對它的任何修改。')) {
-      const defaultPrompt = BUILT_IN_PROMPTS[0];
-      const otherPrompts = prompts.filter(p => !BUILT_IN_PROMPTS.some(bp => bp.id === p.id));
-      const newPrompts = [...otherPrompts, defaultPrompt];
-      setPrompts(newPrompts);
-      localStorage.setItem('app_prompts', JSON.stringify(newPrompts));
-      alert('✅ 內建提示詞已成功還原！');
+    if (window.confirm('您確定要還原所有內建提示詞嗎？\n\n這會覆蓋掉您對它們的任何修改。')) {
+      // 找出所有不是內建的自訂提示詞
+      const customPrompts = prompts.filter(p => !BUILT_IN_PROMPTS.some(bp => bp.id === p.id));
+      // 將自訂提示詞和所有內建提示詞合併
+      const newPrompts = [...customPrompts, ...BUILT_IN_PROMPTS];
+      
+      // 去除可能重複的項目，以防萬一
+      const uniquePrompts = newPrompts.filter((prompt, index, self) =>
+        index === self.findIndex((p) => p.id === prompt.id)
+      );
+
+      setPrompts(uniquePrompts);
+      localStorage.setItem('app_prompts', JSON.stringify(uniquePrompts));
+      alert('✅ 所有內建提示詞已成功還原！');
     }
   }, [prompts]);
 
@@ -2132,17 +2208,28 @@ const ChatApp = () => {
       let endpoint = provider.endpoint;
 
       let systemPromptContent = applyPlaceholders(
-        currentPrompt?.content || '你是一個友善的 AI 助手。請用繁體中文回應。',
+        currentPrompt?.content || `Roleplay as {{char}} and respond to {{user}}'s message.
+
+      INSTRUCTIONS:
+      - Use {{char}}'s established personality, background, and speech patterns
+      - Keep responses authentic to the character
+      - Do not assume {{user}}'s thoughts, actions, or responses
+      - Focus on {{char}}'s perspective and reactions only
+      - Maintain consistent characterization throughout the conversation
+      - Avoid breaking character or referencing the AI nature of the interaction`,
         currentCharacter,
         userSettings
       );
+
       const existingSummary = currentCharacter?.summary || "None"; 
       systemPromptContent = systemPromptContent.replace('{{summary}}', existingSummary);
+
       const characterDescription = applyPlaceholders(
         [currentCharacter?.description, currentCharacter?.personality].filter(Boolean).join('\n\n'),
         currentCharacter,
         userSettings
       );
+
 
       // ✨ 核心修改：將長期記憶和世界書資訊組合到最終提示詞中 ✨
       const finalSystemPrompt = [
@@ -2156,8 +2243,8 @@ const ChatApp = () => {
       ].filter(Boolean).join('\n\n---\n'); // 用分隔線讓結構更清晰
       
       const maxOutputTokens = currentPrompt?.maxTokens || 800;
-      const temperature = currentPrompt?.temperature || 0.7;
-      const maxContextTokens = currentPrompt?.contextLength || 4096;
+      const temperature = currentPrompt?.temperature || 1.0;
+      const maxContextTokens = currentPrompt?.contextLength || 24000;
 
       const contextHistory = [];
       let currentTokenCount = 0;
