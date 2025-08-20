@@ -1367,7 +1367,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.2</p>
+                  <p>版本：0.2.3</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1493,7 +1493,10 @@ const ChatApp = () => {
     openai: {
       name: 'OpenAI',
       endpoint: 'https://api.openai.com/v1/chat/completions',
-      models: ['gpt-3.5-turbo', 'gpt-4', 'gpt-4-turbo', 'gpt-4o', 'gpt-4o-mini'],
+      models: ['gpt-5', 'gpt-5-2025-08-07', 'gpt-5-chat-latest', 'gpt-5-mini', 'gpt-5-mini-2025-08-07', 'gpt-5-nano', 'gpt-5-nano-2025-08-07',
+            'gpt-4o', 'gpt-4o-2024-11-20', 'gpt-4o-2024-08-06', 'gpt-4o-2024-05-13', 'chatgpt-4o-latest',
+            'gpt-4.1', 'gpt-4.1-2025-04-14', 'gpt-4.1-mini', 'gpt-4.1-mini-2025-04-14', 'gpt-4.1-nano', 'gpt-4.1-nano-2025-04-14',
+            'gpt-4-turbo', 'gpt-3.5-turbo'],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
@@ -1502,14 +1505,19 @@ const ChatApp = () => {
     gemini: {
       name: 'Google Gemini',
       endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/',
-      models: ['gemini-2.5-flash', 'gemini-2.5-pro'],
+      models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-pro-preview-06-05', 'gemini-2.5-pro-preview-05-06', 'gemini-2.5-pro-preview-03-25', 'gemini-2.5-pro-exp-03-25', 'gemini-2.5-flash-preview-05-20', 'gemini-2.5-flash-preview-04-17',],
       headers: () => ({ 'Content-Type': 'application/json' }),
       isGemini: true
     },
     claude: {
       name: 'Anthropic Claude',
       endpoint: 'https://api.anthropic.com/v1/messages',
-      models: ['claude-3-5-sonnet-20240620', 'claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
+      models: ['claude-opus-4-1', 'claude-opus-4-1-20250805', 'claude-opus-4-0', 'claude-opus-4-20250514',
+            'claude-sonnet-4-0', 'claude-sonnet-4-20250514',
+            'claude-3-7-sonnet-latest', 'claude-3-7-sonnet-20250219',
+            'claude-3-5-sonnet-latest', 'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-20240620',
+            'claude-3-5-haiku-latest', 'claude-3-5-haiku-20241022',
+            'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
         'x-api-key': apiKey,
@@ -1519,7 +1527,7 @@ const ChatApp = () => {
     grok: {
       name: 'xAI Grok',
       endpoint: 'https://api.x.ai/v1/chat/completions',
-      models: ['grok-1.5-flash', 'grok-1.5'],
+      models: ['grok-4-0709', 'grok-3-beta', 'grok-3-fast-beta', 'grok-3-mini-beta', 'grok-3-mini-fast-beta', 'grok-1'],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
@@ -1528,7 +1536,7 @@ const ChatApp = () => {
     mistral: {
       name: 'Mistral AI',
       endpoint: 'https://api.mistral.ai/v1/chat/completions',
-      models: ['mistral-large-latest', 'mistral-small-latest'],
+      models: ['mistral-medium-2508', 'mistral-large-latest', 'mistral-small-latest', 'mistral-large-2411'],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
