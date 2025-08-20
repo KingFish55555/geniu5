@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Send, Settings, ArrowLeft, Key, Globe, Check, X,
+  Send, Settings, X,
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin
+  MoveRightIcon,
 } from 'lucide-react';
 
 // ==================== 組件定義 ====================
@@ -1378,7 +1378,7 @@ const SettingsPage = ({
                     className="about-btn"
                   >
                     <FileText size={16} />
-                    說明與回饋
+                    公告 x 說明 x 回饋
                   </a>
                 </div>
               </div>
@@ -1557,7 +1557,7 @@ const ChatApp = () => {
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
       const savedActiveChatId = localStorage.getItem('app_active_chat_id');
 
-      const activeChar = savedCharacters.find(c => c.id == savedActiveCharId);
+      const activeChar = savedCharacters.find(c => c.id === savedActiveCharId);
       if (activeChar) {
         setActiveChatCharacterId(activeChar.id);
         setCurrentCharacter(activeChar);
@@ -1591,7 +1591,7 @@ const ChatApp = () => {
       localStorage.clear(); // 清理可能的損壞資料
       window.location.reload();
     }
-  }, []);
+  }, [apiProviders]);
 
   useEffect(() => {
     if (Object.keys(chatMetadatas).length > 0) {
@@ -2428,7 +2428,7 @@ const ChatApp = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeChatId, activeChatCharacterId, chatHistories, sendToAI, setCharacters, apiKey, isApiConnected]);
+  }, [activeChatId, activeChatCharacterId, chatHistories, sendToAI, setCharacters]);
 
   const handleChangeVersion = useCallback((messageId, direction) => {
     setChatHistories(prev => {
