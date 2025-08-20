@@ -59,7 +59,7 @@ body {
 
 /* App Container */
 .app-container {
-  height: 100dvh; /*原本是vh，改成dvh是使用了動態高度，適應手機瀏覽器*/
+  height: 100vh; /*原本是vh，改成dvh是使用了動態高度，適應手機瀏覽器*/
   display: flex;
   flex-direction: column;
   max-width: 800px;
