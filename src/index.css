@@ -2372,3 +2372,40 @@ select:focus {
   resize: vertical;
   min-height: 60px;
 }
+
+/* =================================== */
+/*  Markdown 內容樣式                 */
+/* =================================== */
+
+/* 讓 Markdown 產生的所有元素都繼承聊天泡泡的文字顏色 */
+.message-content .markdown-content,
+.message-content .markdown-content * {
+  color: inherit;
+}
+
+/* 確保段落之間有適當的間距 */
+.message-content p:not(:last-child) {
+  margin-bottom: 0.75em;
+}
+
+/* 粗體 */
+.message-content strong {
+  font-weight: 600; /* 您可以改成 'bold' 或數字 */
+}
+
+/* 斜體 */
+.message-content em {
+  font-style: italic;
+}
+
+/* 項目列表 */
+.message-content ul,
+.message-content ol {
+  padding-left: 20px; /* 讓列表稍微內縮 */
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.message-content li {
+  margin-bottom: 0.25em; /* 列表項之間的間距 */
+}

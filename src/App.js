@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Settings, ArrowLeft, Key, Globe, Check, X,
@@ -6,6 +7,7 @@ import {
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
   MoveRightIcon, Pin
 } from 'lucide-react';
+import rehypeRaw from 'rehype-raw';
 
 // ==================== 組件定義 ====================
 
@@ -455,7 +457,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
   );
 };
 
-const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat }) => {
+const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat, onEditMetadata }) => {
 
   const allChats = [];
   for (const char of characters) {
@@ -466,7 +468,6 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
       const history = sessions[chatId];
       if (history && history.length > 0) {
         const lastMessage = history[history.length - 1];
-        // ✨✨✨ 增加一個檢查，確保 lastMessage 是有效的 ✨✨✨
         if (!lastMessage) continue; 
 
         const metadata = metas[chatId] || { name: '', pinned: false };
@@ -511,24 +512,24 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
         ) : (
           <div className="character-list">
             {allChats.map(({ char, chatId, lastMessage, isPinned }) => {
-              // ✨✨✨ 核心修正：加入防禦性程式碼 ✨✨✨
-              // 檢查 lastMessage 是否有 contents 屬性，如果沒有，就從舊的 text 屬性讀取
               const lastMessageText = lastMessage.contents 
                 ? lastMessage.contents[lastMessage.activeContentIndex] 
                 : lastMessage.text;
+              
+              const metadata = chatMetadatas[char.id]?.[chatId] || {};
 
               return (
                 <div key={chatId} className="swipe-item-wrapper">
                   <div className="swipe-actions">
                     <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
-                      {isPinned ? '取消釘選' : '釘選'}
+                      {isPinned ? '取消最愛' : '最愛'}
                     </button>
                     <button 
                       className="swipe-action-btn delete" 
                       onClick={(e) => {
                         if (isPinned) {
                           e.stopPropagation();
-                          alert('請先取消釘選才能刪除此對話。');
+                          alert('都設成最愛了，怎麼能刪除呢？😢');
                           setSwipedChatId(null);
                         } else {
                           handleDeleteChat(char.id, chatId, e);
@@ -561,11 +562,22 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                           )}
                       </div>
                       <div className="character-info">
-                        <h4>{char.name}</h4>
-                        {/* ✨✨✨ 使用我們新的、安全的 lastMessageText 變數 ✨✨✨ */}
-                        <p>{lastMessage.sender === 'user' ? '你: ' : ''}{lastMessageText}</p>
+                        <h4>{metadata.name || char.name}</h4> {/* ✨ 優先顯示自訂名稱 ✨ */}
+                        <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
                       </div>
                     </div>
+
+                    <button 
+                      className="edit-character-btn" 
+                      style={{ marginRight: '8px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditMetadata(char.id, chatId); // ✨ 現在這裡可以正常呼叫了 ✨
+                      }}
+                    >
+                      <Settings size={16} />
+                    </button>
+
                     <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                     </button>
@@ -580,7 +592,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
   );
 };
 
-// ================== ✨ 複製這整段，取代你舊的 ChatMessage 組件 ✨ ==================
+// ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
 const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion }) => {
   const showActions = showActionsMessageId === msg.id;
 
@@ -595,7 +607,7 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
 
   const onDelete = () => {
     handleDeleteMessage(msg.id);
-    setShowActionsMessageId(null); // 刪除後也關閉選單
+    setShowActionsMessageId(null);
   };
 
   const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyYleIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg==';
@@ -606,6 +618,9 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
 
   const currentText = msg.contents[msg.activeContentIndex];
 
+  // ✨✨✨ 核心修改：我們先用 highlightQuotedText 處理文字，再交給 ReactMarkdown ✨✨✨
+  const processedText = highlightQuotedText(currentText);
+
   return (
     <div className={`message ${messageClass}`}>
       {msg.sender !== 'system' && (
@@ -615,23 +630,24 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
       )}
       <div className="message-content">
         <div className="bubble-wrapper" onClick={handleBubbleClick}>
-          <p>{highlightQuotedText(currentText)}</p>
+          {/* ✨ 核心修改：使用 ReactMarkdown，並傳入 rehypeRaw 外掛 ✨ */}
+          <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+            {processedText}
+          </ReactMarkdown>
+          
           <span className="timestamp">{msg.timestamp}</span>
           
           {msg.sender !== 'system' && (
             <>
-              {/* ✨ 新增的刪除按鈕 ✨ */}
               <button onClick={onDelete} className={`delete-message-btn ${showActions ? 'visible' : ''}`} title="刪除訊息">
                 <Trash2 size={14} />
               </button>
-              
               <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
               </button>
             </>
           )}
 
-          {/* --- 版本切換器 (AI 訊息且有多個版本時顯示) --- */}
           {msg.sender === 'ai' && msg.contents.length > 1 && showActions && (
               <div className="message-actions-toolbar">
                   <button 
@@ -760,12 +776,59 @@ const LongTermMemoryModal = ({ memory, onSave, onUpdate, onClose, isLoading }) =
              className="edit-btn secondary" // 使用次要按鈕樣式
              disabled={isLoading}
             >
-             {isLoading ? '更新中...' : '由 AI 自動更新'}
+             {isLoading ? '更新中...' : '長期記憶更新'}
            </button>
           <div>
             <button onClick={onClose} className="edit-btn cancel">取消</button>
             <button onClick={handleSave} className="edit-btn save">儲存</button>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ==================== 全新！聊天室備註編輯 Modal 元件 ====================
+const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (metadata) {
+      setNotes(metadata.notes || '');
+    }
+  }, [metadata]);
+
+  if (!metadata) {
+    return null;
+  }
+  
+  const handleSave = () => {
+    onSave(notes);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>編輯聊天備註</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="setting-label" style={{ marginBottom: '12px' }}>
+            是不是聊天室太多記不過來了啊～😉
+          </p>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="edit-textarea"
+            style={{ minHeight: '150px' }}
+            placeholder="紀錄的文字會放在角色名下面，放心的寫吧，角色不會看到的"
+            autoFocus
+          />
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} className="edit-btn cancel">取消</button>
+          <button onClick={handleSave} className="edit-btn save">儲存備註</button>
         </div>
       </div>
     </div>
@@ -1303,7 +1366,7 @@ const SettingsPage = ({
                   </div>
                 </div>
                 <div className="setting-group">
-                  <label className="setting-label">API 金鑰 (輸入完成之後，請按【連線】)</label>
+                  <label className="setting-label">API 金鑰 (輸入完成之後，請按【連線】)。一定要保存好金鑰，請勿隨意分享</label>
                   <div className="api-key-input">
                     <input
                       type="password"
@@ -1463,7 +1526,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.5</p>
+                  <p>版本：0.2.6</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1604,6 +1667,9 @@ const ChatApp = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewingCharacter, setPreviewingCharacter] = useState(null);
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+
+  // ✨ 1. 新增兩個 state 來管理聊天備註編輯器 ✨
+  const [editingMetadata, setEditingMetadata] = useState(null); // 記住正在編輯哪一個聊天
 
   const apiProviders = {
     openai: {
@@ -2521,64 +2587,80 @@ const ChatApp = () => {
     if (!activeChatId || !activeChatCharacterId) return;
 
     const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    if (currentHistory.length === 0) return;
+    if (currentHistory.length === 0) {
+      console.log("聊天記錄為空，無法重新生成。");
+      return;
+    }
 
     const lastMessage = currentHistory[currentHistory.length - 1];
-    if (lastMessage.sender !== 'ai') return;
+    // 步驟 1: 檢查最後一則訊息是否確實是 AI 的回覆。如果不是，就什麼都不做。
+    if (lastMessage.sender !== 'ai') {
+      console.log("最後一則訊息不是 AI 的回覆，無法重新生成。");
+      return;
+    }
 
-    let userMessageIndex = -1;
+    // 步驟 2: 往前尋找觸發這次 AI 回應的、最後一則「使用者」訊息。
+    // 我們從倒數第二則訊息開始往前找 (currentHistory.length - 2)。
+    let lastUserMessageIndex = -1;
     for (let i = currentHistory.length - 2; i >= 0; i--) {
       if (currentHistory[i].sender === 'user') {
-        userMessageIndex = i;
-        break;
+        lastUserMessageIndex = i;
+        break; // 找到了就跳出迴圈
       }
     }
-    if (userMessageIndex === -1) return;
 
-    const userMessage = currentHistory[userMessageIndex];
-    const contextMessages = currentHistory.slice(0, userMessageIndex + 1);
+    // 如果從頭到尾都找不到任何使用者訊息 (例如整個對話只有 AI 的開場白)，也無法重新生成。
+    if (lastUserMessageIndex === -1) {
+      console.log("找不到可以據以重新生成的使用者訊息。");
+      return;
+    }
+
+    // 步驟 3: 根據找到的索引，準備正確的「上下文」。
+    // 我們使用 .slice(0, lastUserMessageIndex + 1) 來精確地「切」出從第一則到最後一則使用者訊息為止的所有歷史紀錄。
+    // 這就是我們準備要交給 AI 的、乾淨的「筆記本」。
+    const contextForRegeneration = currentHistory.slice(0, lastUserMessageIndex + 1);
+
+    // 從切出來的上下文中，取得最後一則訊息，也就是觸發這次回應的使用者訊息。
+    const triggerUserMessage = contextForRegeneration[contextForRegeneration.length - 1];
     
     setIsLoading(true);
 
     try {
-      const aiResponse = await sendToAI(userMessage.contents[0], contextMessages);
+      // 步驟 4: 呼叫 AI，並把「乾淨的筆記本」和「使用者的問題」交給它。
+      const aiResponse = await sendToAI(triggerUserMessage.contents[0], contextForRegeneration);
 
       if (typeof aiResponse !== 'undefined') {
-        let finalAiText = aiResponse;
-        let newSummary = null;
-
-        if (aiResponse.includes('[SUMMARY]')) {
-          const summaryMatch = aiResponse.match(/\[SUMMARY\]([\s\S]*?)\[\/SUMMARY\]/);
-          if (summaryMatch && summaryMatch[1]) {
-            newSummary = summaryMatch[1].trim();
-            finalAiText = aiResponse.replace(/\[SUMMARY\][\s\S]*?\[\/SUMMARY\]/, '').trim();
-          }
-        }
         
+        // 步驟 5: 將 AI 的新回覆，作為一個「新版本」加入到最後一則訊息中。
         setChatHistories(prev => {
           const newHistories = JSON.parse(JSON.stringify(prev));
           const historyToUpdate = newHistories[activeChatCharacterId][activeChatId];
+          
+          // 找到要更新的那則 AI 訊息 (它一定是陣列中的最後一個)
           const messageToUpdate = historyToUpdate[historyToUpdate.length - 1];
           
-          messageToUpdate.contents.push(finalAiText);
+          // 在它的 'contents' 陣列中，加入新的回覆內容
+          messageToUpdate.contents.push(aiResponse);
+          // 同時，將 activeContentIndex 設為最新版本的索引，讓畫面上立刻顯示新回覆
           messageToUpdate.activeContentIndex = messageToUpdate.contents.length - 1;
           
           return newHistories;
         });
 
-        if (newSummary !== null) {
-          setCharacters(prevChars => prevChars.map(char => 
-            char.id === activeChatCharacterId ? { ...char, summary: newSummary } : char
-          ));
-        }
       }
     } catch (error) {
+      // 錯誤處理 (保持不變)
       if (error.message === 'AI_EMPTY_RESPONSE') {
         alert('AI 回傳了空的訊息，請再試一次。');
+      } else {
+        // 如果發生其他錯誤，也可以考慮在這裡顯示一則系統訊息
+        console.error("重新生成失敗:", error);
+        alert(`重新生成失敗: ${error.message}`);
       }
     } finally {
       setIsLoading(false);
     }
+    // ✨ 這裡的依賴項陣列，請確保與您檔案中的 sendToAI 函式所使用的 state 一致 ✨
   }, [activeChatId, activeChatCharacterId, chatHistories, sendToAI, setCharacters, apiKey, isApiConnected]);
 
   const handleChangeVersion = useCallback((messageId, direction) => {
@@ -2666,6 +2748,30 @@ const ChatApp = () => {
     setIsMemoryModalOpen(false); // 儲存後自動關閉 Modal
     alert('長期記憶已儲存！');
   }, [activeChatCharacterId, activeChatId]);
+
+// ==================== 全新！開啟聊天備註編輯器的函式 ====================
+  const handleOpenMetadataEditor = useCallback((charId, chatId) => {
+    setEditingMetadata({ charId, chatId });
+  }, []);
+
+  // ✨ 2. 新增儲存聊天備註的函式 ✨
+  const handleSaveChatNotes = useCallback((newNotes) => {
+    if (!editingMetadata) return;
+    const { charId, chatId } = editingMetadata;
+    
+    setChatMetadatas(prev => {
+      const newMetas = JSON.parse(JSON.stringify(prev));
+      // 確保物件路徑存在
+      if (!newMetas[charId]) newMetas[charId] = {};
+      if (!newMetas[charId][chatId]) newMetas[charId][chatId] = { pinned: false };
+      
+      newMetas[charId][chatId].notes = newNotes;
+      return newMetas;
+    });
+
+    setEditingMetadata(null); // 關閉編輯視窗
+    alert('✅ 聊天備註已儲存！');
+  }, [editingMetadata]);
 
   const handleTogglePinChat = useCallback((charId, chatId) => {
     setChatMetadatas(prev => {
@@ -2827,104 +2933,108 @@ const ChatApp = () => {
   }, []);
 
   return (
-    <div className="app-container">
-      <TopNavigation currentPage={currentPage} navigateToPage={navigateToPage} />
-      <div className="app-content">
-        {currentPage === 'characters' && (
-          <CharactersPage
-            characters={characters}
-            onAdd={openEditorForNew}
-            onEdit={openEditorForEdit}
-            onImport={handleImportCharacter}
-            onPreview={openPreview}
-          />
-        )}
-        {currentPage === 'chat' && (
-          activeChatCharacterId === null ? (
-            <ChatLobby
+    // ✨ 核心修正：使用 React Fragment (<>) 包裹所有元素 ✨
+    <>
+      <div className="app-container">
+        <TopNavigation currentPage={currentPage} navigateToPage={navigateToPage} />
+        <div className="app-content">
+          {currentPage === 'characters' && (
+            <CharactersPage
               characters={characters}
-              chatHistories={chatHistories}
-              chatMetadatas={chatMetadatas}
-              onSelectChat={(characterId, chatId) => {
-                const selectedChar = characters.find(c => c.id === characterId);
-                setCurrentCharacter(selectedChar);
-                setActiveChatCharacterId(characterId);
-                setActiveChatId(chatId);
-              }}
-              onTogglePin={handleTogglePinChat}
-              swipedChatId={swipedChatId}
-              setSwipedChatId={setSwipedChatId}
-              onDeleteChat={handleDeleteChat}
+              onAdd={openEditorForNew}
+              onEdit={openEditorForEdit}
+              onImport={handleImportCharacter}
+              onPreview={openPreview}
             />
-          ) : (
-            <ChatPage
-              messages={chatHistories[activeChatCharacterId]?.[activeChatId] || []}
-              inputMessage={inputMessage}
-              setInputMessage={setInputMessage}
-              isLoading={isLoading}
-              sendMessage={sendMessage}
-              continueGeneration={continueGeneration}
-              userSettings={userSettings}
-              currentCharacter={currentCharacter}
-              activeChatId={activeChatId}
-              showActionsMessageId={showActionsMessageId}
-              setShowActionsMessageId={setShowActionsMessageId}
-              editingMessage={editingMessage}
-              setEditingMessage={setEditingMessage}
-              handleUpdateMessage={handleUpdateMessage}
-              handleDeleteMessage={handleDeleteMessage}
+          )}
+          {currentPage === 'chat' && (
+            activeChatCharacterId === null ? (
+              <ChatLobby
+                characters={characters}
+                chatHistories={chatHistories}
+                chatMetadatas={chatMetadatas}
+                onSelectChat={(characterId, chatId) => {
+                  const selectedChar = characters.find(c => c.id === characterId);
+                  setCurrentCharacter(selectedChar);
+                  setActiveChatCharacterId(characterId);
+                  setActiveChatId(chatId);
+                }}
+                onTogglePin={handleTogglePinChat}
+                swipedChatId={swipedChatId}
+                setSwipedChatId={setSwipedChatId}
+                onDeleteChat={handleDeleteChat}
+                onEditMetadata={handleOpenMetadataEditor}
+              />
+            ) : (
+              <ChatPage
+                messages={chatHistories[activeChatCharacterId]?.[activeChatId] || []}
+                inputMessage={inputMessage}
+                setInputMessage={setInputMessage}
+                isLoading={isLoading}
+                sendMessage={sendMessage}
+                continueGeneration={continueGeneration}
+                userSettings={userSettings}
+                currentCharacter={currentCharacter}
+                activeChatId={activeChatId}
+                showActionsMessageId={showActionsMessageId}
+                setShowActionsMessageId={setShowActionsMessageId}
+                editingMessage={editingMessage}
+                setEditingMessage={setEditingMessage}
+                handleUpdateMessage={handleUpdateMessage}
+                handleDeleteMessage={handleDeleteMessage}
+                currentPrompt={currentPrompt}
+                isApiConnected={isApiConnected}
+                apiProviders={apiProviders}
+                apiProvider={apiProvider}
+                messagesEndRef={messagesEndRef}
+                handleRegenerate={handleRegenerate}
+                onChangeVersion={handleChangeVersion}
+                isInputMenuOpen={isInputMenuOpen}
+                setIsInputMenuOpen={setIsInputMenuOpen}
+                setIsMemoryModalOpen={setIsMemoryModalOpen}
+                loadedConfigName={loadedConfigName}
+                apiModel={apiModel}
+              />
+            )
+          )}
+          {currentPage === 'prompts' && (
+            <PromptsPage
+              prompts={prompts}
               currentPrompt={currentPrompt}
-              isApiConnected={isApiConnected}
-              apiProviders={apiProviders}
-              apiProvider={apiProvider}
-              messagesEndRef={messagesEndRef}
-              handleRegenerate={handleRegenerate}
-              onChangeVersion={handleChangeVersion}
-              isInputMenuOpen={isInputMenuOpen}
-              setIsInputMenuOpen={setIsInputMenuOpen}
-              setIsMemoryModalOpen={setIsMemoryModalOpen}
-              loadedConfigName={loadedConfigName}
-              apiModel={apiModel}
+              setCurrentPrompt={setCurrentPrompt}
+              savePrompt={savePrompt}
+              deletePrompt={deletePrompt}
+              restoreDefaultPrompts={restoreDefaultPrompts}
             />
-          )
-        )}
-        {currentPage === 'prompts' && (
-          <PromptsPage
-            prompts={prompts}
-            currentPrompt={currentPrompt}
-            setCurrentPrompt={setCurrentPrompt}
-            savePrompt={savePrompt}
-            deletePrompt={deletePrompt}
-            restoreDefaultPrompts={restoreDefaultPrompts}
-          />
-        )}
-        {currentPage === 'settings' && (
-          <SettingsPage
-            userSettings={userSettings}
-            handleUserSettingsChange={handleUserSettingsChange}
-            saveUserSettings={saveUserSettings}
-            apiProvider={apiProvider}
-            apiKey={apiKey}
-            apiModel={apiModel}
-            setApiModel={setApiModel}
-            apiProviders={apiProviders}
-            handleProviderChange={handleProviderChange}
-            handleApiKeyChange={handleApiKeyChange}
-            testApiConnection={testApiConnection}
-            apiTestLoading={apiTestLoading}
-            theme={theme}
-            setTheme={setTheme}
-            exportChatHistory={exportChatHistory}
-            handleImportChat={handleImportChat}
-            clearAllData={clearAllData}
-            apiConfigs={apiConfigs}
-            configName={configName}
-            setConfigName={setConfigName}
-            saveApiConfiguration={saveApiConfiguration}
-            loadApiConfiguration={loadApiConfiguration}
-            deleteApiConfiguration={deleteApiConfiguration}
-          />
-        )}
+          )}
+          {currentPage === 'settings' && (
+            <SettingsPage
+              userSettings={userSettings}
+              handleUserSettingsChange={handleUserSettingsChange}
+              saveUserSettings={saveUserSettings}
+              apiProvider={apiProvider}
+              apiKey={apiKey}
+              apiModel={apiModel}
+              setApiModel={setApiModel}
+              apiProviders={apiProviders}
+              handleProviderChange={handleProviderChange}
+              handleApiKeyChange={handleApiKeyChange}
+              testApiConnection={testApiConnection}
+              apiTestLoading={apiTestLoading}
+              theme={theme}
+              setTheme={setTheme}
+              exportChatHistory={exportChatHistory}
+              handleImportChat={handleImportChat}
+              clearAllData={clearAllData}
+              apiConfigs={apiConfigs}
+              configName={configName}
+              setConfigName={setConfigName}
+              saveApiConfiguration={saveApiConfiguration}
+              loadApiConfiguration={loadApiConfiguration}
+              deleteApiConfiguration={deleteApiConfiguration}
+            />
+          )}
+        </div>
       </div>
 
       {isEditorOpen && (
@@ -2953,18 +3063,25 @@ const ChatApp = () => {
         />
       )}
 
-      {/* ✨✨✨ 在這裡渲染我們的長期記憶 Modal ✨✨✨ */}
       {isMemoryModalOpen && (
         <LongTermMemoryModal
-          // 傳入當前對話的記憶內容
           memory={longTermMemories[activeChatCharacterId]?.[activeChatId] || ''}
           onSave={handleSaveMemory}
           onUpdate={handleUpdateMemory}
           onClose={() => setIsMemoryModalOpen(false)}
-          isLoading={isLoading} // 共用聊天的 loading 狀態
+          isLoading={isLoading}
         />
       )}
-    </div>
+      
+      {/* ✨ 核心修正：將這個 Modal 也放在 Fragment 內部 ✨ */}
+      {editingMetadata && (
+        <ChatMetadataEditorModal
+          metadata={chatMetadatas[editingMetadata.charId]?.[editingMetadata.chatId]}
+          onSave={handleSaveChatNotes}
+          onClose={() => setEditingMetadata(null)}
+        />
+      )}
+    </>
   );
 };
 
@@ -3029,15 +3146,20 @@ const applyPlaceholders = (text, character, user) => {
   return newText;
 };
 
+// ==================== ✨ 全新升級版！引號高亮函式 ✨ ====================
+// 這個版本會回傳一個包含 HTML <span> 標籤的字串
 const highlightQuotedText = (text) => {
   if (!text) return '';
+
+  // 我們用正規表示式去尋找所有被引號包住的內容
+  // 「...」 “...” "..." 『...』 【...】
   const regex = /(「.*?」|“.*?”|".*?"|『.*?』|【.*?】)/g;
-  const parts = text.split(regex);
-  return parts.map((part, index) => {
-    if (regex.test(part)) {
-      return <span key={index} className="quoted-text">{part}</span>;
-    }
-    return part;
+  
+  // 使用 String.prototype.replace() 的強大功能
+  // 它可以找到所有匹配的引號部分 (match)，然後用我們提供的內容替換它
+  return text.replace(regex, (match) => {
+    // 對於每一個找到的引號部分，我們都用一個帶有 'quoted-text' class 的 <span> 包起來
+    return `<span class="quoted-text">${match}</span>`;
   });
 };
 
