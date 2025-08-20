@@ -37,6 +37,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   const [alternateGreetings, setAlternateGreetings] = useState([]);
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
   const [characterBook, setCharacterBook] = useState(null);
+  const [creatorNotes, setCreatorNotes] = useState('');//新增一行state管理創作者備註
 
   useEffect(() => {
     if (character) {
@@ -46,6 +47,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       setAlternateGreetings(character.alternateGreetings || []);
       setAvatar(character.avatar || { type: 'icon', data: 'UserCircle' });
       setCharacterBook(character.characterBook ? structuredClone(character.characterBook) : null);
+      setCreatorNotes(character.creatorNotes || ''); //讓編輯器讀取角色的備註
     } else {
       setName('');
       setDescription('');
@@ -53,6 +55,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       setAlternateGreetings([]);
       setAvatar({ type: 'icon', data: 'UserCircle' });
       setCharacterBook(null);
+      setCreatorNotes('');//創建新角色時，輕空備註
     }
   }, [character]);
 
@@ -69,6 +72,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       alternateGreetings: alternateGreetings.filter(g => g.trim() !== ''),
       avatar,
       characterBook,
+      creatorNotes, //儲存時把備註也儲存進去
     };
     onSave(characterData);
   };
@@ -121,6 +125,41 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   const handleRemoveGreeting = (index) => {
     const updatedGreetings = alternateGreetings.filter((_, i) => i !== index);
     setAlternateGreetings(updatedGreetings);
+  };
+
+  // 處理世界書條目的變更 (修改關鍵字或內容)
+  const handleWorldBookEntryChange = (index, field, value) => {
+    if (!characterBook) return;
+    const newEntries = [...characterBook.entries];
+    const entryToUpdate = { ...newEntries[index] };
+
+    if (field === 'keys') {
+      // 將逗號分隔的字串轉回陣列
+      entryToUpdate.keys = value.split(',').map(k => k.trim());
+    } else {
+      entryToUpdate[field] = value;
+    }
+    
+    newEntries[index] = entryToUpdate;
+    setCharacterBook({ ...characterBook, entries: newEntries });
+  };
+
+  // 新增一個空白的世界書條目
+  const handleAddWorldBookEntry = () => {
+    const newEntry = { keys: [], content: '', enabled: true };
+    const newEntries = characterBook?.entries ? [...characterBook.entries, newEntry] : [newEntry];
+    setCharacterBook({
+      ...characterBook,
+      name: characterBook?.name || 'Default World',
+      entries: newEntries,
+    });
+  };
+  
+  // 刪除指定的世界書條目
+  const handleDeleteWorldBookEntry = (index) => {
+    if (!characterBook) return;
+    const newEntries = characterBook.entries.filter((_, i) => i !== index);
+    setCharacterBook({ ...characterBook, entries: newEntries });
   };
 
   return (
@@ -179,6 +218,19 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
               placeholder="例如：夏洛克·福爾摩斯"
             />
           </div>
+
+          {/* ✨✨✨ 在這裡插入新的輸入框 ✨✨✨ */}
+          <div className="form-group">
+            <label>創作者備註 (會顯示在角色列表上)</label>
+            <textarea
+              value={creatorNotes}
+              onChange={(e) => setCreatorNotes(e.target.value)}
+              rows="2"
+              placeholder="輸入一段簡短的備註..."
+            />
+          </div>
+          {/* ✨✨✨ 新增結束 ✨✨✨ */}
+
           <div className="form-group">
             <label>角色描述 (個性、背景、說話風格等)</label>
             <textarea
@@ -189,19 +241,22 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
             />
           </div>
           
+          {/* ✨✨✨ 全新可編輯的世界書區塊 ✨✨✨ */}
           {characterBook && characterBook.entries && characterBook.entries.length > 0 && (
             <div className="form-group world-book-section">
-              <label className="world-book-label">
-                <BookOpen size={16} />
-                <span>世界書 ({characterBook.entries.length} 條)</span>
-              </label>
+              <div className="form-label-group">
+                <label className="world-book-label" style={{ marginBottom: '0' }}>
+                  <BookOpen size={16} />
+                  <span>世界書 ({characterBook.entries.length} 條)</span>
+                </label>
+                <button onClick={handleAddWorldBookEntry} className="add-greeting-btn">
+                  <Plus size={14} /> 新增條目
+                </button>
+              </div>
               <div className="world-book-entries">
                 {characterBook.entries.map((entry, index) => (
-                  <div key={index} className="world-book-entry">
-                    <div className="wb-entry-header">
-                      <div className="wb-keys">
-                        <strong>關鍵字:</strong> {entry.keys.join(', ')}
-                      </div>
+                  <div key={index} className="world-book-entry wb-entry-editor">
+                    <div className="wb-entry-actions">
                       <label className="wb-entry-toggle">
                         <input
                           type="checkbox"
@@ -210,9 +265,23 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
                         />
                         <span className="slider"></span>
                       </label>
+                      <button onClick={() => handleDeleteWorldBookEntry(index)} className="wb-delete-btn">
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <div className="wb-content">
-                      {entry.content}
+                    <div className="wb-entry-inputs">
+                      <input
+                        type="text"
+                        placeholder="關鍵字 (用逗號,分隔)"
+                        value={entry.keys.join(', ')}
+                        onChange={(e) => handleWorldBookEntryChange(index, 'keys', e.target.value)}
+                      />
+                      <textarea
+                        placeholder="內容"
+                        rows="3"
+                        value={entry.content}
+                        onChange={(e) => handleWorldBookEntryChange(index, 'content', e.target.value)}
+                      />
                     </div>
                   </div>
                 ))}
@@ -354,7 +423,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
                   </div>
                   <div className="character-info">
                     <h4>{character.name}</h4>
-                    <p>{character.description?.split('\n')[0]}</p>
+                    <p>{character.creatorNotes || character.description?.split('\n')[0]}</p>
                   </div>
                 </div>
                 <button className="edit-character-btn" onClick={() => onEdit(character)}><Settings size={16} /></button>
@@ -1365,7 +1434,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.4</p>
+                  <p>版本：0.2.5</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1770,6 +1839,7 @@ const ChatApp = () => {
           alternate_greetings: editingCharacter.alternateGreetings,
           character_book: editingCharacter.characterBook,
           // 我們不儲存頭像的 base64，因為它已經是圖片本身了
+          creator_notes: editingCharacter.creatorNotes,
         }
       };
 
@@ -1818,16 +1888,6 @@ const ChatApp = () => {
   const handleImportCharacter = useCallback(async (event) => {
     const file = event.target.files[0];
     if (!file) return;
-
-    const base64ToUtf8 = (base64) => {
-      const binaryString = atob(base64);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    };
 
     const getCharacterDataFromPng = (file) => {
       return new Promise((resolve, reject) => {
@@ -1906,6 +1966,9 @@ const ChatApp = () => {
         description: cardData.description || '',
         firstMessage: cardData.first_mes || '',
         alternateGreetings: cardData.alternate_greetings || [],
+        // ✨ 5. 在這裡新增一行，讀取 creator_notes 欄位 ✨
+        // 如果卡片裡沒有這個欄位，就給它一個空字串
+        creatorNotes: cardData.creator_notes || '',
         personality: cardData.personality || '',
         avatar: characterAvatar,
         characterBook: cardData.character_book || null,
@@ -2891,21 +2954,48 @@ const highlightQuotedText = (text) => {
   });
 };
 
-// ==================== 全新！PNG 角色卡生成輔助函式 ====================
-async function createPngWithCharaChunk(imageUrl, characterData) {
-  // 步驟 1: 將角色資料轉為 Base64
-  const characterJsonString = JSON.stringify(characterData, null, 2);
-  const characterBase64 = btoa(new TextDecoder('utf-8').decode(new TextEncoder().encode(characterJsonString)));
+// ==================== 全新！可靠的 UTF-8 <=> Base64 轉換輔助函式 ====================
+// 將包含 UTF-8 字元 (例如中文) 的字串安全地轉換為 Base64
+const utf8ToBase64 = (str) => {
+  try {
+    const bytes = new TextEncoder().encode(str);
+    const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
+    return btoa(binaryString);
+  } catch (error) {
+    console.error("UTF-8 to Base64 conversion failed:", error);
+    // 提供一個備用方案，雖然在現代瀏覽器中很少需要
+    return btoa(unescape(encodeURIComponent(str)));
+  }
+};
 
-  // 步驟 2: 創建 tEXt chunk
+// 將 Base64 字串解碼回原始的 UTF-8 字串
+const base64ToUtf8 = (base64) => {
+  try {
+    const binaryString = atob(base64);
+    const bytes = Uint8Array.from(binaryString, char => char.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    console.error("Base64 to UTF-8 conversion failed:", error);
+    // 提供一個備用方案
+    return decodeURIComponent(escape(atob(base64)));
+  }
+};
+
+// ==================== 全新！PNG 角色卡生成輔助函式 (最終修正版) ====================
+async function createPngWithCharaChunk(imageDataSource, characterData) {
+  // ✨ 核心修正：使用我們新的、可靠的 utf8ToBase64 函式 ✨
+  const characterJsonString = JSON.stringify(characterData, null, 2);
+  const characterBase64 = utf8ToBase64(characterJsonString);
+
+  // 創建 tEXt chunk
   const keyword = 'chara';
   const textChunkContent = keyword + '\0' + characterBase64;
-  const textChunk = new Uint8Array(textChunkContent.length);
+  const textChunkBytes = new Uint8Array(textChunkContent.length);
   for (let i = 0; i < textChunkContent.length; i++) {
-    textChunk[i] = textChunkContent.charCodeAt(i);
+    textChunkBytes[i] = textChunkContent.charCodeAt(i);
   }
 
-  // 創建 CRC32 校驗碼的函式
+  // 創建 CRC32 校驗碼的函式 (這個函式保持不變)
   const crc32 = (function() {
     const table = new Uint32Array(256);
     for (let i = 0; i < 256; i++) {
@@ -2924,44 +3014,84 @@ async function createPngWithCharaChunk(imageUrl, characterData) {
     };
   })();
 
-  const chunkType = new TextEncoder().encode('tEXt');
-  const chunkData = new Uint8Array(chunkType.length + textChunk.length);
-  chunkData.set(chunkType);
-  chunkData.set(textChunk, chunkType.length);
+  const chunkTypeBytes = new TextEncoder().encode('tEXt'); // 'tEXt' 區塊類型
+  // 計算 tEXt 區塊的總數據 (類型 + 內容)
+  const chunkDataForCrc = new Uint8Array(chunkTypeBytes.length + textChunkBytes.length);
+  chunkDataForCrc.set(chunkTypeBytes);
+  chunkDataForCrc.set(textChunkBytes, chunkTypeBytes.length);
 
-  const crc = crc32(chunkData);
-  
-  const chunkLength = new ArrayBuffer(4);
-  new DataView(chunkLength).setUint32(0, textChunk.length, false);
+  const crc = crc32(chunkDataForCrc); // 計算 CRC
+  const chunkLengthBuffer = new ArrayBuffer(4);
+  new DataView(chunkLengthBuffer).setUint32(0, textChunkBytes.length, false); // 區塊長度
 
-  const chunkCrc = new ArrayBuffer(4);
-  new DataView(chunkCrc).setUint32(0, crc, false);
+  const chunkCrcBuffer = new ArrayBuffer(4);
+  new DataView(chunkCrcBuffer).setUint32(0, crc, false); // 區塊 CRC
 
-  // 步驟 3: 讀取原始圖片檔案
-  const response = await fetch(imageUrl);
-  const originalPngBuffer = await response.arrayBuffer();
-  const originalPngBytes = new Uint8Array(originalPngBuffer);
+  // ✨ 重點修改：步驟 3 - 無論來源如何，先將圖片繪製並轉為 PNG 位元組 ✨
+  let originalPngBytes;
+  try {
+    const img = new Image();
+    // 設置 crossOrigin 以處理可能存在的 CORS 問題，雖然對於 data URI 通常不是問題
+    img.crossOrigin = "anonymous"; 
+    img.src = imageDataSource; 
+    
+    // 等待圖片載入完成
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+    });
 
-  // 找到 IEND chunk 的位置 (它永遠是 PNG 的最後一個 chunk)
-  const iendOffset = originalPngBuffer.byteLength - 12;
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, img.width, img.height);
+
+    // 將 Canvas 內容輸出為 PNG 格式的 Data URL
+    const pngDataUrl = canvas.toDataURL('image/png'); 
+    
+    // 從 Data URL 中提取 Base64 字串
+    const base64Png = pngDataUrl.split(',')[1];
+    if (!base64Png) {
+      throw new Error('無法從 Data URL 中提取有效的 Base64 PNG 資料。');
+    }
+    
+    // 將 Base64 字串轉換為 Uint8Array
+    const binaryString = atob(base64Png);
+    originalPngBytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      originalPngBytes[i] = binaryString.charCodeAt(i);
+    }
+
+  } catch (error) {
+    console.error("在生成角色卡前處理圖片時發生錯誤:", error);
+    throw new Error(`無法準備圖片以生成角色卡。請確認圖片有效。錯誤: ${error.message}`);
+  }
+
+  // 找到 IEND (Image END) 區塊的偏移量，這是 PNG 檔案的標準結束標記
+  const iendOffset = originalPngBytes.byteLength - 12; // 12 = IEND 區塊類型(4) + 長度(4) + CRC(4)
 
   // 步驟 4: 合併成新的 PNG 檔案
+  // 新檔案大小 = 原始 PNG 大小 + 新區塊的長度欄位(4) + 類型欄位(4) + 資料長度 + CRC 欄位(4)
   const newPngBytes = new Uint8Array(
-    originalPngBuffer.byteLength + 4 + 4 + textChunk.length + 4
+    originalPngBytes.byteLength + 4 + 4 + textChunkBytes.length + 4
   );
 
-  // 複製 IEND chunk 之前的內容
+  // 複製原始 PNG 檔案中 IEND 區塊之前的內容
   newPngBytes.set(originalPngBytes.subarray(0, iendOffset));
-  // 插入我們的 tEXt chunk
-  let offset = iendOffset;
-  newPngBytes.set(new Uint8Array(chunkLength), offset);
-  offset += 4;
-  newPngBytes.set(chunkData, offset);
-  offset += chunkData.length;
-  newPngBytes.set(new Uint8Array(chunkCrc), offset);
-  offset += 4;
-  // 最後再把 IEND chunk 加回來
-  newPngBytes.set(originalPngBytes.subarray(iendOffset), offset);
   
+  // 插入新的 tEXt 區塊
+  let currentOffset = iendOffset;
+  newPngBytes.set(new Uint8Array(chunkLengthBuffer), currentOffset); // 區塊長度
+  currentOffset += 4;
+  newPngBytes.set(chunkDataForCrc, currentOffset); // 區塊類型和資料
+  currentOffset += chunkDataForCrc.length;
+  newPngBytes.set(new Uint8Array(chunkCrcBuffer), currentOffset); // 區塊 CRC
+  currentOffset += 4;
+  
+  // 複製原始 PNG 檔案中 IEND 區塊的內容
+  newPngBytes.set(originalPngBytes.subarray(iendOffset), currentOffset);
+  
+  // 返回 Blob 物件，以便下載
   return new Blob([newPngBytes], { type: 'image/png' });
 }
