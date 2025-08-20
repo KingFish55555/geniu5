@@ -1842,7 +1842,6 @@ input:checked + .slider:before {
   align-self: flex-start;
 }
 
-/* --- 訊息編輯功能樣式 --- */
 .message-content {
   position: relative; /* 為了讓編輯按鈕可以定位 */
 }
@@ -1853,9 +1852,9 @@ input:checked + .slider:before {
   cursor: pointer; /* 讓滑鼠移上去時顯示手指圖示，提示可以點擊 */
 }
 
+/* 編輯按鈕 */
 .edit-message-btn {
   position: absolute;
-  /* ✨ 核心修改：從底部改到頂部對齊 ✨ */
   bottom: 45px; 
   background: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -1874,20 +1873,54 @@ input:checked + .slider:before {
   font-size: 14px;
 }
 
-.edit-message-btn.visible {
+/* ✨ 新增：刪除按鈕 */
+.delete-message-btn {
+  position: absolute;
+  bottom: 90px; /* 比編輯按鈕高一點 */
+  background: var(--surface-color);
+  border: 1px solid #dc3545; /* 紅色邊框 */
+  color: #dc3545; /* 紅色文字 */
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.8);
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+/* 顯示狀態 */
+.edit-message-btn.visible,
+.delete-message-btn.visible {
   opacity: 1;
   visibility: visible;
   transform: scale(1);
 }
 
-.user-message .edit-message-btn {
+/* 刪除按鈕 hover 效果 */
+.delete-message-btn:hover {
+  background: #dc3545;
+  color: white;
+}
+
+/* 用戶訊息的按鈕位置 */
+.user-message .edit-message-btn,
+.user-message .delete-message-btn {
   left: -40px;
 }
 
-.ai-message .edit-message-btn {
+/* AI 訊息的按鈕位置 */
+.ai-message .edit-message-btn,
+.ai-message .delete-message-btn {
   right: -40px;
 }
 
+/* 編輯相關的樣式保持不變 */
 .edit-container {
   width: 100%;
 }
