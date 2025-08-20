@@ -1,8 +1,3 @@
-html, body { /*主畫面調整高度*/
-  height: 100%;
-  overflow: hidden;
-}
-
 /* CSS Variables for Theme System */
 :root[data-theme="light"] {
   --primary-color: #cfd8e7;      /* 中性灰 */
@@ -59,7 +54,7 @@ body {
 
 /* App Container */
 .app-container {
-  height: 100vh; /*原本是vh，改成dvh是使用了動態高度，適應手機瀏覽器*/
+  height: 100dvh; /*原本是vh，改成dvh是使用了動態高度，適應手機瀏覽器*/
   display: flex;
   flex-direction: column;
   max-width: 800px;
