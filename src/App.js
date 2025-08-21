@@ -610,7 +610,7 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
     setShowActionsMessageId(null);
   };
 
-  const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyYleIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg==';
+  const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyY2xlIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg==';
   const userAvatar = userSettings.avatar?.type === 'image' ? userSettings.avatar.data : DEFAULT_AVATAR;
   const charAvatar = character.avatar?.type === 'image' ? character.avatar.data : DEFAULT_AVATAR;
   const avatarUrl = msg.sender === 'user' ? userAvatar : charAvatar;
@@ -637,17 +637,23 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
           
           <span className="timestamp">{msg.timestamp}</span>
           
+          {/* 🔥 主要變化 1：刪除按鈕移到外面，所有訊息（包括系統訊息）都可以刪除 */}
+          <button 
+            onClick={onDelete} 
+            className={`delete-message-btn ${showActions ? 'visible' : ''}`} 
+            title={msg.sender === 'system' ? '刪除系統訊息' : '刪除訊息'}
+          >
+            <Trash2 size={14} />
+          </button>
+
+          {/* 🔥 主要變化 2：編輯按鈕只對非系統訊息顯示 */}
           {msg.sender !== 'system' && (
-            <>
-              <button onClick={onDelete} className={`delete-message-btn ${showActions ? 'visible' : ''}`} title="刪除訊息">
-                <Trash2 size={14} />
-              </button>
-              <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-              </button>
-            </>
+            <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+            </button>
           )}
 
+          {/* 🔥 主要變化 3：AI 訊息的版本切換功能保持不變 */}
           {msg.sender === 'ai' && msg.contents.length > 1 && showActions && (
               <div className="message-actions-toolbar">
                   <button 
@@ -670,6 +676,7 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
               </div>
           )}
           
+          {/* 🔥 主要變化 4：重新生成按鈕保持不變 */}
           {isLastMessage && msg.sender === 'ai' && showActions && (
              <button className="regenerate-btn" onClick={(e) => { e.stopPropagation(); handleRegenerate(); }} title="重新生成">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M3 21a9 9 0 0 1 .5-4.5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>

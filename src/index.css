@@ -2409,3 +2409,25 @@ select:focus {
 .message-content li {
   margin-bottom: 0.25em; /* 列表項之間的間距 */
 }
+
+/* 🔥 新增：系統訊息的刪除按鈕樣式 */
+.system-message .delete-message-btn {
+  /* 系統訊息只有刪除按鈕，所以位置可以調低一點 */
+  bottom: 10px; /* 原本是 45px，現在調低 */
+  
+  /* 系統訊息的刪除按鈕用不同顏色 */
+  background: #ff4a4a;
+  border-color: #c90000;
+  color: #ffffff;
+}
+
+/* 🔥 新增：系統訊息刪除按鈕的 hover 效果 */
+.system-message .delete-message-btn:hover {
+  background: #c90000;
+  color: white;
+}
+
+/* 🔥 新增：確保系統訊息的刪除按鈕位置正確 */
+.system-message .delete-message-btn.visible {
+  right: -40px; /* 系統訊息通常在中間，所以放右邊 */
+}
