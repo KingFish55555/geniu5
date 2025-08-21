@@ -1565,7 +1565,7 @@ body {
 }
 
 .floating-options-container {
-  position: absolute;
+  position: fixed;
   bottom: 92px;
   right: 20px;
   display: flex;
