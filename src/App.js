@@ -809,6 +809,47 @@ const LongTermMemoryModal = ({ memory, onSave, onUpdate, onClose, isLoading }) =
   );
 };
 
+// ==================== 全新！作者備註編輯 Modal ====================
+const AuthorsNoteModal = ({ initialNote, onSave, onClose }) => {
+  const [authorsNote, setAuthorsNote] = useState('');
+
+  useEffect(() => {
+    setAuthorsNote(initialNote || '');
+  }, [initialNote]);
+  
+  const handleSave = () => {
+    onSave(authorsNote);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Author's Note (Author's Note)</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="setting-label" style={{ marginBottom: '12px' }}>
+            在這裡輸入給 AI 的指令，這個指令只對當前聊天室有效。
+          </p>
+          <textarea
+            value={authorsNote}
+            onChange={(e) => setAuthorsNote(e.target.value)}
+            className="edit-textarea"
+            rows={5}
+            placeholder="例如：Focus on the character's internal thoughts."
+            autoFocus
+          />
+        </div>
+        <div className="modal-footer">
+          <button onClick={onClose} className="edit-btn cancel">取消</button>
+          <button onClick={handleSave} className="edit-btn save">儲存</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== 全新！聊天室備註編輯 Modal 元件 ====================
 const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
   const [notes, setNotes] = useState('');
@@ -856,7 +897,7 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen }) => {
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen }) => {
   
   const textareaRef = useRef(null);
 
@@ -957,6 +998,14 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <button className="input-menu-item">
               <Camera size={20} />
               <span>傳送圖片</span>
+            </button>
+            {/* ✨ 在這裡新增一個按鈕，點擊後打開作者備註編輯器 ✨ */}
+            <button className="input-menu-item" onClick={() => {
+                setIsAuthorsNoteModalOpen(true); // ✨ 直接呼叫我們傳進來的開關
+                setIsInputMenuOpen(false);
+            }}>
+              <Settings size={20} />
+              <span>Author's Note</span>
             </button>
           </div>
         )}
@@ -1670,6 +1719,7 @@ const ChatApp = () => {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewingCharacter, setPreviewingCharacter] = useState(null);
   const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [isAuthorsNoteModalOpen, setIsAuthorsNoteModalOpen] = useState(false);
 
   // ✨ 1. 新增兩個 state 來管理聊天備註編輯器 ✨
   const [editingMetadata, setEditingMetadata] = useState(null); // 記住正在編輯哪一個聊天
@@ -2274,6 +2324,7 @@ const ChatApp = () => {
 
     // ✨✨✨ 核心修改：注入長期記憶 ✨✨✨
     const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+    const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
 
     try {
       const provider = apiProviders[apiProvider];
@@ -2306,13 +2357,22 @@ const ChatApp = () => {
 
       // ✨ 核心修改：將長期記憶和世界書資訊組合到最終提示詞中 ✨
       const finalSystemPrompt = [
-        activeMemory ? `[先前對話的記憶摘要]\n${activeMemory}` : '',
+        // 深度 1: 主要的系统提示词，告訴 AI 它的核心任务。
         systemPromptContent,
-        `角色設定:\n${characterDescription}`,
+        
+        // 深度 2: 作者備註。這是最高優先級的臨時指令，緊跟在核心任务之後。
+        activeAuthorsNote ? `[Author's Note: ${activeAuthorsNote}]` : '', // 現在這裡就可以正常使用了
+
+        // 深度 3: 長期記憶。讓 AI 在思考前，先回顧一下過去的重點。
+        activeMemory ? `[Memory]\n${activeMemory}` : '',
+        
+        // 深度 4: 角色與世界觀的詳細資料。
+        `[Character Persona]\n${characterDescription}`,
         (userSettings.name || userSettings.description) 
-          ? `你的設定 (使用者):\n姓名: ${userSettings.name || '未設定'}\n描述: ${userSettings.description || '未設定'}`
+          ? `[User Persona]\nName: ${userSettings.name || 'Not Set'}\nDescription: ${userSettings.description || 'Not Set'}`
           : '',
-        injectedWorldInfo ? `補充資訊:\n${injectedWorldInfo}` : '',
+        injectedWorldInfo ? `[World Info]\n${injectedWorldInfo}` : '',
+
       ].filter(Boolean).join('\n\n---\n'); // 用分隔線讓結構更清晰
       
       const maxOutputTokens = currentPrompt?.maxTokens || 800;
@@ -2443,6 +2503,25 @@ const ChatApp = () => {
         return null;
       }
   }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, userSettings.name, currentCharacter]);
+
+  // ✨ 2. 新增一個專門用來儲存「作者備註」的函式 ✨
+  const handleSaveAuthorsNote = useCallback((newNote) => {
+    if (!activeChatCharacterId || !activeChatId) return;
+    
+    setChatMetadatas(prev => {
+      const newMetas = JSON.parse(JSON.stringify(prev));
+      // 確保物件路徑存在
+      if (!newMetas[activeChatCharacterId]) newMetas[activeChatCharacterId] = {};
+      if (!newMetas[activeChatCharacterId][activeChatId]) newMetas[activeChatCharacterId][activeChatId] = { pinned: false };
+      
+      // 只更新 authorsNote 欄位
+      newMetas[activeChatCharacterId][activeChatId].authorsNote = newNote;
+      return newMetas;
+    });
+
+    setIsAuthorsNoteModalOpen(false); // 關閉編輯視窗
+    alert('✅ 作者備註已儲存！');
+  }, [activeChatCharacterId, activeChatId]);
 
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
@@ -2957,8 +3036,9 @@ const ChatApp = () => {
   }, []);
 
   return (
-    // ✨ 核心修正：使用 React Fragment (<>) 包裹所有元素 ✨
+    // 我們用一個 Fragment (<>) 作為最外層的容器
     <>
+      {/* ==================== 主要應用程式介面 ==================== */}
       <div className="app-container">
         <TopNavigation currentPage={currentPage} navigateToPage={navigateToPage} />
         <div className="app-content">
@@ -3016,6 +3096,8 @@ const ChatApp = () => {
                 isInputMenuOpen={isInputMenuOpen}
                 setIsInputMenuOpen={setIsInputMenuOpen}
                 setIsMemoryModalOpen={setIsMemoryModalOpen}
+                // ✨ 我們要把 isAuthorsNoteModalOpen 的開關也傳給 ChatPage ✨
+                setIsAuthorsNoteModalOpen={setIsAuthorsNoteModalOpen} 
                 loadedConfigName={loadedConfigName}
                 apiModel={apiModel}
               />
@@ -3061,6 +3143,9 @@ const ChatApp = () => {
         </div>
       </div>
 
+      {/* ==================== 所有的彈出式視窗 (Modals) ==================== */}
+      {/* 把它們放在 app-container 的外面，確保它們能浮在最上層 */}
+
       {isEditorOpen && (
         <CharacterEditor
           character={editingCharacter}
@@ -3097,12 +3182,12 @@ const ChatApp = () => {
         />
       )}
       
-      {/* ✨ 核心修正：將這個 Modal 也放在 Fragment 內部 ✨ */}
-      {editingMetadata && (
-        <ChatMetadataEditorModal
-          metadata={chatMetadatas[editingMetadata.charId]?.[editingMetadata.chatId]}
-          onSave={handleSaveChatNotes}
-          onClose={() => setEditingMetadata(null)}
+      {/* ✨ 您新增的 Modal 會放在這裡，和大家並排 ✨ */}
+      {isAuthorsNoteModalOpen && (
+        <AuthorsNoteModal
+          initialNote={chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote}
+          onSave={handleSaveAuthorsNote}
+          onClose={() => setIsAuthorsNoteModalOpen(false)}
         />
       )}
     </>

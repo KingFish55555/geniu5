@@ -875,7 +875,7 @@ body {
 .messages-area::-webkit-scrollbar-track,
 .settings-content::-webkit-scrollbar-track,
 .content-area::-webkit-scrollbar-track {
-  background: var(--surface-color);
+  background: var(--background-color);
 }
 
 .messages-area::-webkit-scrollbar-thumb,
@@ -1855,7 +1855,7 @@ input:checked + .slider:before {
 /* 編輯按鈕 */
 .edit-message-btn {
   position: absolute;
-  bottom: 45px; 
+  bottom: 40px; 
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
@@ -1876,7 +1876,7 @@ input:checked + .slider:before {
 /* ✨ 新增：刪除按鈕 */
 .delete-message-btn {
   position: absolute;
-  bottom: 90px; /* 比編輯按鈕高一點 */
+  bottom: 76px; /* 比編輯按鈕高一點 */
   background: var(--surface-color);
   border: 1px solid #dc3545; /* 紅色邊框 */
   color: #dc3545; /* 紅色文字 */
