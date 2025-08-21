@@ -1,20 +1,4 @@
 /* CSS Variables for Theme System */
-:root[data-theme="light"] {
-  --primary-color: #cfd8e7;      /* 中性灰 */
-  --accent-color: #4b5563;       /* 深灰 */
-  --background-color: #f9fafb;   /* 極淺灰白 */
-  --surface-color: #f3f4f6;      /* 淺灰 */
-  --border-color: #e5e7eb;       /* 邊框灰 */
-  --text-primary: #111827;       /* 深黑 */
-  --text-secondary: #6b7280;     /* 中灰 */
-  --text-muted: #9ca3af;         /* 淺灰 */
-  --shadow-light: rgba(0, 0, 0, 0.05);
-  --shadow-medium: rgba(0, 0, 0, 0.1);
-  --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-  --quote-text-color: #587c9a;
-  --middle-color: #e7e7e7;
-}
-
 :root[data-theme="dark"] {
   --primary-color: #313131;
   --accent-color: #272727;
@@ -29,6 +13,22 @@
   --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   --quote-text-color: #8ac2e6;
   --middle-color: #505050;
+}
+
+:root[data-theme="light"] {
+  --primary-color: #cfd8e7;      /* 中性灰 */
+  --accent-color: #4b5563;       /* 深灰 */
+  --background-color: #f9fafb;   /* 極淺灰白 */
+  --surface-color: #f3f4f6;      /* 淺灰 */
+  --border-color: #e5e7eb;       /* 邊框灰 */
+  --text-primary: #111827;       /* 深黑 */
+  --text-secondary: #6b7280;     /* 中灰 */
+  --text-muted: #9ca3af;         /* 淺灰 */
+  --shadow-light: rgba(0, 0, 0, 0.05);
+  --shadow-medium: rgba(0, 0, 0, 0.1);
+  --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  --quote-text-color: #587c9a;
+  --middle-color: #e7e7e7;
 }
 
 /* 引號內文字的專屬樣式 */
