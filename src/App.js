@@ -466,17 +466,37 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
     const metas = chatMetadatas[charId] || {};
     for (const chatId in sessions) {
       const history = sessions[chatId];
-      if (history && history.length > 0) {
-        const lastMessage = history[history.length - 1];
-        if (!lastMessage) continue; 
+      
+      // ✨✨✨ 核心修正 1：只要聊天存在 (history 不是 undefined)，就顯示！✨✨✨
+      if (history) {
+        let lastMessage, lastMessageText, sortKey;
 
-        const metadata = metas[chatId] || { name: '', pinned: false };
+        if (history.length > 0) {
+          // 如果聊天有內容，正常處理
+          lastMessage = history[history.length - 1];
+          lastMessageText = lastMessage.contents 
+            ? lastMessage.contents[lastMessage.activeContentIndex] 
+            : lastMessage.text; // 向下相容舊格式
+          sortKey = lastMessage.id || 0;
+        } else {
+          // 如果聊天是空的，提供預設值
+          lastMessage = { sender: 'system' }; // 創建一個假的 lastMessage 以免程式出錯
+          lastMessageText = "點此開始對話...";
+          // 使用聊天室 ID 中的時間戳來排序，確保新建立的空聊天室在最上面
+          sortKey = parseInt(chatId.split('_')[1] || Date.now());
+        }
+
+        const metadata = metas[chatId] || { name: '', notes: '', pinned: false };
+        
         allChats.push({
           char,
           chatId,
-          lastMessage,
+          lastMessage, // 雖然可能用不到，但保持結構完整
           isPinned: metadata.pinned,
-          sortKey: lastMessage.id || 0
+          sortKey,
+          // ✨ 直接把處理好的文字和 metadata 傳下去
+          lastMessageText,
+          metadata
         });
       }
     }
@@ -511,80 +531,74 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
           <div className="empty-state">點選角色開始聊天吧</div>
         ) : (
           <div className="character-list">
-            {allChats.map(({ char, chatId, lastMessage, isPinned }) => {
-              const lastMessageText = lastMessage.contents 
-                ? lastMessage.contents[lastMessage.activeContentIndex] 
-                : lastMessage.text;
-              
-              const metadata = chatMetadatas[char.id]?.[chatId] || {};
-
-              return (
-                <div key={chatId} className="swipe-item-wrapper">
-                  <div className="swipe-actions">
-                    <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
-                      {isPinned ? '取消最愛' : '最愛'}
-                    </button>
-                    <button 
-                      className="swipe-action-btn delete" 
-                      onClick={(e) => {
-                        if (isPinned) {
-                          e.stopPropagation();
-                          alert('都設成最愛了，怎麼能刪除呢？😢');
-                          setSwipedChatId(null);
-                        } else {
-                          handleDeleteChat(char.id, chatId, e);
-                        }
-                      }}
-                    >
-                      刪除
-                    </button>
-                  </div>
-
-                  <div 
-                    className={`character-list-item swipe-content ${swipedChatId === chatId ? 'swiped' : ''}`}
+            {/* ✨✨✨ 核心修正 2：直接使用我們上面準備好的變數 ✨✨✨ */}
+            {allChats.map(({ char, chatId, lastMessage, isPinned, lastMessageText, metadata }) => (
+              <div key={chatId} className="swipe-item-wrapper">
+                <div className="swipe-actions">
+                  <button className="swipe-action-btn pin" onClick={(e) => handlePinChat(char.id, chatId, e)}>
+                    {isPinned ? '取消最愛' : '最愛'}
+                  </button>
+                  <button 
+                    className="swipe-action-btn delete" 
                     onClick={(e) => {
-                      if (swipedChatId === chatId) {
-                          handleSwipeToggle(chatId, e);
+                      if (isPinned) {
+                        e.stopPropagation();
+                        alert('都設成最愛了，怎麼能刪除呢？😢');
+                        setSwipedChatId(null);
                       } else {
-                          onSelectChat(char.id, chatId);
+                        handleDeleteChat(char.id, chatId, e);
                       }
                     }}
                   >
-                    <div className="character-select-area">
-                      <div className="avatar-wrapper">
-                          <div className="character-avatar-large">
-                          {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
-                          </div>
-                          {isPinned && (
-                              <div className="pin-badge">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-                              </div>
-                          )}
-                      </div>
-                      <div className="character-info">
-                        <h4>{metadata.name || char.name}</h4> {/* ✨ 優先顯示自訂名稱 ✨ */}
-                        <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
-                      </div>
-                    </div>
-
-                    <button 
-                      className="edit-character-btn" 
-                      style={{ marginRight: '8px' }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEditMetadata(char.id, chatId); // ✨ 現在這裡可以正常呼叫了 ✨
-                      }}
-                    >
-                      <Settings size={16} />
-                    </button>
-
-                    <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                    </button>
-                  </div>
+                    刪除
+                  </button>
                 </div>
-              );
-            })}
+
+                <div 
+                  className={`character-list-item swipe-content ${swipedChatId === chatId ? 'swiped' : ''}`}
+                  onClick={(e) => {
+                    if (swipedChatId === chatId) {
+                        handleSwipeToggle(chatId, e);
+                    } else {
+                        onSelectChat(char.id, chatId);
+                    }
+                  }}
+                >
+                  <div className="character-select-area">
+                    <div className="avatar-wrapper">
+                        <div className="character-avatar-large">
+                        {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
+                        </div>
+                        {isPinned && (
+                            <div className="pin-badge">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                            </div>
+                        )}
+                    </div>
+                    <div className="character-info">
+                      <h4>{metadata.name || char.name}</h4>
+                      {/* ✨ 使用處理好的 lastMessageText，並優先顯示備註 ✨ */}
+                      <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
+                    </div>
+                  </div>
+
+                  <button 
+                    className="edit-character-btn" 
+                    style={{ marginRight: '8px' }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEditMetadata(char.id, chatId);
+                    }}
+                  >
+                    <Settings size={16} />
+                  </button>
+
+                  <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -900,24 +914,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
       </div>
   
       <div className="messages-area">
-        {messages.length === 0 ? (
-          <div className="welcome-message">
-            <p>開始你的對話吧！</p>
-            {currentCharacter && (
-              <div className="character-greeting">
-                <div className="greeting-avatar">
-                  {currentCharacter.avatar?.type === 'image' ? (
-                    <img src={currentCharacter.avatar.data} alt={currentCharacter.name} className="greeting-avatar-img"/>
-                    ) : (
-                    <UserCircle size={24} />
-                  )}
-                </div>
-                <p><strong>{currentCharacter.name}：</strong>{applyPlaceholders(currentCharacter.firstMessage || '你好！很高興與你對話！', currentCharacter, userSettings)}</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          messages.map((message, index) => (
+        {messages.length > 0 && messages.map((message, index) => (
             <ChatMessage 
               key={message.id}
               msg={message}
@@ -932,8 +929,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               onChangeVersion={onChangeVersion}
               isLastMessage={index === messages.length - 1}
             />
-          ))
-        )}
+        ))}
         
         {isLoading && (
           <div className="loading-message">
@@ -1533,7 +1529,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.71</p>
+                  <p>版本：0.2.8</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2136,36 +2132,40 @@ const ChatApp = () => {
     }
   }, [characters]);
 
-  const handleStartChat = useCallback((character, greeting) => {
+    const handleStartChat = useCallback((character, greeting) => {
     setCurrentCharacter(character);
     
-    // ✨ 核心修改：準備好所有的開場白 ✨
     const allGreetings = [
       character.firstMessage,
       ...(character.alternateGreetings || [])
     ].filter(Boolean).map(g => applyPlaceholders(g, character, userSettings));
 
-    // 找到使用者在預覽時選擇的那句開場白的索引
-    const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, userSettings));
-
     const newChatId = `chat_${Date.now()}`;
+    
+    // ✨✨✨ 核心修正開始 ✨✨✨
+    let initialHistory = []; // 預設是一個空的聊天紀錄
 
-    const firstMessage = {
-      id: Date.now(),
-      sender: 'ai',
-      // ✨ 核心修改：將所有開場白放進 contents 陣列 ✨
-      contents: allGreetings.length > 0 ? allGreetings : ['你好！'], 
-      // ✨ 核心修改：將當前顯示的索引設為使用者選擇的那一句 ✨
-      activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, 
-      timestamp: getFormattedTimestamp(),
-    };
+    // 只有當角色真的有開場白時，我們才創建第一則訊息
+    if (allGreetings.length > 0) {
+      const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, userSettings));
+      const firstMessage = {
+        id: Date.now(),
+        sender: 'ai',
+        contents: allGreetings, 
+        activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, 
+        timestamp: getFormattedTimestamp(),
+      };
+      initialHistory = [firstMessage]; // 將開場白放入歷史紀錄
+    }
+    // ✨✨✨ 核心修正結束 ✨✨✨
 
     setChatHistories(prev => {
       const newHistories = { ...prev };
       if (!newHistories[character.id]) {
         newHistories[character.id] = {};
       }
-      newHistories[character.id][newChatId] = [firstMessage];
+      // 使用我們準備好的 initialHistory，它可能是空的，也可能包含開場白
+      newHistories[character.id][newChatId] = initialHistory;
       return newHistories;
     });
     
@@ -2174,7 +2174,7 @@ const ChatApp = () => {
       if (!newMetas[character.id]) {
         newMetas[character.id] = {};
       }
-      newMetas[character.id][newChatId] = { name: '', pinned: false };
+      newMetas[character.id][newChatId] = { name: '', notes: '', pinned: false };
       return newMetas;
     });
     
@@ -2183,7 +2183,7 @@ const ChatApp = () => {
 
     closePreview();
     navigateToPage('chat');
-  }, [navigateToPage, userSettings, getFormattedTimestamp]); // getFormattedTimestamp 也加入依賴項
+  }, [navigateToPage, userSettings, getFormattedTimestamp]);
 
   const testApiConnection = useCallback(async () => {
     if (!apiKey.trim()) {
