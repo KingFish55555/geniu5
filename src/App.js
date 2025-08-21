@@ -1533,7 +1533,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.2.6</p>
+                  <p>版本：0.2.7</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2335,6 +2335,23 @@ const ChatApp = () => {
           break;
         }
       }
+
+      // === 決定最後要塞給模型的訊息（Mistral 合規版） ===========
+      const continueText = '請直接延續上一句 assistant 回覆。';
+
+      let tailForOpenAI;   // 給 OpenAI / Claude / Mistral
+      let tailForGemini;   // 給 Gemini
+
+      if (typeof userInput === 'string' && userInput.trim() !== '') {
+        // (A) 使用者真的輸入了文字
+        tailForOpenAI = { role: 'user', content: userInput };
+        tailForGemini = { role: 'user', parts: [{ text: userInput }] };
+      } else {
+        // (B) 沒有新輸入，只想續寫：仍然用 role:'user'，內容寫明續寫指示
+        tailForOpenAI = { role: 'user', content: continueText };
+        tailForGemini = { role: 'user', parts: [{ text: continueText }] };
+      }
+      // =============================================================
       
       let requestBody;
       if (provider.isGemini) {
@@ -2344,7 +2361,7 @@ const ChatApp = () => {
             parts: [{ text: msg.content }]
         }));
         requestBody = {
-          contents: [ ...geminiHistory, { role: 'user', parts: [{ text: userInput }] }],
+          contents: [ ...geminiHistory, tailForGemini ],
           systemInstruction: { parts: [{ text: finalSystemPrompt }] },
           generationConfig: { temperature, maxOutputTokens }
         };
@@ -2353,7 +2370,7 @@ const ChatApp = () => {
           model: apiModel,
           max_tokens: maxOutputTokens,
           temperature,
-          messages: [...contextHistory, { role: 'user', content: userInput }],
+          messages: [...contextHistory, tailForOpenAI ],
           system: finalSystemPrompt
         };
       } else {
@@ -2362,7 +2379,7 @@ const ChatApp = () => {
           messages: [
             { role: 'system', content: finalSystemPrompt },
             ...contextHistory,
-            { role: 'user', content: userInput }
+            tailForOpenAI
           ],
           max_tokens: maxOutputTokens,
           temperature
@@ -2531,7 +2548,7 @@ const ChatApp = () => {
     setIsLoading(true);
 
     try {
-      const aiResponse = await sendToAI("", currentHistory); // ✨ 關鍵差異：第一個參數傳入空字串
+      const aiResponse = await sendToAI(null, currentHistory); // ✨ 沒有使用者的輸入
       
       if (typeof aiResponse !== 'undefined') {
         const aiMessage = {

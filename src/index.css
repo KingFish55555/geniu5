@@ -1537,7 +1537,7 @@ body {
 }
 
 .floating-add-button {
-  position: absolute;
+  position: fixed;
   bottom: 20px;
   right: 20px;
   width: 56px;
@@ -2396,6 +2396,7 @@ select:focus {
 /* 斜體 */
 .message-content em {
   font-style: italic;
+  color: var(--text-muted);
 }
 
 /* 項目列表 */
