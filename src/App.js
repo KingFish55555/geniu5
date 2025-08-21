@@ -995,10 +995,6 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               <BookOpen size={20} />
               <span>長期記憶</span>
             </button>
-            <button className="input-menu-item">
-              <Camera size={20} />
-              <span>傳送圖片</span>
-            </button>
             {/* ✨ 在這裡新增一個按鈕，點擊後打開作者備註編輯器 ✨ */}
             <button className="input-menu-item" onClick={() => {
                 setIsAuthorsNoteModalOpen(true); // ✨ 直接呼叫我們傳進來的開關
