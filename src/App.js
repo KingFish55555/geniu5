@@ -1353,7 +1353,7 @@ const SettingsPage = ({
                       />
                       <label htmlFor="avatar-upload" className="avatar-btn">
                         <Camera size={16} />
-                        上傳照片
+                        上傳圖片
                       </label>
                     </div>
                   </div>
@@ -1373,7 +1373,7 @@ const SettingsPage = ({
                   <textarea
                     value={userSettings.description}
                     onChange={(e) => handleUserSettingsChange('description', e.target.value)}
-                    placeholder="描述一下你的個性和特色..."
+                    placeholder="描述一下你的個性和特色"
                     className="setting-textarea"
                     rows="3"
                   />
