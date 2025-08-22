@@ -1470,7 +1470,7 @@ const SettingsPage = ({
     apiConfigs, configName, setConfigName,
     saveApiConfiguration, loadApiConfiguration, deleteApiConfiguration,
 }) => {
-    const [expandedSection, setExpandedSection] = useState('user'); // 預設展開使用者區塊
+    const [expandedSection, setExpandedSection] = useState('null'); // 預設展開使用者區塊
     const [selectedConfigId, setSelectedConfigId] = useState('');
   
     const toggleSection = useCallback((section) => {
