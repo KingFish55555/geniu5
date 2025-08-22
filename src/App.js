@@ -897,7 +897,7 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen }) => {
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport }) => {
   
   const textareaRef = useRef(null);
 
@@ -1003,8 +1003,32 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               <Settings size={20} />
               <span>Author's Note</span>
             </button>
+            <button className="input-menu-item" onClick={() => {
+                exportChat(); // 呼叫我們的大腦函式
+                setIsInputMenuOpen(false); // 點擊後關閉選單
+            }}>
+              <Download size={20} />
+              <span>匯出聊天 (.jsonl)</span>
+            </button>
+            {/* ✨ 1. 在這裡新增匯入按鈕 ✨ */}
+            <button className="input-menu-item" onClick={() => {
+                document.getElementById('st-import-input').click(); // 點擊隱藏的選擇器
+                setIsInputMenuOpen(false);
+            }}>
+              <Upload size={20} />
+              <span>匯入聊天 (.jsonl)</span>
+            </button>
           </div>
         )}
+
+        {/* ✨ 2. 在這裡新增隱藏的檔案選擇器 ✨ */}
+        <input 
+          type="file" 
+          id="st-import-input" 
+          accept=".jsonl" 
+          style={{ display: 'none' }} 
+          onChange={handleImport} 
+        />
 
         <div className="input-area">
           <button 
@@ -1574,7 +1598,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.3.1</p>
+                  <p>版本：0.3.2</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2925,6 +2949,178 @@ const ChatApp = () => {
     }
   }, [activeChatId]);
 
+  // ==================== 全新！SillyTavern 時間格式化輔助函式 ====================
+const formatStDate = (date, type = 'send_date') => {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) { // 如果傳入的日期無效，返回一個預設值
+      return type === 'create_date' ? '2025-01-01@00h00m00s' : 'January 1, 2025 12:00am';
+  }
+
+  if (type === 'create_date') {
+    // 格式化成 "2025-08-16@16h11m21s"
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}@${hours}h${minutes}m${seconds}s`;
+  } else { // 預設是 'send_date'
+    // 格式化成 "August 21, 2025 12:33am"
+    return d.toLocaleString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }).replace(' at', ''); // en-US 地區可能會多一個 " at"，我們把它去掉
+  }
+};
+
+  // ==================== 全新！匯出聊天紀錄到 SillyTavern 格式的函式 ====================
+  const exportChatToSillyTavernFormat = useCallback(() => {
+    // 步驟 1: 檢查是否有聊天紀錄可以匯出
+    const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    if (currentMessages.length === 0) {
+        alert('📝 目前沒有聊天紀錄可以匯出');
+        return;
+    }
+
+    // 步驟 2: 準備「封面資訊頁」(第一行)
+    const header = {
+      user_name: userSettings.name || "User",
+      character_name: currentCharacter.name || "Character",
+      create_date: formatStDate(new Date(), 'create_date'), // 使用標準時間格式
+      // 其他 SillyTavern 可能需要的元數據可以留空或使用預設值
+      chat_metadata: {}, 
+    };
+
+    // 步驟 3: 開始組合 .jsonl 檔案的內容
+    // 我們先放入封面，並加上一個換行符號
+    let fileContent = JSON.stringify(header) + '\n';
+
+    // 步驟 4: 遍歷每一句對話，並把它們「翻譯」成 SillyTavern 格式
+    for (const message of currentMessages) {
+      // 系統訊息 (例如錯誤訊息) 通常不需要匯出，我們跳過它
+      if (message.sender === 'system') continue;
+
+      const isUser = message.sender === 'user';
+
+      // ✨ 處理我們的時間格式，確保它能被 new Date() 正確解析 ✨
+      const messageDate = new Date(message.timestamp.replace(/\//g, '-'));
+      
+      const sillyTavernMessage = {
+        name: isUser ? (userSettings.name || "User") : (currentCharacter.name || "Character"),
+        is_user: isUser,
+        is_system: false,
+        send_date: formatStDate(new Date(message.timestamp.replace(/\//g, '-')), 'send_date'), // 直接使用我們自己的時間戳
+        mes: message.contents[message.activeContentIndex], // 當前選擇的訊息版本
+        swipes: message.contents, // 所有的訊息版本
+        swipe_info: [], // 這個欄位我們先留空
+        extra: {}, // 同上
+      };
+      
+      // 將翻譯好的訊息物件轉換成文字，並在後面加上換行符號
+      fileContent += JSON.stringify(sillyTavernMessage) + '\n';
+    }
+
+    // 步驟 5: 產生可以下載的檔案
+    const charName = currentCharacter.name || 'Chat';
+    const blob = new Blob([fileContent], { type: 'application/jsonl;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    // 檔名會像這樣：ST_Export_測試角色_2025-08-22.jsonl
+    link.download = `ST_Export_${charName}_${new Date().toISOString().split('T')[0]}.jsonl`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    alert(`✅ 聊天紀錄已準備匯出！包含 ${currentMessages.length} 則對話`);
+    
+  }, [chatHistories, activeChatCharacterId, activeChatId, userSettings, currentCharacter]);
+
+  // ==================== 全新！從 SillyTavern 格式匯入聊天紀錄的函式 ====================
+  const handleImportFromSillyTavern = useCallback((event) => {
+    // 步驟 1: 取得使用者選擇的檔案
+    const file = event.target.files[0];
+    if (!file) {
+      return; // 如果使用者取消選擇，就什麼都不做
+    }
+    if (!activeChatCharacterId || !activeChatId) {
+      alert('請先選擇一個聊天室，才能匯入紀錄！');
+      event.target.value = ''; // 清空選擇，以便下次還能選同個檔案
+      return;
+    }
+
+    const reader = new FileReader();
+
+    // 步驟 2: 當檔案讀取完成時，開始進行翻譯
+    reader.onload = (e) => {
+      try {
+        const content = e.target.result;
+        const lines = content.split('\n').filter(line => line.trim() !== ''); // 切割成一行一行，並過濾掉空行
+
+        const importedMessages = [];
+        // 我們從第二行開始讀取，因為第一行是標頭資訊
+        for (let i = 1; i < lines.length; i++) {
+          const lineData = JSON.parse(lines[i]);
+
+          // 安全檢查，確保這是一個對話訊息
+          if (typeof lineData.is_user === 'undefined' || !lineData.mes) {
+            continue;
+          }
+
+          // 逆向翻譯回我們 App 的格式
+          const ourMessage = {
+            id: Date.now() + i, // 產生一個獨一無二的 ID
+            sender: lineData.is_user ? 'user' : 'ai',
+            contents: lineData.swipes || [lineData.mes],
+            activeContentIndex: (lineData.swipes || [lineData.mes]).indexOf(lineData.mes),
+            timestamp: getFormattedTimestamp(), // 我們自己產生一個新的時間戳
+          };
+          
+          // 如果找不到 activeContentIndex，預設為 0
+          if (ourMessage.activeContentIndex === -1) {
+            ourMessage.activeContentIndex = 0;
+          }
+
+          importedMessages.push(ourMessage);
+        }
+
+        // 步驟 3: 詢問使用者要如何處理這些匯入的訊息
+        if (importedMessages.length > 0) {
+          const shouldAppend = window.confirm(`✅ 成功解析到 ${importedMessages.length} 則對話。\n\n請問您要如何處理？\n\n- 按下「確定」= 將這些訊息【附加】到目前對話的後面。\n- 按下「取消」= 用這些訊息【覆蓋】掉目前的對話。`);
+          
+          setChatHistories(prev => {
+            const newHistories = {...prev};
+            const currentChat = newHistories[activeChatCharacterId]?.[activeChatId] || [];
+            newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
+              ? [...currentChat, ...importedMessages] 
+              : importedMessages;
+            return newHistories;
+          });
+
+          alert(`✅ 操作完成！已成功${shouldAppend ? '附加' : '覆蓋'} ${importedMessages.length} 則對話！`);
+        } else {
+          alert('❌ 檔案中沒有找到可以匯入的對話內容。');
+        }
+
+      } catch (error) {
+        alert('❌ 匯入失敗，檔案格式可能不正確。\n錯誤訊息：' + error.message);
+      } finally {
+        // 清空檔案選擇器的值，這樣使用者下次才能再次選擇同一個檔案
+        event.target.value = '';
+      }
+    };
+
+    // 步驟 4: 開始讀取檔案
+    reader.readAsText(file);
+    
+  }, [activeChatCharacterId, activeChatId, getFormattedTimestamp]);
+
   const exportChatHistory = useCallback(() => {
     const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
     if (currentMessages.length === 0) {
@@ -3096,6 +3292,8 @@ const ChatApp = () => {
                 setIsAuthorsNoteModalOpen={setIsAuthorsNoteModalOpen} 
                 loadedConfigName={loadedConfigName}
                 apiModel={apiModel}
+                exportChat={exportChatToSillyTavernFormat}
+                handleImport={handleImportFromSillyTavern}
               />
             )
           )}
@@ -3250,14 +3448,27 @@ const compressImage = (base64Str, options = {}) => {
 const applyPlaceholders = (text, character, user) => {
   if (!text) return '';
 
+  // ✨ 1. 我們把之前修正過的「去掉空白」和「預設名字」的聰明邏輯加回來，確保功能最完整！
+  const trimmedUserName = user?.name?.trim();
+  const userName = trimmedUserName || '你';
+  
+  const charName = character?.name || '角色';
+
   let newText = text;
-  if (character && character.name) {
-    newText = newText.replaceAll('{{char}}', character.name);
-  }
-  if (user && user.name) {
-    newText = newText.replaceAll('{{user}}', user.name);
-    newText = newText.replaceAll('<user>', user.name);
-  }
+
+  // ✨ 2. 核心修改：我們使用「特殊搜尋指令 (Regex)」來進行替換
+  // 寫法是 /要找的文字/gi
+  // "g" 代表 "global" (找全部，跟 replaceAll 的意思一樣)
+  // "i" 代表 "insensitive" (對大小寫不敏感，也就是忽略大小寫！)
+  
+  // --- 替換角色名稱 (忽略大小寫) ---
+  newText = newText.replaceAll(/\{\{char\}\}/gi, charName);
+  newText = newText.replaceAll(/<char>/gi, charName);
+
+  // --- 替換使用者名稱 (忽略大小寫) ---
+  newText = newText.replaceAll(/\{\{user\}\}/gi, userName);
+  newText = newText.replaceAll(/<user>/gi, userName);
+  
   return newText;
 };
 
