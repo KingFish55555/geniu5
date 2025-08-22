@@ -1,5 +1,5 @@
 import ReactMarkdown from 'react-markdown';
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Send, Settings, ArrowLeft, Key, Globe, Check, X,
   User, Palette, FileText, Save, Trash2,
@@ -31,6 +31,75 @@ const TopNavigation = ({ currentPage, navigateToPage }) => (
     </button>
   </div>
 );
+
+// ==================== 全新！帶有頭像的使用者選擇器元件 ====================
+const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // 找出當前選中的個人檔案是哪一個
+  const selectedProfile = profiles.find(p => p.id === selectedProfileId) || profiles[0];
+
+  const handleSelect = (profileId) => {
+    onChange(profileId); // 呼叫父元件傳來的更新函式
+    setIsOpen(false);    // 選擇後關閉選單
+  };
+
+  // 點擊選單外部時，自動關閉選單
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [dropdownRef]);
+
+
+  return (
+    <div className="custom-select-container" ref={dropdownRef}>
+      {/* 這個按鈕顯示當前選中的使用者 */}
+      <button className="custom-select-trigger" onClick={() => setIsOpen(!isOpen)}>
+        <div className="selected-option">
+          <div className="option-avatar">
+            {selectedProfile?.avatar?.type === 'image' ? (
+              <img src={selectedProfile.avatar.data} alt={selectedProfile.name} />
+            ) : (
+              <UserCircle size={24} />
+            )}
+          </div>
+          <span className="option-name">{selectedProfile?.name || '選擇身份'}</span>
+        </div>
+        <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {/* 這是點擊後彈出的選項列表 */}
+      {isOpen && (
+        <div className="custom-select-options">
+          {profiles.map(profile => (
+            <div
+              key={profile.id}
+              className={`custom-select-option ${selectedProfileId === profile.id ? 'selected' : ''}`}
+              onClick={() => handleSelect(profile.id)}
+            >
+              <div className="option-avatar">
+                {profile.avatar?.type === 'image' ? (
+                  <img src={profile.avatar.data} alt={profile.name} />
+                ) : (
+                  <UserCircle size={24} />
+                )}
+              </div>
+              <span className="option-name">{profile.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // 角色編輯器組件 (彈出式視窗)
 const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
@@ -334,24 +403,29 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   );
 };
 
-// --- 全新！精簡版角色預覽組件 ---
-const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => {
+// =================================================================================
+// CharacterPreview - ✨ 全新升級版，支援身份選擇 ✨
+// =================================================================================
+const CharacterPreview = ({ character, onClose, onStartChat, userProfiles, activeUserProfileId }) => {
+  const [selectedProfileId, setSelectedProfileId] = useState(activeUserProfileId);
+
+  // 當預設使用者變更時，同步更新下拉選單的選項
+  useEffect(() => {
+    setSelectedProfileId(activeUserProfileId);
+  }, [activeUserProfileId]);
+
+  if (!character) return null;
   
-  // 我們不再需要 selectedGreeting 這個 state 了
-  // useEffect 也可以移除了
+  // 找出當前選中的使用者是誰
+  const selectedProfile = userProfiles.find(p => p.id === selectedProfileId) || userProfiles[0];
 
-  if (!character) {
-    return null; // 如果沒有 character 資料，就什麼都不顯示
-  }
-
-  // 我們依然需要處理佔位符
-  const processedDescription = applyPlaceholders(character.description || '這個角色沒有描述。', character, userSettings);
+  // 我們用選中的使用者來處理佔位符
+  const processedDescription = applyPlaceholders(character.description || '這個角色沒有描述。', character, selectedProfile);
   
   const handleStartChat = () => {
-    // ✨ 核心修改：我們不再需要關心使用者選了哪一句 ✨
-    // 直接將「主要開場白」(firstMessage) 作為預設的第一句話傳遞過去
     const initialGreeting = character.firstMessage || '你好！';
-    onStartChat(character, initialGreeting);
+    // ✨ 核心修改：將選中的使用者 ID 一起傳出去
+    onStartChat(character, initialGreeting, selectedProfileId);
   };
 
   return (
@@ -362,7 +436,6 @@ const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => 
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body preview-body">
-          {/* 上半部：這部分完全不變 */}
           <div className="preview-top-section">
             <div className="preview-character-image">
               {character.avatar?.type === 'image' ? (
@@ -376,16 +449,21 @@ const CharacterPreview = ({ character, onClose, onStartChat, userSettings }) => 
             </div>
           </div>
 
-          {/* ✨ 核心修改：下半部的開場白選擇區塊，整個被移除了！ ✨ */}
-          {/* 
-            <div className="preview-greetings">
-              ...
-            </div> 
-          */}
-
-        </div>
+          {/* ✨✨✨ 全新！使用者身份選擇下拉選單 ✨✨✨ */}
+          </div>
         <div className="modal-footer">
-          {/* ✨ 核心修改：按鈕不再有 disabled 狀態 ✨ */}
+
+          {/* ✨✨✨ 我們把它剪下並貼到這裡，按鈕的上方 ✨✨✨ */}
+          <div className="form-group" style={{marginTop: '0'}}> {/* 順便把 marginTop 拿掉 */}
+            <label className="setting-label">以...身份開始對話</label>
+            {/* 🔥🔥🔥 把原本的 <select>...</select> 整個刪掉，換成下面這一段 🔥🔥🔥 */}
+            <UserProfileSelector
+              profiles={userProfiles}
+              selectedProfileId={selectedProfileId}
+              onChange={setSelectedProfileId}
+            />
+          </div>
+          
           <button onClick={handleStartChat} className="footer-btn save-btn">
             開始聊天
           </button>
@@ -608,7 +686,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
 };
 
 // ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
-const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion }) => {
+const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion }) => {
   const showActions = showActionsMessageId === msg.id;
 
   const handleBubbleClick = () => {
@@ -626,7 +704,7 @@ const ChatMessage = ({ msg, userSettings, character, setEditingMessage, activeCh
   };
 
   const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyY2xlIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg==';
-  const userAvatar = userSettings.avatar?.type === 'image' ? userSettings.avatar.data : DEFAULT_AVATAR;
+  const userAvatar = currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : DEFAULT_AVATAR;
   const charAvatar = character.avatar?.type === 'image' ? character.avatar.data : DEFAULT_AVATAR;
   const avatarUrl = msg.sender === 'user' ? userAvatar : charAvatar;
   const messageClass = msg.sender === 'user' ? 'user-message' : msg.sender === 'system' ? 'system-message' : 'ai-message';
@@ -898,7 +976,117 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, userSettings, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport }) => {
+// ==================== 全新！使用者個人檔案編輯器 Modal ====================
+const UserProfileEditor = ({ profile, onSave, onClose }) => {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
+
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name || '');
+      setDescription(profile.description || '');
+      setAvatar(profile.avatar || { type: 'icon', data: 'UserCircle' });
+    } else {
+      // 新增模式，清空欄位
+      setName('');
+      setDescription('');
+      setAvatar({ type: 'icon', data: 'UserCircle' });
+    }
+  }, [profile]);
+
+  const handleSave = () => {
+    if (!name.trim()) {
+      alert('請為您的個人檔案命名！');
+      return;
+    }
+    onSave({ name, description, avatar });
+  };
+
+  const handleAvatarUpload = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('⚠️ 圖片檔案不能超過 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const originalBase64 = e.target.result;
+      try {
+        const compressedBase64 = await compressImage(originalBase64);
+        setAvatar({ type: 'image', data: compressedBase64 });
+      } catch (error) {
+        console.error("使用者頭像壓縮失敗:", error);
+        setAvatar({ type: 'image', data: originalBase64 });
+      }
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>{profile ? '編輯個人檔案' : '建立新個人檔案'}</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group avatar-form-group">
+            <label>你的頭像</label>
+            <div className="avatar-editor">
+              <div className="avatar-preview-large">
+                {avatar.type === 'image' ? (
+                  <img src={avatar.data} alt="頭像" />
+                ) : (
+                  <UserCircle size={48} />
+                )}
+              </div>
+              <div className="avatar-actions">
+                <label htmlFor="user-avatar-upload" className="action-button-base">
+                  <Upload size={16} /> 上傳圖片
+                </label>
+                 <input
+                  type="file"
+                  id="user-avatar-upload"
+                  accept="image/*"
+                  onChange={handleAvatarUpload}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="form-group">
+            <label>你的名稱/暱稱</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例如：華生醫生"
+            />
+          </div>
+          <div className="form-group">
+            <label>你的角色描述 (AI 會參考這份資料)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows="4"
+              placeholder="描述一下你的個性和特色..."
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={handleSave} className="footer-btn save-btn">
+            <Save size={16} /> {profile ? '儲存變更' : '儲存檔案'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport }) => {
   
   const textareaRef = useRef(null);
 
@@ -960,7 +1148,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <ChatMessage 
               key={message.id}
               msg={message}
-              userSettings={userSettings}
+              currentUserProfile={currentUserProfile}
               character={currentCharacter}
               activeChatId={activeChatId}
               setEditingMessage={setEditingMessage}
@@ -1263,8 +1451,18 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
   );
 };
   
+// =================================================================================
+// SettingsPage - ✨ 全新升級版 ✨
+// =================================================================================
 const SettingsPage = ({
-    userSettings, handleUserSettingsChange, saveUserSettings,
+    // ✨ 新傳入的 props
+    userProfiles,
+    activeUserProfileId,
+    onSetActiveUserProfile,
+    onNewUserProfile,
+    onEditUserProfile,
+    onDeleteUserProfile,
+    // --- (舊 props 保持不變) ---
     apiProvider, apiKey, apiModel, setApiModel, apiProviders,
     handleProviderChange, handleApiKeyChange, testApiConnection, apiTestLoading,
     theme, setTheme,
@@ -1272,7 +1470,7 @@ const SettingsPage = ({
     apiConfigs, configName, setConfigName,
     saveApiConfiguration, loadApiConfiguration, deleteApiConfiguration,
 }) => {
-    const [expandedSection, setExpandedSection] = useState('null');
+    const [expandedSection, setExpandedSection] = useState('user'); // 預設展開使用者區塊
     const [selectedConfigId, setSelectedConfigId] = useState('');
   
     const toggleSection = useCallback((section) => {
@@ -1281,9 +1479,7 @@ const SettingsPage = ({
   
     const handleLoadConfig = (id) => {
       setSelectedConfigId(id);
-      if (id) {
-        loadApiConfiguration(id);
-      }
+      if (id) { loadApiConfiguration(id); }
     };
   
     const handleDeleteConfig = () => {
@@ -1293,41 +1489,18 @@ const SettingsPage = ({
       }
     };
   
-    const handleAvatarUpload = (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-  
-      if (file.size > 5 * 1024 * 1024) {
-        alert('⚠️ 圖片檔案不能超過 5MB');
-        return;
-      }
-  
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const originalBase64 = e.target.result;
-        try {
-          const compressedBase64 = await compressImage(originalBase64);
-          handleUserSettingsChange('avatar', { type: 'image', data: compressedBase64 });
-        } catch (error) {
-          console.error("使用者頭像壓縮失敗:", error);
-          handleUserSettingsChange('avatar', { type: 'image', data: originalBase64 });
-        }
-      };
-      reader.readAsDataURL(file);
-      event.target.value = '';
-    };
-
     return (
       <div className="page-content">
         <div className="settings-content">
+          {/* ==================== ✨ 全新！使用者個人檔案管理區塊 ✨ ==================== */}
           <div className="setting-card">
             <button
               className={`card-header ${expandedSection === 'user' ? 'expanded' : ''}`}
               onClick={() => toggleSection('user')}
             >
               <div className="card-title">
-                <User size={20} />
-                <span>使用者設定</span>
+                <Users size={20} />
+                <span>使用者個人檔案</span>
               </div>
               <span className="expand-arrow">{expandedSection === 'user' ? '▲' : '▼'}</span>
             </button>
@@ -1335,70 +1508,69 @@ const SettingsPage = ({
             {expandedSection === 'user' && (
               <div className="card-content">
                 <div className="setting-group">
-                  <label className="setting-label">頭像</label>
-                  <div className="avatar-setting">
-                    <div className="avatar-preview">
-                      {userSettings.avatar.type === 'image' ? (
-                        <img src={userSettings.avatar.data} alt="頭像" />
-                      ) : (
-                        <UserCircle size={32} />
-                      )}
-                    </div>
-                    <div className="avatar-options">
-                      <input
-                        type="file"
-                        id="avatar-upload"
-                        accept="image/*"
-                        onChange={handleAvatarUpload}
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="avatar-upload" className="avatar-btn">
-                        <Camera size={16} />
-                        上傳圖片
-                      </label>
-                    </div>
+                  <label className="setting-label">預設使用者身份</label>
+                  <p className="setting-label" style={{fontWeight: 'normal', fontSize: '0.8em', marginTop: '-6px', marginBottom: '10px'}}>
+                    （當你建立新對話時，會預設使用這個身份）
+                  </p>
+                  <select
+                    value={activeUserProfileId || ''}
+                    onChange={(e) => onSetActiveUserProfile(e.target.value)}
+                    className="setting-select"
+                  >
+                    {userProfiles.map(profile => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <hr className="divider" />
+                <div className="setting-group">
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                    <label className="setting-label" style={{marginBottom: 0}}>個人檔案列表</label>
+                    <button onClick={onNewUserProfile} className="add-greeting-btn">
+                      <Plus size={14} /> 新增
+                    </button>
+                  </div>
+                  <div className="character-list">
+                    {userProfiles.map((profile) => (
+                      <div key={profile.id} className="character-list-item">
+                         <div className="character-select-area">
+                          <div className="character-avatar-large">
+                            {profile.avatar?.type === 'image' ? (<img src={profile.avatar.data} alt={profile.name} />) : (<UserCircle size={32} />)}
+                          </div>
+                          <div className="character-info">
+                            <h4>{profile.name}</h4>
+                            <p>{profile.description?.split('\n')[0]}</p>
+                          </div>
+                        </div>
+                        <button className="edit-character-btn" onClick={() => onEditUserProfile(profile.id)}><Settings size={16} /></button>
+                        <button
+                          onClick={() => onDeleteUserProfile(profile.id)}
+                          // 同時使用這兩個 class，並移除 inline style
+                          className="edit-character-btn delete-icon-btn"
+                          disabled={userProfiles.length <= 1}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="setting-group">
-                  <label className="setting-label">名稱/暱稱</label>
-                  <input
-                    type="text"
-                    value={userSettings.name}
-                    onChange={(e) => handleUserSettingsChange('name', e.target.value)}
-                    placeholder="輸入你的名稱或暱稱"
-                    className="setting-input"
-                  />
-                </div>
-                <div className="setting-group">
-                  <label className="setting-label">角色描述</label>
-                  <textarea
-                    value={userSettings.description}
-                    onChange={(e) => handleUserSettingsChange('description', e.target.value)}
-                    placeholder="描述一下你的個性和特色"
-                    className="setting-textarea"
-                    rows="3"
-                  />
-                </div>
-                <button onClick={saveUserSettings} className="save-btn">
-                  <Save size={16} />
-                  儲存使用者設定
-                </button>
               </div>
             )}
           </div>
-          <div className="setting-card">
-            <button
-              className={`card-header ${expandedSection === 'api' ? 'expanded' : ''}`}
-              onClick={() => toggleSection('api')}
-            >
-              <div className="card-title">
-                <Bot size={20} />
-                <span>API 設定</span>
-              </div>
-              <span className="expand-arrow">{expandedSection === 'api' ? '▲' : '▼'}</span>
-            </button>
-            {expandedSection === 'api' && (
-              <div className="card-content">
+
+            <div className="setting-card">
+              <button
+                className={`card-header ${expandedSection === 'api' ? 'expanded' : ''}`}
+                onClick={() => toggleSection('api')}
+              >
+                <div className="card-title"><Bot size={20} /><span>API 設定</span></div>
+                <span className="expand-arrow">{expandedSection === 'api' ? '▲' : '▼'}</span>
+              </button>
+              {expandedSection === 'api' && (
+                <div className="card-content">
                 <div className="setting-group">
                   <label className="setting-label">已儲存的配置</label>
                   <div className="config-management">
@@ -1599,7 +1771,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.0</p>
+                  <p>版本：0.4.1</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1697,53 +1869,53 @@ const ChatApp = () => {
   const [currentPage, setCurrentPage] = useState('characters');
   const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
 
+  const [characters, setCharacters] = useState([]);
   const [chatHistories, setChatHistories] = useState({});
   const [chatMetadatas, setChatMetadatas] = useState({});
   const [longTermMemories, setLongTermMemories] = useState({});
+  const [prompts, setPrompts] = useState([]);
+  const [apiConfigs, setApiConfigs] = useState([]);
+  
+  // ✨✨✨ 全新！使用者個人檔案管理 State ✨✨✨
+  const [userProfiles, setUserProfiles] = useState([]); // 儲存所有使用者個人檔案的列表
+  const [activeUserProfileId, setActiveUserProfileId] = useState(null); // 記住預設的使用者 ID
+
+  // ==================== 當前活動狀態 ====================
   const [activeChatCharacterId, setActiveChatCharacterId] = useState(null);
   const [activeChatId, setActiveChatId] = useState(null);
+  const [currentCharacter, setCurrentCharacter] = useState(null);
+  const [currentPrompt, setCurrentPrompt] = useState(null);
+  
+  // ==================== 使用者輸入與 API 狀態 ====================
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  const [configName, setConfigName] = useState('');
+  const [loadedConfigName, setLoadedConfigName] = useState('');
+
+  // ==================== UI 彈出視窗與選單狀態 ====================
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingCharacter, setEditingCharacter] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [previewingCharacter, setPreviewingCharacter] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
-  const [showActionsMessageId, setShowActionsMessageId] = useState(null);
-  const messagesEndRef = useRef(null);
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+  const [isAuthorsNoteModalOpen, setIsAuthorsNoteModalOpen] = useState(false);
+  const [editingMetadata, setEditingMetadata] = useState(null);
   const [isInputMenuOpen, setIsInputMenuOpen] = useState(false);
   const [swipedChatId, setSwipedChatId] = useState(null);
+  const [showActionsMessageId, setShowActionsMessageId] = useState(null);
+  const messagesEndRef = useRef(null);
 
-  const [characters, setCharacters] = useState([]);
-  const [currentCharacter, setCurrentCharacter] = useState(null);
-  const [prompts, setPrompts] = useState([]);
-  const [currentPrompt, setCurrentPrompt] = useState(null);
-
-  const [userSettings, setUserSettings] = useState(() => {
-    const saved = localStorage.getItem('user_settings');
-    return saved ? JSON.parse(saved) : {
-      avatar: { type: 'icon', data: 'UserCircle' },
-      name: '',
-      description: ''
-    };
-  });
+  // ✨✨✨ 全新！使用者個人檔案編輯器 Modal 的 State ✨✨✨
+  const [isUserProfileEditorOpen, setIsUserProfileEditorOpen] = useState(false);
+  const [editingUserProfileId, setEditingUserProfileId] = useState(null);
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
   const [apiModel, setApiModel] = useState('gpt-3.5-turbo');
   const [isApiConnected, setIsApiConnected] = useState(false);
   const [apiTestLoading, setApiTestLoading] = useState(false);
-
-  const [apiConfigs, setApiConfigs] = useState([]);
-  const [configName, setConfigName] = useState('');
-  const [loadedConfigName, setLoadedConfigName] = useState('');
-
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingCharacter, setEditingCharacter] = useState(null);
-
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [previewingCharacter, setPreviewingCharacter] = useState(null);
-  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
-  const [isAuthorsNoteModalOpen, setIsAuthorsNoteModalOpen] = useState(false);
-
-  // ✨ 1. 新增兩個 state 來管理聊天備註編輯器 ✨
-  const [editingMetadata, setEditingMetadata] = useState(null); // 記住正在編輯哪一個聊天
 
   const apiProviders = {
     openai: {
@@ -1831,7 +2003,8 @@ useEffect(() => {
       // 1. 先嘗試從 IndexedDB 讀取所有資料
       const [
         savedCharacters, savedPrompts, savedApiConfigs,
-        savedHistories, savedMetadatas, savedMemories, savedSettings
+        savedHistories, savedMetadatas, savedMemories,
+        savedUserProfiles, savedActiveProfileId // ✨ 新增讀取使用者個人檔案
       ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
         const chars = await db.characters.toArray();
         const proms = await db.prompts.toArray();
@@ -1839,65 +2012,42 @@ useEffect(() => {
         const hist = await db.kvStore.get('chatHistories');
         const meta = await db.kvStore.get('chatMetadatas');
         const mem = await db.kvStore.get('longTermMemories');
-        const sett = await db.kvStore.get('userSettings');
-        return [chars, proms, configs, hist, meta, mem, sett];
+        const profiles = (await db.kvStore.get('userProfiles'))?.value; 
+        const activeId = (await db.kvStore.get('activeUserProfileId'))?.value; // ✨ 讀取預設 ID
+        return [chars, proms, configs, hist, meta, mem, profiles, activeId];
       });
       
-      // 2. 檢查 IndexedDB 是否為空，如果是，就觸發一次性搬家
-      if (!savedCharacters || savedCharacters.length === 0) {
-        console.log("IndexedDB 是空的，正在檢查 Local Storage 是否有舊資料...");
-        const oldChars = JSON.parse(localStorage.getItem('app_characters'));
-        
-        if (oldChars && oldChars.length > 0) {
-          console.log("發現舊資料！正在進行一次性搬家...");
-          
-          // 讀取所有舊的 localStorage 資料
-          const oldPrompts = JSON.parse(localStorage.getItem('app_prompts')) || BUILT_IN_PROMPTS;
-          const oldApiConfigs = JSON.parse(localStorage.getItem('app_api_configs')) || [];
-          const oldHistories = JSON.parse(localStorage.getItem('app_chat_histories')) || {};
-          const oldMetadatas = JSON.parse(localStorage.getItem('app_chat_metadatas')) || {};
-          const oldMemories = JSON.parse(localStorage.getItem('app_long_term_memories')) || {};
-          const oldSettings = JSON.parse(localStorage.getItem('user_settings'));
-
-          // 使用 bulkPut 一次性寫入 IndexedDB
-          await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
-              await db.characters.bulkPut(oldChars);
-              await db.prompts.bulkPut(oldPrompts);
-              await db.apiConfigs.bulkPut(oldApiConfigs);
-              if(oldHistories) await db.kvStore.put(oldHistories, 'chatHistories');
-              if(oldMetadatas) await db.kvStore.put(oldMetadatas, 'chatMetadatas');
-              if(oldMemories) await db.kvStore.put(oldMemories, 'longTermMemories');
-              if(oldSettings) await db.kvStore.put(oldSettings, 'userSettings');
-          });
-          
-          console.log("搬家完成！正在設定 App 狀態...");
-          setCharacters(oldChars);
-          setPrompts(oldPrompts);
-          setApiConfigs(oldApiConfigs);
-          setChatHistories(oldHistories);
-          setChatMetadatas(oldMetadatas);
-          setLongTermMemories(oldMemories);
-          if(oldSettings) setUserSettings(oldSettings);
-
-        } else {
-          console.log("Local Storage 也沒有資料，全新啟動。");
-          // 如果兩邊都沒資料，確保提示詞有預設值
-          setPrompts(BUILT_IN_PROMPTS);
-          await db.prompts.bulkPut(BUILT_IN_PROMPTS);
-        }
+      // 2. 處理使用者個人檔案 (如果不存在，就建立一個預設的)
+      if (savedUserProfiles && savedUserProfiles.length > 0) {
+        setUserProfiles(savedUserProfiles);
+        // 確保儲存的 active ID 是有效的
+        const activeProfileExists = savedUserProfiles.some(p => p.id === savedActiveProfileId);
+        setActiveUserProfileId(activeProfileExists ? savedActiveProfileId : savedUserProfiles[0].id);
       } else {
-        console.log("成功從 IndexedDB 載入資料。");
-        // 如果 IndexedDB 有資料，就直接使用
-        setCharacters(savedCharacters);
-        setPrompts(savedPrompts.length > 0 ? savedPrompts : BUILT_IN_PROMPTS);
-        setApiConfigs(savedApiConfigs);
-        setChatHistories(savedHistories || {});
-        setChatMetadatas(savedMetadatas || {});
-        setLongTermMemories(savedMemories || {});
-        if(savedSettings) setUserSettings(savedSettings);
+        // 如果資料庫是空的，就建立一個預設的「你」
+        const defaultProfile = { 
+          id: `user_${Date.now()}`, 
+          name: '', 
+          description: '', 
+          avatar: { type: 'icon', data: 'UserCircle' } 
+        };
+        setUserProfiles([defaultProfile]);
+        setActiveUserProfileId(defaultProfile.id);
+        // 同時也寫回資料庫
+        await db.kvStore.put({ key: 'userProfiles', value: [defaultProfile] });
+        await db.kvStore.put({ key: 'activeUserProfileId', value: defaultProfile.id });
       }
 
-      // 這些比較小的 session-like 資料可以暫時保留在 localStorage
+      // 3. 處理角色、提示詞等其他資料 (這部分邏輯不變，但我們移除舊的 localstorage 搬家邏輯，假設資料都在 IndexedDB)
+      setCharacters(savedCharacters || []);
+      setPrompts(savedPrompts && savedPrompts.length > 0 ? savedPrompts : BUILT_IN_PROMPTS);
+      if (savedPrompts.length === 0) await db.prompts.bulkPut(BUILT_IN_PROMPTS);
+      setApiConfigs(savedApiConfigs || []);
+      setChatHistories(savedHistories || {});
+      setChatMetadatas(savedMetadatas || {});
+      setLongTermMemories(savedMemories || {});
+
+      // 4. 載入上次的聊天狀態和 API 設定 (這部分邏輯不變)
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
       const savedActiveChatId = localStorage.getItem('app_active_chat_id');
       const activeChar = (savedCharacters || []).find(c => c.id == savedActiveCharId);
@@ -1924,7 +2074,24 @@ useEffect(() => {
   };
 
   loadData();
-}, []);
+}, []); // 這個 effect 只在啟動時執行一次，所以依賴項是空的
+
+  // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
+  // 這段程式碼會決定現在該用哪個 user profile
+  const currentUserProfile = useMemo(() => {
+    let profileIdToUse = activeUserProfileId; // 預設使用全域設定的 ID
+
+    // 如果我們正在一個聊天室裡，就以聊天室的設定為優先
+    if (activeChatCharacterId && activeChatId) {
+      const chatMeta = chatMetadatas[activeChatCharacterId]?.[activeChatId];
+      if (chatMeta?.userProfileId) {
+        profileIdToUse = chatMeta.userProfileId;
+      }
+    }
+
+    // 從總列表中找出對應的 profile，如果找不到，就用第一個作為備用
+    return userProfiles.find(p => p.id === profileIdToUse) || userProfiles[0];
+  }, [activeChatCharacterId, activeChatId, chatMetadatas, userProfiles, activeUserProfileId]);
 
   const navigateToPage = useCallback((page) => {
     if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
@@ -1935,20 +2102,6 @@ useEffect(() => {
       setCurrentPage(page);
     }
   }, [currentPage, activeChatCharacterId]);
-
-  const handleUserSettingsChange = useCallback((field, value) => {
-    setUserSettings(prev => ({ ...prev, [field]: value }));
-  }, []);
-
-  const saveUserSettings = useCallback(async () => {
-    try {
-      await db.kvStore.put(userSettings, 'userSettings');
-      alert('✅ 使用者設定已儲存！');
-    } catch (error) {
-      console.error("儲存使用者設定失敗:", error);
-      alert('❌ 儲存使用者設定失敗！');
-    }
-  }, [userSettings]);
 
   const handleProviderChange = useCallback((provider) => {
     setApiProvider(provider);
@@ -2157,7 +2310,7 @@ useEffect(() => {
       // 同時也刪除這個角色附帶的所有聊天紀錄
       const currentHistories = chatHistories;
       delete currentHistories[characterId];
-      await db.kvStore.put(currentHistories, 'chatHistories');
+      await db.kvStore.put({ key: 'chatHistories', value: currentHistories });
       setChatHistories(currentHistories);
 
       const updatedCharacters = characters.filter(c => c.id !== characterId);
@@ -2315,22 +2468,96 @@ useEffect(() => {
     }
   }, [characters]); // 依賴項保持不變
 
-    const handleStartChat = useCallback((character, greeting) => {
+  // =================================================================================
+  // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
+  // =================================================================================
+
+  // 開啟編輯器 (新增模式)
+  const openNewUserProfileEditor = () => {
+    setEditingUserProfileId(null); // 清空 ID 代表是新增
+    setIsUserProfileEditorOpen(true);
+  };
+
+  // 開啟編輯器 (編輯模式)
+  const openEditUserProfileEditor = (profileId) => {
+    setEditingUserProfileId(profileId); // 傳入要編輯的 ID
+    setIsUserProfileEditorOpen(true);
+  };
+
+  // 關閉編輯器
+  const closeUserProfileEditor = () => {
+    setIsUserProfileEditorOpen(false);
+  };
+
+  // 儲存個人檔案 (核心邏輯)
+  const handleSaveUserProfile = useCallback(async (profileData) => {
+    let updatedProfiles;
+    // 檢查是更新還是新增
+    if (editingUserProfileId) {
+      // 更新：用 map 找到對應 ID 的那一筆，然後替換掉
+      updatedProfiles = userProfiles.map(p => 
+        p.id === editingUserProfileId ? { ...p, ...profileData } : p
+      );
+    } else {
+      // 新增：在列表後面加上新的一筆
+      const newProfile = { id: `user_${Date.now()}`, ...profileData };
+      updatedProfiles = [...userProfiles, newProfile];
+    }
+    
+    // 更新畫面並存入資料庫
+    setUserProfiles(updatedProfiles);
+    await db.kvStore.put({ key: 'userProfiles', value: updatedProfiles });
+    
+    closeUserProfileEditor(); // 關閉編輯視窗
+    alert('✅ 個人檔案已儲存！');
+  }, [userProfiles, editingUserProfileId]);
+
+  // 刪除個人檔案
+  const handleDeleteUserProfile = useCallback(async (profileId) => {
+    if (userProfiles.length <= 1) {
+      alert('❌ 至少需要保留一個個人檔案。');
+      return;
+    }
+
+    if (window.confirm('確定要刪除這個個人檔案嗎？')) {
+      const updatedProfiles = userProfiles.filter(p => p.id !== profileId);
+      setUserProfiles(updatedProfiles);
+      await db.kvStore.put({ key: 'userProfiles', value: updatedProfiles });
+      
+      // 如果刪掉的是當前預設的 profile，就自動把第一個設為新的預設
+      if (activeUserProfileId === profileId) {
+        const newActiveId = updatedProfiles[0]?.id || null;
+        setActiveUserProfileId(newActiveId);
+        await db.kvStore.put({ key: 'activeUserProfileId', value: newActiveId });
+      }
+      alert('🗑️ 個人檔案已刪除。');
+    }
+  }, [userProfiles, activeUserProfileId]);
+
+  // 設定預設個人檔案
+  const handleSetActiveUserProfile = useCallback(async (profileId) => {
+    setActiveUserProfileId(profileId);
+    await db.kvStore.put({ key: 'activeUserProfileId', value: profileId });
+    alert('✅ 預設使用者已更新！');
+  }, []);
+
+  // ✨✨✨ 升級版！建立聊天室時綁定使用者 ID ✨✨✨
+  const handleStartChat = useCallback((character, greeting, selectedProfileId) => {
     setCurrentCharacter(character);
     
+    // 找出要用哪個使用者來替換佔位符
+    const startingProfile = userProfiles.find(p => p.id === selectedProfileId) || userProfiles[0];
+
     const allGreetings = [
       character.firstMessage,
       ...(character.alternateGreetings || [])
-    ].filter(Boolean).map(g => applyPlaceholders(g, character, userSettings));
+    ].filter(Boolean).map(g => applyPlaceholders(g, character, startingProfile));
 
     const newChatId = `chat_${Date.now()}`;
     
-    // ✨✨✨ 核心修正開始 ✨✨✨
-    let initialHistory = []; // 預設是一個空的聊天紀錄
-
-    // 只有當角色真的有開場白時，我們才創建第一則訊息
+    let initialHistory = [];
     if (allGreetings.length > 0) {
-      const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, userSettings));
+      const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, startingProfile));
       const firstMessage = {
         id: Date.now(),
         sender: 'ai',
@@ -2338,26 +2565,26 @@ useEffect(() => {
         activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, 
         timestamp: getFormattedTimestamp(),
       };
-      initialHistory = [firstMessage]; // 將開場白放入歷史紀錄
+      initialHistory = [firstMessage];
     }
-    // ✨✨✨ 核心修正結束 ✨✨✨
 
     setChatHistories(prev => {
       const newHistories = { ...prev };
-      if (!newHistories[character.id]) {
-        newHistories[character.id] = {};
-      }
-      // 使用我們準備好的 initialHistory，它可能是空的，也可能包含開場白
+      if (!newHistories[character.id]) newHistories[character.id] = {};
       newHistories[character.id][newChatId] = initialHistory;
       return newHistories;
     });
     
+    // ✨ 核心修改：在建立 metadata 時，把使用者 ID 存進去！
     setChatMetadatas(prev => {
       const newMetas = { ...prev };
-      if (!newMetas[character.id]) {
-        newMetas[character.id] = {};
-      }
-      newMetas[character.id][newChatId] = { name: '', notes: '', pinned: false };
+      if (!newMetas[character.id]) newMetas[character.id] = {};
+      newMetas[character.id][newChatId] = { 
+        name: '', 
+        notes: '', 
+        pinned: false, 
+        userProfileId: selectedProfileId // ✨ 在這裡綁定 ID
+      };
       return newMetas;
     });
     
@@ -2366,7 +2593,7 @@ useEffect(() => {
 
     closePreview();
     navigateToPage('chat');
-  }, [navigateToPage, userSettings, getFormattedTimestamp]);
+  }, [navigateToPage, getFormattedTimestamp, userProfiles]); // ✨ 新增 userProfiles 依賴項
 
   const testApiConnection = useCallback(async () => {
     if (!apiKey.trim()) {
@@ -2475,7 +2702,7 @@ useEffect(() => {
       - Maintain consistent characterization throughout the conversation
       - Avoid breaking character or referencing the AI nature of the interaction`,
         currentCharacter,
-        userSettings
+        currentUserProfile
       );
 
       const existingSummary = currentCharacter?.summary || "None"; 
@@ -2484,7 +2711,7 @@ useEffect(() => {
       const characterDescription = applyPlaceholders(
         [currentCharacter?.description, currentCharacter?.personality].filter(Boolean).join('\n\n'),
         currentCharacter,
-        userSettings
+        currentUserProfile
       );
 
 
@@ -2501,8 +2728,8 @@ useEffect(() => {
         
         // 深度 4: 角色與世界觀的詳細資料。
         `[Character Persona]\n${characterDescription}`,
-        (userSettings.name || userSettings.description) 
-          ? `[User Persona]\nName: ${userSettings.name || 'Not Set'}\nDescription: ${userSettings.description || 'Not Set'}`
+        (currentUserProfile?.name || currentUserProfile?.description) 
+          ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
           : '',
         injectedWorldInfo ? `[World Info]\n${injectedWorldInfo}` : '',
 
@@ -2601,7 +2828,7 @@ useEffect(() => {
       console.error("sendToAI 函式發生錯誤:", error);
       throw error;
     }
-  }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, userSettings, longTermMemories, activeChatCharacterId, activeChatId]); // ✨ 將新依賴項加入陣列
+  }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId]); // ✨ 將新依賴項加入陣列
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
@@ -2615,7 +2842,7 @@ useEffect(() => {
       }
 
       try {
-        const conversationText = history.map(m => `${m.sender === 'user' ? (userSettings.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
+        const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
         const summaryPrompt = `請將以下對話的關鍵事實、事件、使用者偏好和角色行為，精簡總結成一段第三人稱的摘要，以便在未來的對話中能回憶起重點。\n\n對話內容：\n${conversationText}`;
         
         const summary = await sendToAI(summaryPrompt, []);
@@ -2635,7 +2862,7 @@ useEffect(() => {
         if (!isSilent) alert(`記憶更新失敗: ${error.message}`);
         return null;
       }
-  }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, userSettings.name, currentCharacter]);
+  }, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, currentUserProfile, currentCharacter]);
 
   // ✨ 2. 新增一個專門用來儲存「作者備註」的函式 ✨
   const handleSaveAuthorsNote = useCallback((newNote) => {
@@ -2682,7 +2909,7 @@ useEffect(() => {
     // 先更新畫面上的狀態
     setChatHistories(historiesWithUserMsg);
     // ✨ 新增: 立刻將這個新狀態存入 IndexedDB
-    await db.kvStore.put(historiesWithUserMsg, 'chatHistories');
+    await db.kvStore.put({ key: 'chatHistories', value: historiesWithUserMsg });
 
     setInputMessage('');
     setIsLoading(true);
@@ -2713,7 +2940,7 @@ useEffect(() => {
         // 更新畫面狀態
         setChatHistories(finalHistories);
         // ✨ 新增: 立刻將最終狀態存入 IndexedDB
-        await db.kvStore.put(finalHistories, 'chatHistories');
+        await db.kvStore.put({ key: 'chatHistories', value: finalHistories });
         
         // (這部分是您原本就有的邏輯，保持不變)
         if (finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
@@ -2744,7 +2971,7 @@ useEffect(() => {
       // 更新畫面狀態
       setChatHistories(historiesWithError);
       // ✨ 新增: 立刻將這個包含錯誤訊息的狀態存入 IndexedDB
-      await db.kvStore.put(historiesWithError, 'chatHistories');
+      await db.kvStore.put({ key: 'chatHistories', value: historiesWithError });
       
     } finally {
       setIsLoading(false);
@@ -2817,7 +3044,7 @@ useEffect(() => {
     } finally {
       setIsLoading(false);
     }
-}, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate]);
+}, [activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp]);
 
   const handleRegenerate = useCallback(async () => {
     if (!activeChatId || !activeChatCharacterId) return;
@@ -3102,7 +3329,7 @@ const formatStDate = (date, type = 'send_date') => {
 
     // 步驟 2: 準備「封面資訊頁」(第一行)
     const header = {
-      user_name: userSettings.name || "User",
+      user_name: currentUserProfile?.name || "User",
       character_name: currentCharacter.name || "Character",
       create_date: formatStDate(new Date(), 'create_date'), // 使用標準時間格式
       // 其他 SillyTavern 可能需要的元數據可以留空或使用預設值
@@ -3124,7 +3351,7 @@ const formatStDate = (date, type = 'send_date') => {
       const messageDate = new Date(message.timestamp.replace(/\//g, '-'));
       
       const sillyTavernMessage = {
-        name: isUser ? (userSettings.name || "User") : (currentCharacter.name || "Character"),
+        name: isUser ? (currentUserProfile?.name || "User") : (currentCharacter.name || "Character"),
         is_user: isUser,
         is_system: false,
         send_date: formatStDate(new Date(message.timestamp.replace(/\//g, '-')), 'send_date'), // 直接使用我們自己的時間戳
@@ -3153,7 +3380,7 @@ const formatStDate = (date, type = 'send_date') => {
     
     alert(`✅ 聊天紀錄已準備匯出！包含 ${currentMessages.length} 則對話`);
     
-  }, [chatHistories, activeChatCharacterId, activeChatId, userSettings, currentCharacter]);
+  }, [chatHistories, activeChatCharacterId, activeChatId, currentUserProfile, currentCharacter]);
 
   // ==================== 全新！從 SillyTavern 格式匯入聊天紀錄的函式 ====================
   const handleImportFromSillyTavern = useCallback((event) => {
@@ -3234,6 +3461,7 @@ const formatStDate = (date, type = 'send_date') => {
     
   }, [activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
+  // 🔥🔥🔥 核心修正點 #1 🔥🔥🔥
   const exportChatHistory = useCallback(() => {
     const currentMessages = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
     if (currentMessages.length === 0) {
@@ -3250,12 +3478,12 @@ const formatStDate = (date, type = 'send_date') => {
     content += `提示詞: ${currentPromptName}\n`;
     content += `對話數量: ${currentMessages.length} 則\n`;
     content += `===============================\n\n`;
-    content += `📱 ${userSettings.name || '用戶'} 與 ${currentChar} 的對話\n`;
+    content += `📱 ${currentUserProfile?.name || '用戶'} 與 ${currentChar} 的對話\n`;
     content += `時間：${new Date().toLocaleDateString('zh-TW')}\n\n`;
     
     currentMessages.forEach(message => {
         const time = message.timestamp || new Date().toLocaleTimeString('zh-TW', { hour12: false });
-        const sender = message.sender === 'user' ? (userSettings.name || '用戶') : currentChar;
+        const sender = message.sender === 'user' ? (currentUserProfile?.name || '用戶') : currentChar;
         // 使用當前活動的內容進行匯出
         const text = message.contents[message.activeContentIndex];
         content += `[${time}] ${sender}: ${text}\n`;
@@ -3276,8 +3504,9 @@ const formatStDate = (date, type = 'send_date') => {
     URL.revokeObjectURL(url);
     
     alert(`✅ 聊天紀錄已匯出！包含 ${currentMessages.length} 則對話`);
-  }, [currentCharacter, currentPrompt, userSettings.name, chatHistories, activeChatCharacterId, activeChatId]);
+  }, [currentCharacter, currentPrompt, currentUserProfile, chatHistories, activeChatCharacterId, activeChatId]);
 
+  // 🔥🔥🔥 核心修正點 #2 🔥🔥🔥
   const handleImportChat = useCallback((event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -3305,7 +3534,7 @@ const formatStDate = (date, type = 'send_date') => {
             importedMessages.push({
               id: Date.now() + Math.random(),
               timestamp: timestamp || getFormattedTimestamp(),
-              sender: sender === (userSettings.name || '用戶') ? 'user' : 'ai',
+              sender: sender === (currentUserProfile?.name || '用戶') ? 'user' : 'ai',
               contents: [text],
               activeContentIndex: 0
             });
@@ -3331,7 +3560,7 @@ const formatStDate = (date, type = 'send_date') => {
     };
     reader.readAsText(file);
     event.target.value = '';
-  }, [userSettings.name, activeChatCharacterId, activeChatId]);
+  }, [currentUserProfile, activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
   const clearAllData = useCallback(() => {
     if (window.confirm('⚠️ 確定要清除所有資料嗎？此操作無法復原！\n\n將會清除：\n• 所有聊天紀錄\n• 角色資料\n• 提示詞\n• 使用者設定\n• API 配置')) {
@@ -3382,7 +3611,7 @@ const formatStDate = (date, type = 'send_date') => {
                 isLoading={isLoading}
                 sendMessage={sendMessage}
                 continueGeneration={continueGeneration}
-                userSettings={userSettings}
+                currentUserProfile={currentUserProfile}
                 currentCharacter={currentCharacter}
                 activeChatId={activeChatId}
                 showActionsMessageId={showActionsMessageId}
@@ -3422,9 +3651,12 @@ const formatStDate = (date, type = 'send_date') => {
           )}
           {currentPage === 'settings' && (
             <SettingsPage
-              userSettings={userSettings}
-              handleUserSettingsChange={handleUserSettingsChange}
-              saveUserSettings={saveUserSettings}
+              userProfiles={userProfiles}
+              activeUserProfileId={activeUserProfileId}
+              onSetActiveUserProfile={handleSetActiveUserProfile}
+              onNewUserProfile={openNewUserProfileEditor}
+              onEditUserProfile={openEditUserProfileEditor}
+              onDeleteUserProfile={handleDeleteUserProfile}
               apiProvider={apiProvider}
               apiKey={apiKey}
               apiModel={apiModel}
@@ -3467,7 +3699,8 @@ const formatStDate = (date, type = 'send_date') => {
           character={previewingCharacter}
           onClose={closePreview}
           onStartChat={handleStartChat}
-          userSettings={userSettings}
+          userProfiles={userProfiles}
+          activeUserProfileId={activeUserProfileId}
         />
       )}
       
@@ -3503,6 +3736,14 @@ const formatStDate = (date, type = 'send_date') => {
           metadata={editingMetadata}
           onSave={handleSaveChatNotes}
           onClose={() => setEditingMetadata(null)}
+        />
+      )}
+       {isUserProfileEditorOpen && (
+        <UserProfileEditor
+          // 從列表中找出正在編輯的 profile 資料傳進去
+          profile={userProfiles.find(p => p.id === editingUserProfileId)}
+          onSave={handleSaveUserProfile}
+          onClose={closeUserProfileEditor}   
         />
       )}
     </>

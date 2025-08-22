@@ -992,6 +992,18 @@ body {
   cursor: not-allowed;
 }
 
+/* 新增一個專門用於圖示按鈕的刪除樣式 */
+.delete-icon-btn {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.delete-icon-btn:hover {
+  background-color: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
 .divider {
   border: none;
   border-top: 1px solid var(--border-color);
@@ -2431,4 +2443,94 @@ select:focus {
 /* 🔥 新增：確保系統訊息的刪除按鈕位置正確 */
 .system-message .delete-message-btn.visible {
   right: -40px; /* 系統訊息通常在中間，所以放右邊 */
+}
+
+/* index.css */
+
+/* =================================== */
+/*  自訂使用者選擇器樣式 (Custom Select) */
+/* =================================== */
+
+.custom-select-container {
+  position: relative; /* 這是定位的基準 */
+  width: 100%;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  text-align: left;
+}
+.custom-select-trigger:hover {
+  border-color: var(--accent-color);
+}
+
+.selected-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.option-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--border-color);
+  flex-shrink: 0;
+}
+.option-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dropdown-arrow {
+  color: var(--text-muted);
+}
+
+.custom-select-options {
+  position: absolute;
+  bottom: 100%; /* 從按鈕的上方彈出 */
+  left: 0;
+  right: 0;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1010; /* 確保在最上層 */
+  margin-bottom: 8px; /* 和觸發按鈕之間留一點空隙 */
+  box-shadow: 0 -4px 12px var(--shadow-light);
+}
+
+.custom-select-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.custom-select-option:hover {
+  background-color: var(--surface-color);
+}
+
+.custom-select-option.selected {
+  background-color: var(--primary-color);
+  color: white;
 }
