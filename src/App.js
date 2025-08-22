@@ -977,7 +977,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <div className="loading-dots">
               <span></span><span></span><span></span>
             </div>
-            <p>{currentCharacter.name} 正在打字中...</p>
+            <p>{currentCharacter.name} 正在輸入中...</p>
           </div>
         )}
         
@@ -1574,7 +1574,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.3.0</p>
+                  <p>版本：0.3.1</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3249,12 +3249,14 @@ const compressImage = (base64Str, options = {}) => {
 
 const applyPlaceholders = (text, character, user) => {
   if (!text) return '';
+
   let newText = text;
   if (character && character.name) {
     newText = newText.replaceAll('{{char}}', character.name);
   }
   if (user && user.name) {
     newText = newText.replaceAll('{{user}}', user.name);
+    newText = newText.replaceAll('<user>', user.name);
   }
   return newText;
 };
