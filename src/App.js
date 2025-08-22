@@ -1797,6 +1797,24 @@ const ChatApp = () => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       })
+    },
+    openrouter: {
+      name: 'OpenRouter',
+      endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+      models: [
+        // --- Anthropic ---
+        'anthropic/claude-3.7-sonnet',
+        // --- OpenAI ---
+        'openai/ChatGPT-4o',
+        'openai/GPT-4.1',
+      ],
+      headers: (apiKey) => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        // OpenRouter 建議加上這兩行，讓他們知道流量來自哪個應用
+        'HTTP-Referer': 'https://your-app-url.com', // 您可以換成您的應用網址
+        'X-Title': 'GENIU5' // 您的應用名稱
+      })
     }
   };
 
