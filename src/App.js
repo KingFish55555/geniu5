@@ -8,6 +8,7 @@ import {
   MoveRightIcon, Pin
 } from 'lucide-react';
 import rehypeRaw from 'rehype-raw';
+import { db } from './db';
 
 // ==================== 組件定義 ====================
 
@@ -412,7 +413,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
             <label htmlFor="import-character-json" className="import-button">
               <Upload size={16} /> 匯入角色 (.png / .json)
             </label>
-            <input type="file" id="import-character-json" accept=".json,.jsonc,.png" onChange={onImport} style={{ display: 'none' }} />
+            <input type="file" id="import-character-json" accept=".json,.jsonc,.png" onChange={onImport} style={{ display: 'none' }} multiple />
           </div>
         </div>
       ) : (
@@ -441,7 +442,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
                 <label htmlFor="import-character-float" className="floating-add-button mini">
                   <Upload size={24} />
                 </label>
-                <input type="file" id="import-character-float" accept=".json,.jsonc,.png" onChange={(e) => { onImport(e); setShowFloatMenu(false); }} style={{ display: 'none' }}/>
+                <input type="file" id="import-character-float" accept=".json,.jsonc,.png" onChange={(e) => { onImport(e); setShowFloatMenu(false); }} style={{ display: 'none' }} multiple />
                 <button onClick={() => { onAdd(); setShowFloatMenu(false); }} className="floating-add-button mini">
                   <Plus size={24} />
                 </button>
@@ -1803,102 +1804,109 @@ const ChatApp = () => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  useEffect(() => {
+  // ✨✨✨ 請用下面這整段程式碼，來取代您原本從 localStorage 讀取資料的 useEffect ✨✨✨
+useEffect(() => {
+  const loadData = async () => {
     try {
-      const savedCharacters = JSON.parse(localStorage.getItem('app_characters')) || [];
-      const savedChatHistories = JSON.parse(localStorage.getItem('app_chat_histories')) || {};
-      const savedChatMetadatas = JSON.parse(localStorage.getItem('app_chat_metadatas')) || {};
-      const savedLongTermMemories = JSON.parse(localStorage.getItem('app_long_term_memories')) || {};
+      console.log("正在從 IndexedDB 載入資料...");
+
+      // 1. 先嘗試從 IndexedDB 讀取所有資料
+      const [
+        savedCharacters, savedPrompts, savedApiConfigs,
+        savedHistories, savedMetadatas, savedMemories, savedSettings
+      ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+        const chars = await db.characters.toArray();
+        const proms = await db.prompts.toArray();
+        const configs = await db.apiConfigs.toArray();
+        const hist = await db.kvStore.get('chatHistories');
+        const meta = await db.kvStore.get('chatMetadatas');
+        const mem = await db.kvStore.get('longTermMemories');
+        const sett = await db.kvStore.get('userSettings');
+        return [chars, proms, configs, hist, meta, mem, sett];
+      });
+      
+      // 2. 檢查 IndexedDB 是否為空，如果是，就觸發一次性搬家
+      if (!savedCharacters || savedCharacters.length === 0) {
+        console.log("IndexedDB 是空的，正在檢查 Local Storage 是否有舊資料...");
+        const oldChars = JSON.parse(localStorage.getItem('app_characters'));
+        
+        if (oldChars && oldChars.length > 0) {
+          console.log("發現舊資料！正在進行一次性搬家...");
+          
+          // 讀取所有舊的 localStorage 資料
+          const oldPrompts = JSON.parse(localStorage.getItem('app_prompts')) || BUILT_IN_PROMPTS;
+          const oldApiConfigs = JSON.parse(localStorage.getItem('app_api_configs')) || [];
+          const oldHistories = JSON.parse(localStorage.getItem('app_chat_histories')) || {};
+          const oldMetadatas = JSON.parse(localStorage.getItem('app_chat_metadatas')) || {};
+          const oldMemories = JSON.parse(localStorage.getItem('app_long_term_memories')) || {};
+          const oldSettings = JSON.parse(localStorage.getItem('user_settings'));
+
+          // 使用 bulkPut 一次性寫入 IndexedDB
+          await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+              await db.characters.bulkPut(oldChars);
+              await db.prompts.bulkPut(oldPrompts);
+              await db.apiConfigs.bulkPut(oldApiConfigs);
+              if(oldHistories) await db.kvStore.put(oldHistories, 'chatHistories');
+              if(oldMetadatas) await db.kvStore.put(oldMetadatas, 'chatMetadatas');
+              if(oldMemories) await db.kvStore.put(oldMemories, 'longTermMemories');
+              if(oldSettings) await db.kvStore.put(oldSettings, 'userSettings');
+          });
+          
+          console.log("搬家完成！正在設定 App 狀態...");
+          setCharacters(oldChars);
+          setPrompts(oldPrompts);
+          setApiConfigs(oldApiConfigs);
+          setChatHistories(oldHistories);
+          setChatMetadatas(oldMetadatas);
+          setLongTermMemories(oldMemories);
+          if(oldSettings) setUserSettings(oldSettings);
+
+        } else {
+          console.log("Local Storage 也沒有資料，全新啟動。");
+          // 如果兩邊都沒資料，確保提示詞有預設值
+          setPrompts(BUILT_IN_PROMPTS);
+          await db.prompts.bulkPut(BUILT_IN_PROMPTS);
+        }
+      } else {
+        console.log("成功從 IndexedDB 載入資料。");
+        // 如果 IndexedDB 有資料，就直接使用
+        setCharacters(savedCharacters);
+        setPrompts(savedPrompts.length > 0 ? savedPrompts : BUILT_IN_PROMPTS);
+        setApiConfigs(savedApiConfigs);
+        setChatHistories(savedHistories || {});
+        setChatMetadatas(savedMetadatas || {});
+        setLongTermMemories(savedMemories || {});
+        if(savedSettings) setUserSettings(savedSettings);
+      }
+
+      // 這些比較小的 session-like 資料可以暫時保留在 localStorage
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
       const savedActiveChatId = localStorage.getItem('app_active_chat_id');
-
-      const activeChar = savedCharacters.find(c => c.id == savedActiveCharId);
+      const activeChar = (savedCharacters || []).find(c => c.id == savedActiveCharId);
       if (activeChar) {
         setActiveChatCharacterId(activeChar.id);
         setCurrentCharacter(activeChar);
-        const activeChatIsValid = savedChatHistories[activeChar.id]?.[savedActiveChatId];
+        const activeChatIsValid = (savedHistories || {})[activeChar.id]?.[savedActiveChatId];
         if (activeChatIsValid) {
           setActiveChatId(savedActiveChatId);
         }
       }
-
-      setCharacters(savedCharacters);
-      setChatHistories(savedChatHistories);
-      setChatMetadatas(savedChatMetadatas);
-      setLongTermMemories(savedLongTermMemories);
       
-// ✨ 核心修改：確保第一次啟動時，所有內建提示詞都被載入 ✨
-      let savedPrompts = JSON.parse(localStorage.getItem('app_prompts'));
-      // 如果讀出來是 null 或是一個空陣列，就使用完整的 BUILT_IN_PROMPTS
-      if (!savedPrompts || savedPrompts.length === 0) {
-        savedPrompts = BUILT_IN_PROMPTS;
-      }
-      setPrompts(savedPrompts);
-
-      const savedApiConfigs = JSON.parse(localStorage.getItem('app_api_configs')) || [];
-      setApiConfigs(savedApiConfigs);
-
       const lastUsedApi = JSON.parse(localStorage.getItem('app_last_used_api'));
       if (lastUsedApi) {
-        const config = lastUsedApi;
-        setApiProvider(config.provider || 'openai');
-        setApiKey(config.apiKey || '');
-        setApiModel(config.model || (apiProviders[config.provider]?.models[0] || 'gpt-3.5-turbo'));
-        if (config.apiKey) setIsApiConnected(true);
+        setApiProvider(lastUsedApi.provider || 'openai');
+        setApiKey(lastUsedApi.apiKey || '');
+        setApiModel(lastUsedApi.model || (apiProviders[lastUsedApi.provider]?.models[0] || 'gpt-3.5-turbo'));
+        if (lastUsedApi.apiKey) setIsApiConnected(true);
       }
-      // ===============================================================================
-      // ✨✨✨ 一次性資料庫升級程式 (執行一次後即可刪除) ✨✨✨
-      // ===============================================================================
-      let needsSave = false;
-      for (const charId in savedChatHistories) {
-        for (const chatId in savedChatHistories[charId]) {
-          const history = savedChatHistories[charId][chatId];
-          if (history && history.length > 0 && history[0].hasOwnProperty('text')) {
-            console.log(`正在為 ${charId} 的 ${chatId} 升級資料格式...`);
-            needsSave = true;
-            savedChatHistories[charId][chatId] = history.map(msg => ({
-              ...msg,
-              contents: [msg.text],
-              activeContentIndex: 0,
-            }));
-          }
-        }
-      }
-      if (needsSave) {
-        console.log("偵測到舊版資料，已自動升級。正在重新儲存...");
-        localStorage.setItem('app_chat_histories', JSON.stringify(savedChatHistories));
-      }
+
     } catch (error) {
-      console.error('從 localStorage 載入資料失敗:', error);
-      localStorage.clear(); // 清理可能的損壞資料
-      window.location.reload();
+      console.error('從 IndexedDB 載入資料失敗:', error);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    if (Object.keys(chatMetadatas).length > 0) {
-      localStorage.setItem('app_chat_metadatas', JSON.stringify(chatMetadatas));
-    }
-  }, [chatMetadatas]);
-
-  useEffect(() => {
-    if (Object.keys(chatHistories).length > 0) {
-      localStorage.setItem('app_chat_histories', JSON.stringify(chatHistories));
-    }
-  }, [chatHistories]);
-
-  useEffect(() => {
-    if (characters.length > 0) {
-      localStorage.setItem('app_characters', JSON.stringify(characters));
-    }
-  }, [characters]);
-
-  useEffect(() => {
-  // 我們要避免在程式第一次載入時就儲存空資料
-  if (Object.keys(longTermMemories).length > 0) {
-    localStorage.setItem('app_long_term_memories', JSON.stringify(longTermMemories));
-  }
-}, [longTermMemories]);
+  loadData();
+}, []);
 
   const navigateToPage = useCallback((page) => {
     if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
@@ -1914,9 +1922,14 @@ const ChatApp = () => {
     setUserSettings(prev => ({ ...prev, [field]: value }));
   }, []);
 
-  const saveUserSettings = useCallback(() => {
-    localStorage.setItem('user_settings', JSON.stringify(userSettings));
-    alert('✅ 使用者設定已儲存！');
+  const saveUserSettings = useCallback(async () => {
+    try {
+      await db.kvStore.put(userSettings, 'userSettings');
+      alert('✅ 使用者設定已儲存！');
+    } catch (error) {
+      console.error("儲存使用者設定失敗:", error);
+      alert('❌ 儲存使用者設定失敗！');
+    }
   }, [userSettings]);
 
   const handleProviderChange = useCallback((provider) => {
@@ -1932,7 +1945,7 @@ const ChatApp = () => {
     setLoadedConfigName('');
   }, []);
 
-  const saveApiConfiguration = useCallback(() => {
+  const saveApiConfiguration = useCallback(async () => {
     if (!configName.trim() || !apiKey.trim()) {
       alert('請輸入配置名稱和 API 金鑰！');
       return;
@@ -1945,15 +1958,17 @@ const ChatApp = () => {
       model: apiModel,
       createdAt: new Date().toISOString()
     };
-    const updatedConfigs = [...apiConfigs, newConfig];
-    setApiConfigs(updatedConfigs);
-    localStorage.setItem('app_api_configs', JSON.stringify(updatedConfigs));
-    
-    // ✨ 核心修改：儲存新配置時，也把它設為當前載入的配置 ✨
-    setLoadedConfigName(configName);
-    
-    setConfigName(''); // 清空輸入框
-    alert(`✅ 已儲存配置：「${configName}」`);
+    try {
+      await db.apiConfigs.add(newConfig);
+      const updatedConfigs = [...apiConfigs, newConfig];
+      setApiConfigs(updatedConfigs);
+      setLoadedConfigName(configName);
+      setConfigName('');
+      alert(`✅ 已儲存配置：「${configName}」`);
+    } catch (error) {
+      console.error("儲存 API 配置失敗:", error);
+      alert('❌ 儲存 API 配置失敗！');
+    }
   }, [configName, apiKey, apiProvider, apiModel, apiConfigs]);
 
   const loadApiConfiguration = useCallback((configId) => {
@@ -1970,49 +1985,68 @@ const ChatApp = () => {
     }
   }, [apiConfigs]);
 
-  const deleteApiConfiguration = useCallback((configId) => {
+  const deleteApiConfiguration = useCallback(async (configId) => {
     const configToDelete = apiConfigs.find(c => c.id === Number(configId));
     if (configToDelete && window.confirm(`確定要刪除配置「${configToDelete.name}」嗎？`)) {
-      const updatedConfigs = apiConfigs.filter(c => c.id !== Number(configId));
-      setApiConfigs(updatedConfigs);
-      localStorage.setItem('app_api_configs', JSON.stringify(updatedConfigs));
-      alert('🗑️ 配置已刪除');
+      try {
+        await db.apiConfigs.delete(Number(configId));
+        const updatedConfigs = apiConfigs.filter(c => c.id !== Number(configId));
+        setApiConfigs(updatedConfigs);
+        alert('🗑️ 配置已刪除');
+      } catch (error) {
+        console.error("刪除 API 配置失敗:", error);
+        alert('❌ 刪除 API 配置失敗！');
+      }
     }
   }, [apiConfigs]);
 
-  const savePrompt = useCallback((promptData) => {
-    const existingIndex = prompts.findIndex(p => p.id === promptData.id);
-    let updatedPrompts = existingIndex > -1
-      ? prompts.map(p => p.id === promptData.id ? promptData : p)
-      : [...prompts, promptData];
-    setPrompts(updatedPrompts);
-    localStorage.setItem('app_prompts', JSON.stringify(updatedPrompts));
-    alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
+  const savePrompt = useCallback(async (promptData) => {
+    try {
+      await db.prompts.put(promptData);
+      const existingIndex = prompts.findIndex(p => p.id === promptData.id);
+      let updatedPrompts = existingIndex > -1
+        ? prompts.map(p => p.id === promptData.id ? promptData : p)
+        : [...prompts, promptData];
+      setPrompts(updatedPrompts);
+      alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
+    } catch (error) {
+      console.error("儲存提示詞失敗:", error);
+      alert('❌ 儲存提示詞失敗！');
+    }
   }, [prompts]);
 
-  const deletePrompt = useCallback((promptId) => {
-    const updatedPrompts = prompts.filter(p => p.id !== promptId);
-    setPrompts(updatedPrompts);
-    localStorage.setItem('app_prompts', JSON.stringify(updatedPrompts));
-    if (currentPrompt?.id === promptId) setCurrentPrompt(null);
-    alert('🗑️ 提示詞已刪除');
+  const deletePrompt = useCallback(async (promptId) => {
+    try {
+      await db.prompts.delete(promptId);
+      const updatedPrompts = prompts.filter(p => p.id !== promptId);
+      setPrompts(updatedPrompts);
+      if (currentPrompt?.id === promptId) setCurrentPrompt(null);
+      alert('🗑️ 提示詞已刪除');
+    } catch (error) {
+      console.error("刪除提示詞失敗:", error);
+      alert('❌ 刪除提示詞失敗！');
+    }
   }, [prompts, currentPrompt]);
 
-  const restoreDefaultPrompts = useCallback(() => {
+  const restoreDefaultPrompts = useCallback(async () => {
     if (window.confirm('您確定要還原所有內建提示詞嗎？\n\n這會覆蓋掉您對它們的任何修改。')) {
-      // 找出所有不是內建的自訂提示詞
-      const customPrompts = prompts.filter(p => !BUILT_IN_PROMPTS.some(bp => bp.id === p.id));
-      // 將自訂提示詞和所有內建提示詞合併
-      const newPrompts = [...customPrompts, ...BUILT_IN_PROMPTS];
-      
-      // 去除可能重複的項目，以防萬一
-      const uniquePrompts = newPrompts.filter((prompt, index, self) =>
-        index === self.findIndex((p) => p.id === prompt.id)
-      );
-
-      setPrompts(uniquePrompts);
-      localStorage.setItem('app_prompts', JSON.stringify(uniquePrompts));
-      alert('✅ 所有內建提示詞已成功還原！');
+      try {
+        const customPrompts = prompts.filter(p => !BUILT_IN_PROMPTS.some(bp => bp.id === p.id));
+        const newPrompts = [...customPrompts, ...BUILT_IN_PROMPTS];
+        const uniquePrompts = newPrompts.filter((prompt, index, self) =>
+          index === self.findIndex((p) => p.id === prompt.id)
+        );
+        
+        await db.prompts.clear();
+        await db.prompts.bulkPut(uniquePrompts);
+        
+        setPrompts(uniquePrompts);
+        alert('✅ 所有內建提示詞已成功還原！');
+      } catch (error)
+      {
+        console.error("還原提示詞失敗:", error);
+        alert('❌ 還原提示詞失敗！');
+      }
     }
   }, [prompts]);
 
@@ -2080,127 +2114,188 @@ const ChatApp = () => {
 
     // ✨ 如果是正常的儲存請求 (舊有邏輯保持不變) ✨
     if (characterData) {
-      const existingIndex = characters.findIndex(c => c.id === characterData.id);
-      let updatedCharacters = existingIndex > -1
-        ? characters.map(c => c.id === characterData.id ? characterData : c)
-        : [...characters, characterData];
-      setCharacters(updatedCharacters);
-      closeEditor();
-      alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
+      try {
+        await db.characters.put(characterData); // 告訴資料庫儲存這本書
+        
+        const existingIndex = characters.findIndex(c => c.id === characterData.id);
+        let updatedCharacters = existingIndex > -1
+          ? characters.map(c => c.id === characterData.id ? characterData : c)
+          : [...characters, characterData];
+        setCharacters(updatedCharacters);
+        closeEditor();
+        alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
+      
+      } catch (error) {
+        console.error("儲存角色失敗:", error);
+        alert('❌ 儲存角色失敗！');
+      }
     }
   }, [characters, editingCharacter]); // ✨ 加入新的依賴項 editingCharacter
 
-  const deleteCharacter = useCallback((characterId) => {
-    const updatedCharacters = characters.filter(c => c.id !== characterId);
-    setCharacters(updatedCharacters);
-    localStorage.setItem('app_characters', JSON.stringify(updatedCharacters));
-    if (currentCharacter?.id === characterId) setCurrentCharacter(null);
-    alert('🗑️ 角色已刪除');
-    closeEditor();
-    closePreview();
-  }, [characters, currentCharacter]);
-  
-  const handleImportCharacter = useCallback(async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const getCharacterDataFromPng = (file) => {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const buffer = e.target.result;
-            const view = new DataView(buffer);
-            if (view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) {
-              reject(new Error('不是有效的 PNG 檔案。'));
-              return;
-            }
-            let offset = 8;
-            const textDecoder = new TextDecoder('utf-8');
-            while (offset < view.byteLength) {
-              const length = view.getUint32(offset);
-              const type = textDecoder.decode(buffer.slice(offset + 4, offset + 8));
-              if (type === 'tEXt') {
-                const chunkData = buffer.slice(offset + 8, offset + 8 + length);
-                let keyword = '';
-                let i = 0;
-                while (i < length) {
-                  const charCode = new DataView(chunkData).getUint8(i);
-                  if (charCode === 0) { break; }
-                  keyword += String.fromCharCode(charCode);
-                  i++;
-                }
-                if (keyword === 'chara') {
-                  const base64Data = textDecoder.decode(chunkData.slice(i + 1));
-                  const decodedJsonString = base64ToUtf8(base64Data);
-                  resolve(JSON.parse(decodedJsonString));
-                  return;
-                }
-              }
-              offset += 12 + length;
-            }
-            reject(new Error('在 PNG 檔案中找不到角色資料 (tEXt chunk)。'));
-          } catch (err) {
-            reject(new Error('解析 PNG 檔案失敗：' + err.message));
-          }
-        };
-        reader.onerror = () => reject(new Error('讀取檔案失敗。'));
-        reader.readAsArrayBuffer(file);
-      });
-    };
-
+  const deleteCharacter = useCallback(async (characterId) => {
     try {
-      let characterJsonData;
-      let characterAvatar = { type: 'icon', data: 'UserCircle' };
+      await db.characters.delete(characterId); // 從資料庫刪除這本書
+      
+      // 同時也刪除這個角色附帶的所有聊天紀錄
+      const currentHistories = chatHistories;
+      delete currentHistories[characterId];
+      await db.kvStore.put(currentHistories, 'chatHistories');
+      setChatHistories(currentHistories);
 
-      if (file.type === 'application/json' || file.name.endsWith('.json')) {
-        characterJsonData = JSON.parse(await file.text());
-      } else if (file.type === 'image/png') {
-        characterJsonData = await getCharacterDataFromPng(file);
-        const originalBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsDataURL(file);
-        });
-        const compressedBase64 = await compressImage(originalBase64);
-        characterAvatar = { type: 'image', data: compressedBase64 };
-      } else {
-        alert('❌ 不支援的檔案格式，請選擇 .json 或 .png 角色卡。');
-        return;
-      }
-      
-      const isV2OrV3Card = characterJsonData.spec === 'chara_card_v2' || characterJsonData.spec?.startsWith('chara_card_v');
-      const cardData = isV2OrV3Card ? characterJsonData.data : characterJsonData;
-      if (!cardData.name && !cardData.char_name) {
-        alert('❌ 檔案格式錯誤，找不到角色名稱 (name / char_name)。');
-        return;
-      }
-      const newCharacter = {
-        id: Date.now(),
-        name: cardData.name || cardData.char_name,
-        description: cardData.description || '',
-        firstMessage: cardData.first_mes || '',
-        alternateGreetings: cardData.alternate_greetings || [],
-        // ✨ 5. 在這裡新增一行，讀取 creator_notes 欄位 ✨
-        // 如果卡片裡沒有這個欄位，就給它一個空字串
-        creatorNotes: cardData.creator_notes || '',
-        personality: cardData.personality || '',
-        avatar: characterAvatar,
-        characterBook: cardData.character_book || null,
-      };
-      
-      const updatedCharacters = [...characters, newCharacter];
+      const updatedCharacters = characters.filter(c => c.id !== characterId);
       setCharacters(updatedCharacters);
-      alert(`✅ 成功匯入角色：「${newCharacter.name}」！`);
+      if (currentCharacter?.id === characterId) setCurrentCharacter(null);
+      alert('🗑️ 角色已刪除');
+      closeEditor();
+      closePreview();
 
     } catch (error) {
-      alert('❌ 匯入失敗：\n' + error.message);
-    } finally {
-      if(event && event.target) {
-        event.target.value = '';
+      console.error("刪除角色失敗:", error);
+      alert('❌ 刪除角色失敗！');
+    }
+  }, [characters, currentCharacter, chatHistories]);
+  
+  // ==================== ✨ 全新！支援多檔案批次匯入的版本 ✨ ====================
+  const handleImportCharacter = useCallback(async (event) => {
+    // 步驟 1: 取得使用者選擇的所有檔案 (這會是一個清單)
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+      // 如果使用者點了取消，就什麼都不做
+      return;
+    }
+
+    console.log(`準備匯入 ${files.length} 個檔案...`);
+
+    // 準備一些計數器和暫存區
+    let successCount = 0;
+    let failureCount = 0;
+    const newlyImported = []; // 暫時存放成功匯入的新角色
+
+    // 步驟 2: 使用 for 迴圈，一個一個處理清單中的檔案
+    for (const file of files) {
+      try {
+        // --- 以下是您原本處理單一檔案的邏輯，我們把它整個搬進迴圈裡 ---
+        let characterJsonData;
+        let characterAvatar = { type: 'icon', data: 'UserCircle' };
+
+        // 輔助函式 getCharacterDataFromPng 保持不變，我們直接複製過來用
+        const getCharacterDataFromPng = (file) => {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const buffer = e.target.result;
+                const view = new DataView(buffer);
+                if (view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) {
+                  reject(new Error('不是有效的 PNG 檔案。'));
+                  return;
+                }
+                let offset = 8;
+                const textDecoder = new TextDecoder('utf-8');
+                while (offset < view.byteLength) {
+                  const length = view.getUint32(offset);
+                  const type = textDecoder.decode(buffer.slice(offset + 4, offset + 8));
+                  if (type === 'tEXt') {
+                    const chunkData = buffer.slice(offset + 8, offset + 8 + length);
+                    let keyword = '';
+                    let i = 0;
+                    while (i < length) {
+                      const charCode = new DataView(chunkData).getUint8(i);
+                      if (charCode === 0) { break; }
+                      keyword += String.fromCharCode(charCode);
+                      i++;
+                    }
+                    if (keyword === 'chara') {
+                      const base64Data = textDecoder.decode(chunkData.slice(i + 1));
+                      const decodedJsonString = base64ToUtf8(base64Data);
+                      resolve(JSON.parse(decodedJsonString));
+                      return;
+                    }
+                  }
+                  offset += 12 + length;
+                }
+                reject(new Error('在 PNG 檔案中找不到角色資料 (tEXt chunk)。'));
+              } catch (err) {
+                reject(new Error('解析 PNG 檔案失敗：' + err.message));
+              }
+            };
+            reader.onerror = () => reject(new Error('讀取檔案失敗。'));
+            reader.readAsArrayBuffer(file);
+          });
+        };
+
+        if (file.type === 'application/json' || file.name.endsWith('.json')) {
+          characterJsonData = JSON.parse(await file.text());
+        } else if (file.type === 'image/png') {
+          characterJsonData = await getCharacterDataFromPng(file);
+          const originalBase64 = await new Promise((resolve) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.readAsDataURL(file);
+          });
+          const compressedBase64 = await compressImage(originalBase64);
+          characterAvatar = { type: 'image', data: compressedBase64 };
+        } else {
+          // 如果檔案類型不支援，就跳過這個檔案
+          console.warn(`不支援的檔案格式，已略過: ${file.name}`);
+          failureCount++;
+          continue; // 繼續處理下一個檔案
+        }
+        
+        const isV2OrV3Card = characterJsonData.spec === 'chara_card_v2' || characterJsonData.spec?.startsWith('chara_card_v');
+        const cardData = isV2OrV3Card ? characterJsonData.data : characterJsonData;
+        if (!cardData.name && !cardData.char_name) {
+          console.warn(`檔案格式錯誤，找不到角色名稱，已略過: ${file.name}`);
+          failureCount++;
+          continue;
+        }
+        const newCharacter = {
+          id: Date.now() + successCount, // 加上 successCount 確保 ID 不會重複
+          name: cardData.name || cardData.char_name,
+          description: cardData.description || '',
+          firstMessage: cardData.first_mes || '',
+          alternateGreetings: cardData.alternate_greetings || [],
+          creatorNotes: cardData.creator_notes || '',
+          personality: cardData.personality || '',
+          avatar: characterAvatar,
+          characterBook: cardData.character_book || null,
+        };
+        
+        // --- 核心修改：不是立刻更新畫面，而是先把新角色存到暫存區 ---
+        newlyImported.push(newCharacter);
+        successCount++;
+        // --- 處理單一檔案的邏輯結束 ---
+
+      } catch (error) {
+        // 如果在處理某個檔案時發生錯誤，紀錄下來並繼續處理下一個
+        console.error(`匯入檔案 ${file.name} 失敗:`, error);
+        failureCount++;
       }
     }
-  }, [characters]);
+
+    // 步驟 3: 迴圈結束後，一次性更新所有資料和畫面
+    if (newlyImported.length > 0) {
+      // 將所有成功匯入的角色一次性存入資料庫
+      await db.characters.bulkPut(newlyImported);
+      // 然後一次性更新 React 的 state，這樣畫面只會重新整理一次，效能更好
+      setCharacters(prev => [...prev, ...newlyImported]);
+    }
+
+    // 步驟 4: 顯示最終的匯入結果報告
+    let summaryMessage = `✅ 批次匯入完成！\n\n`;
+    if (successCount > 0) {
+      summaryMessage += `成功匯入 ${successCount} 個角色。\n`;
+    }
+    if (failureCount > 0) {
+      summaryMessage += `有 ${failureCount} 個檔案匯入失敗，詳情請查看開發者主控台。`;
+    }
+    alert(summaryMessage);
+
+    // 最後，清空檔案選擇器的值，這樣使用者下次才能再次選擇同一個檔案
+    if (event && event.target) {
+      event.target.value = '';
+    }
+  }, [characters]); // 依賴項保持不變
 
     const handleStartChat = useCallback((character, greeting) => {
     setCurrentCharacter(character);
@@ -2557,13 +2652,19 @@ const ChatApp = () => {
     const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
     const updatedHistory = [...currentHistory, userMessage];
 
-    setChatHistories(prev => ({
-      ...prev,
+    // --- 修改點 1: 儲存使用者自己的訊息 ---
+    // 建立一個包含使用者新訊息的完整聊天紀錄物件
+    const historiesWithUserMsg = {
+      ...chatHistories,
       [activeChatCharacterId]: {
-        ...prev[activeChatCharacterId],
+        ...(chatHistories[activeChatCharacterId] || {}),
         [activeChatId]: updatedHistory
       }
-    }));
+    };
+    // 先更新畫面上的狀態
+    setChatHistories(historiesWithUserMsg);
+    // ✨ 新增: 立刻將這個新狀態存入 IndexedDB
+    await db.kvStore.put(historiesWithUserMsg, 'chatHistories');
 
     setInputMessage('');
     setIsLoading(true);
@@ -2572,71 +2673,65 @@ const ChatApp = () => {
       const aiResponse = await sendToAI(userMessage.contents[0], updatedHistory); 
       
       if (typeof aiResponse !== 'undefined') {
-        // 我們不再需要從 AI 回應中手動解析 [SUMMARY] 了，所以程式碼變得很乾淨
         const aiMessage = {
           id: Date.now() + 1,
           sender: 'ai',
-          contents: [aiResponse], // 直接使用完整的 AI 回應
+          contents: [aiResponse],
           activeContentIndex: 0,
           timestamp: getFormattedTimestamp(),
         };
 
-        // 為了拿到最新的聊天紀錄來判斷長度，我們在這裡做一點小技巧
-        let finalHistory;
-        setChatHistories(prev => {
-            const historyForChar = prev[activeChatCharacterId] || {};
-            const historyForChatId = historyForChar[activeChatId] || [];
-            finalHistory = [...historyForChatId, aiMessage]; // 把更新後的歷史紀錄暫存到 finalHistory 變數
-            return {
-              ...prev,
-              [activeChatCharacterId]: {
-                ...historyForChar,
-                [activeChatId]: finalHistory
-              }
-            };
-        });
+        const finalHistory = [...updatedHistory, aiMessage];
         
-        // ===============================================================================
-        // ✨✨✨ 這就是我們新增的「智慧摘要觸發器」 ✨✨✨
-        // ===============================================================================
-        // 檢查更新後的對話長度是否是我們設定的倍數
-        if (finalHistory && finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
+        // --- 修改點 2: 儲存 AI 的回應 ---
+        // 建立包含 AI 回應的最終聊天紀錄物件
+        const finalHistories = {
+          ...chatHistories,
+          [activeChatCharacterId]: {
+            ...(chatHistories[activeChatCharacterId] || {}),
+            [activeChatId]: finalHistory
+          }
+        };
+        // 更新畫面狀態
+        setChatHistories(finalHistories);
+        // ✨ 新增: 立刻將最終狀態存入 IndexedDB
+        await db.kvStore.put(finalHistories, 'chatHistories');
+        
+        // (這部分是您原本就有的邏輯，保持不變)
+        if (finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
           console.log(`對話達到 ${finalHistory.length} 則，正在背景自動更新長期記憶...`);
-          // 呼叫我們的核心函式，並設定為 isSilent=true，這樣就不會跳出 alert
           await triggerMemoryUpdate(true); 
           console.log("背景記憶更新完成！");
         }
-        // ===============================================================================
-        // ✨✨✨ 新增結束 ✨✨✨
-        // ===============================================================================
       }
     } catch (error) {
-      if (error.message === 'AI_EMPTY_RESPONSE') {
-        alert('AI 回傳了空的訊息，可能是模型暫時不穩定或觸發了安全機制。請嘗試重新發送或修改您的訊息。');
-      } else {
-        const errorMessage = {
-          id: Date.now() + 1,
-          sender: 'system',
-          contents: ['發生錯誤：' + error.message],
-          activeContentIndex: 0,
-          timestamp: getFormattedTimestamp(),
-        };
-        setChatHistories(prev => {
-            const historyForChar = prev[activeChatCharacterId] || {};
-            const historyForChatId = historyForChar[activeChatId] || [];
-            return {
-              ...prev,
-              [activeChatCharacterId]: {
-                ...historyForChar,
-                [activeChatId]: [...historyForChatId, errorMessage]
-              }
-            };
-        });
-      }
+      const errorMessage = {
+        id: Date.now() + 1,
+        sender: 'system',
+        contents: ['發生錯誤：' + error.message],
+        activeContentIndex: 0,
+        timestamp: getFormattedTimestamp(),
+      };
+      const historyWithError = [...updatedHistory, errorMessage];
+
+      // --- 修改點 3: 儲存錯誤訊息 ---
+      // 建立包含錯誤訊息的聊天紀錄物件
+      const historiesWithError = {
+        ...chatHistories,
+        [activeChatCharacterId]: {
+          ...(chatHistories[activeChatCharacterId] || {}),
+          [activeChatId]: historyWithError
+        }
+      };
+      // 更新畫面狀態
+      setChatHistories(historiesWithError);
+      // ✨ 新增: 立刻將這個包含錯誤訊息的狀態存入 IndexedDB
+      await db.kvStore.put(historiesWithError, 'chatHistories');
+      
     } finally {
       setIsLoading(false);
     }
-  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate]); // ✨✨✨ 注意！請確保 triggerMemoryUpdate 被加到了這裡的依賴項陣列中！
+  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp]);
 
   const continueGeneration = useCallback(async () => {
     if (!activeChatCharacterId || !activeChatId) return;
