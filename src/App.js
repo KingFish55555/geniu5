@@ -1539,7 +1539,7 @@ const SettingsPage = ({
             >
               <div className="card-title">
                 <Database size={20} />
-                <span>資料管理</span>
+                <span>資料管理 (功能開發中)</span>
               </div>
               <span className="expand-arrow">{expandedSection === 'data' ? '▲' : '▼'}</span>
             </button>
