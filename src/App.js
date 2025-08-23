@@ -71,7 +71,11 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
               <UserCircle size={24} />
             )}
           </div>
-          <span className="option-name">{selectedProfile?.name || '選擇身份'}</span>
+          {/* +++ 核心修改：如果備註存在，就把它顯示在名字後面 +++ */}
+          <span className="option-name">
+            {selectedProfile?.name || '選擇身份'}
+            {selectedProfile?.notes ? ` (${selectedProfile.notes})` : ''}
+          </span>
         </div>
         <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
       </button>
@@ -92,7 +96,11 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
                   <UserCircle size={24} />
                 )}
               </div>
-              <span className="option-name">{profile.name}</span>
+              {/* +++ 核心修改：選項列表裡也要加上備註 +++ */}
+              <span className="option-name">
+                {profile.name}
+                {profile.notes ? ` (${profile.notes})` : ''}
+              </span>
             </div>
           ))}
         </div>
@@ -951,7 +959,7 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>編輯聊天備註</h3>
+          <h3>編輯聊天室備註</h3>
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body">
@@ -979,17 +987,20 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
 // ==================== 全新！使用者個人檔案編輯器 Modal ====================
 const UserProfileEditor = ({ profile, onSave, onClose }) => {
   const [name, setName] = useState('');
+  const [notes, setNotes] = useState(''); // +++ 新增一行 state 來管理備註 +++
   const [description, setDescription] = useState('');
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
 
   useEffect(() => {
     if (profile) {
       setName(profile.name || '');
+      setNotes(profile.notes || ''); // +++ 讀取個人檔案中的備註 +++
       setDescription(profile.description || '');
       setAvatar(profile.avatar || { type: 'icon', data: 'UserCircle' });
     } else {
       // 新增模式，清空欄位
       setName('');
+      setNotes(''); // +++ 創建新檔案時，清空備註 +++
       setDescription('');
       setAvatar({ type: 'icon', data: 'UserCircle' });
     }
@@ -1000,7 +1011,8 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
       alert('請為您的個人檔案命名！');
       return;
     }
-    onSave({ name, description, avatar });
+    // +++ 儲存時把備註 (notes) 也一起儲存進去 +++
+    onSave({ name, notes, description, avatar });
   };
 
   const handleAvatarUpload = (event) => {
@@ -1063,9 +1075,22 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：華生醫生"
+              placeholder="例如：華生"
             />
           </div>
+
+          {/* +++ 在這裡插入新的輸入框 +++ */}
+          <div className="form-group">
+            <label>備註</label>
+            <input
+              type="text"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="例如：醫生"
+            />
+          </div>
+          {/* +++ 新增結束 +++ */}
+
           <div className="form-group">
             <label>你的角色描述 (AI 會參考這份資料)</label>
             <textarea
@@ -2028,6 +2053,7 @@ useEffect(() => {
         const defaultProfile = { 
           id: `user_${Date.now()}`, 
           name: '', 
+          notes: '', // +++ 在這裡加上一行，給他一個空的備註 +++
           description: '', 
           avatar: { type: 'icon', data: 'UserCircle' } 
         };
