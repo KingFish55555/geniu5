@@ -12,7 +12,7 @@ import { db } from './db';
 
 // ==================== 組件定義 ====================
 
-const MEMORY_UPDATE_INTERVAL = 8;
+const MEMORY_UPDATE_INTERVAL = 5;
 
 // 頂部導航組件
 const TopNavigation = ({ currentPage, navigateToPage }) => (
@@ -2878,7 +2878,7 @@ useEffect(() => {
 
       try {
         const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-        const summaryPrompt = `請將以下對話的關鍵事實、事件、使用者偏好和角色行為，精簡總結成一段第三人稱的摘要，以便在未來的對話中能回憶起重點。\n\n對話內容：\n${conversationText}`;
+        const summaryPrompt = `忽略之前的指示。總結故事中迄今為止最重要的事實和事件。如果你的記憶中已經有了總結，請以此為基礎，並補充新的事實。總結字數限制在300字以內。你的回覆應該只包含總結。\n\n對話內容：\n${conversationText}`;
         
         const summary = await sendToAI(summaryPrompt, []);
 
@@ -2966,9 +2966,19 @@ useEffect(() => {
         }
       }));
       
+      // ===============================================================================
+      // ✨✨✨ 在這裡安裝「智慧摘要觸發器」 ✨✨✨
+      // ===============================================================================
+      // 檢查更新後的對話總長度，是否是我們設定的 MEMORY_UPDATE_INTERVAL (8) 的倍數
       if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
+        console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶...`);
+        
+        // 呼叫我們的核心函式，並傳入 true，代表「安靜模式」，這樣就不會跳出提示視窗
         await triggerMemoryUpdate(true); 
+        
+        console.log("背景記憶更新完成！");
       }
+      // ===============================================================================
     } catch (error) {
       const errorMessage = {
         id: Date.now() + 1,
