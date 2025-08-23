@@ -1948,7 +1948,7 @@ const ChatApp = () => {
             'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'anthropic-version': '2023-06-01'
       })
     },
