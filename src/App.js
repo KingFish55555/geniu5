@@ -1771,7 +1771,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.11</p>
+                  <p>版本：0.4.2</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2075,6 +2075,15 @@ useEffect(() => {
 
   loadData();
 }, []); // 這個 effect 只在啟動時執行一次，所以依賴項是空的
+
+// ✨✨✨ 全新！聊天記錄的專屬存檔管家 ✨✨✨  <--- 就是這一段！
+useEffect(() => {
+    // 加上這個判斷，是為了避免在程式剛啟動、資料還沒載入時就存入一筆空資料
+    if (Object.keys(chatHistories).length > 0) {
+        console.log("偵測到聊天記錄變更，正在存入 IndexedDB...");
+        db.kvStore.put({ key: 'chatHistories', value: chatHistories });
+    }
+}, [chatHistories]); // 這個管家只監控 chatHistories
 
   // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
   // 這段程式碼會決定現在該用哪個 user profile
@@ -2894,60 +2903,45 @@ useEffect(() => {
       timestamp: getFormattedTimestamp(),
     };
     
-    const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    const updatedHistory = [...currentHistory, userMessage];
+    const currentHistoryArray = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    const historyWithUserMessage = [...currentHistoryArray, userMessage];
 
-    // --- 修改點 1: 儲存使用者自己的訊息 ---
-    // 建立一個包含使用者新訊息的完整聊天紀錄物件
-    const historiesWithUserMsg = {
-      ...chatHistories,
+    // 步驟 1: 只更新畫面狀態，不用存檔！
+    setChatHistories(prev => ({
+      ...prev,
       [activeChatCharacterId]: {
-        ...(chatHistories[activeChatCharacterId] || {}),
-        [activeChatId]: updatedHistory
+        ...prev[activeChatCharacterId],
+        [activeChatId]: historyWithUserMessage
       }
-    };
-    // 先更新畫面上的狀態
-    setChatHistories(historiesWithUserMsg);
-    // ✨ 新增: 立刻將這個新狀態存入 IndexedDB
-    await db.kvStore.put({ key: 'chatHistories', value: historiesWithUserMsg });
+    }));
 
     setInputMessage('');
     setIsLoading(true);
 
     try {
-      const aiResponse = await sendToAI(userMessage.contents[0], updatedHistory); 
-      
-      if (typeof aiResponse !== 'undefined') {
-        const aiMessage = {
-          id: Date.now() + 1,
-          sender: 'ai',
-          contents: [aiResponse],
-          activeContentIndex: 0,
-          timestamp: getFormattedTimestamp(),
-        };
+      const aiResponse = await sendToAI(userMessage.contents[0], historyWithUserMessage);
 
-        const finalHistory = [...updatedHistory, aiMessage];
-        
-        // --- 修改點 2: 儲存 AI 的回應 ---
-        // 建立包含 AI 回應的最終聊天紀錄物件
-        const finalHistories = {
-          ...chatHistories,
-          [activeChatCharacterId]: {
-            ...(chatHistories[activeChatCharacterId] || {}),
-            [activeChatId]: finalHistory
-          }
-        };
-        // 更新畫面狀態
-        setChatHistories(finalHistories);
-        // ✨ 新增: 立刻將最終狀態存入 IndexedDB
-        await db.kvStore.put({ key: 'chatHistories', value: finalHistories });
-        
-        // (這部分是您原本就有的邏輯，保持不變)
-        if (finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
-          console.log(`對話達到 ${finalHistory.length} 則，正在背景自動更新長期記憶...`);
-          await triggerMemoryUpdate(true); 
-          console.log("背景記憶更新完成！");
+      const aiMessage = {
+        id: Date.now() + 1,
+        sender: 'ai',
+        contents: [aiResponse],
+        activeContentIndex: 0,
+        timestamp: getFormattedTimestamp(),
+      };
+
+      const finalHistoryArray = [...historyWithUserMessage, aiMessage];
+      
+      // 步驟 2: 同樣地，只更新畫面狀態，不用存檔！
+      setChatHistories(prev => ({
+        ...prev,
+        [activeChatCharacterId]: {
+          ...prev[activeChatCharacterId],
+          [activeChatId]: finalHistoryArray
         }
+      }));
+      
+      if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
+        await triggerMemoryUpdate(true); 
       }
     } catch (error) {
       const errorMessage = {
@@ -2957,22 +2951,16 @@ useEffect(() => {
         activeContentIndex: 0,
         timestamp: getFormattedTimestamp(),
       };
-      const historyWithError = [...updatedHistory, errorMessage];
+      const historyWithError = [...historyWithUserMessage, errorMessage];
 
-      // --- 修改點 3: 儲存錯誤訊息 ---
-      // 建立包含錯誤訊息的聊天紀錄物件
-      const historiesWithError = {
-        ...chatHistories,
+      // 步驟 3: 錯誤時也一樣，只更新畫面，讓管家去存檔
+      setChatHistories(prev => ({
+        ...prev,
         [activeChatCharacterId]: {
-          ...(chatHistories[activeChatCharacterId] || {}),
+          ...prev[activeChatCharacterId],
           [activeChatId]: historyWithError
         }
-      };
-      // 更新畫面狀態
-      setChatHistories(historiesWithError);
-      // ✨ 新增: 立刻將這個包含錯誤訊息的狀態存入 IndexedDB
-      await db.kvStore.put({ key: 'chatHistories', value: historiesWithError });
-      
+      }));
     } finally {
       setIsLoading(false);
     }
@@ -2987,41 +2975,35 @@ useEffect(() => {
     setIsLoading(true);
 
     try {
-      const aiResponse = await sendToAI(null, currentHistory); // ✨ 沒有使用者的輸入
+      const aiResponse = await sendToAI(null, currentHistory);
       
-      if (typeof aiResponse !== 'undefined') {
-        const aiMessage = {
-          id: Date.now() + 1,
-          sender: 'ai',
-          contents: [aiResponse],
-          activeContentIndex: 0,
-          timestamp: getFormattedTimestamp(),
-        };
+      const aiMessage = {
+        id: Date.now() + 1,
+        sender: 'ai',
+        contents: [aiResponse],
+        activeContentIndex: 0,
+        timestamp: getFormattedTimestamp(),
+      };
 
-        let finalHistory;
-        setChatHistories(prev => {
-            const historyForChar = prev[activeChatCharacterId] || {};
-            const historyForChatId = historyForChar[activeChatId] || [];
-            finalHistory = [...historyForChatId, aiMessage];
-            return {
-              ...prev,
-              [activeChatCharacterId]: {
-                ...historyForChar,
-                [activeChatId]: finalHistory
-              }
-            };
-        });
-        
-        if (finalHistory && finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
-          console.log(`對話達到 ${finalHistory.length} 則，正在背景自動更新長期記憶...`);
-          await triggerMemoryUpdate(true); 
-          console.log("背景記憶更新完成！");
-        }
+      const finalHistory = [...currentHistory, aiMessage];
+      
+      // 核心修正：先建立完整的、新的 histories 物件
+      const newHistories = {
+          ...chatHistories,
+          [activeChatCharacterId]: {
+              ...(chatHistories[activeChatCharacterId] || {}),
+              [activeChatId]: finalHistory
+          }
+      };
+
+      // 再用這個新物件去同步更新畫面和資料庫
+      setChatHistories(newHistories);
+      await db.kvStore.put({ key: 'chatHistories', value: newHistories });
+      
+      if (finalHistory.length > 0 && finalHistory.length % MEMORY_UPDATE_INTERVAL === 0) {
+        await triggerMemoryUpdate(true); 
       }
     } catch (error) {
-      if (error.message === 'AI_EMPTY_RESPONSE') {
-        alert('AI 回傳了空的訊息，請再試一次。');
-      } else {
         const errorMessage = {
           id: Date.now() + 1,
           sender: 'system',
@@ -3029,18 +3011,17 @@ useEffect(() => {
           activeContentIndex: 0,
           timestamp: getFormattedTimestamp(),
         };
-        setChatHistories(prev => {
-            const historyForChar = prev[activeChatCharacterId] || {};
-            const historyForChatId = historyForChar[activeChatId] || [];
-            return {
-              ...prev,
-              [activeChatCharacterId]: {
-                ...historyForChar,
-                [activeChatId]: [...historyForChatId, errorMessage]
-              }
-            };
-        });
-      }
+        const historyWithError = [...currentHistory, errorMessage];
+
+        const historiesWithError = {
+            ...chatHistories,
+            [activeChatCharacterId]: {
+                ...(chatHistories[activeChatCharacterId] || {}),
+                [activeChatId]: historyWithError
+            }
+        };
+        setChatHistories(historiesWithError);
+        await db.kvStore.put({ key: 'chatHistories', value: historiesWithError });
     } finally {
       setIsLoading(false);
     }
@@ -3050,81 +3031,54 @@ useEffect(() => {
     if (!activeChatId || !activeChatCharacterId) return;
 
     const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    if (currentHistory.length === 0) {
-      console.log("聊天記錄為空，無法重新生成。");
+    if (currentHistory.length === 0 || currentHistory[currentHistory.length - 1].sender !== 'ai') {
       return;
     }
 
-    const lastMessage = currentHistory[currentHistory.length - 1];
-    // 步驟 1: 檢查最後一則訊息是否確實是 AI 的回覆。如果不是，就什麼都不做。
-    if (lastMessage.sender !== 'ai') {
-      console.log("最後一則訊息不是 AI 的回覆，無法重新生成。");
-      return;
-    }
-
-    // 步驟 2: 往前尋找觸發這次 AI 回應的、最後一則「使用者」訊息。
-    // 我們從倒數第二則訊息開始往前找 (currentHistory.length - 2)。
     let lastUserMessageIndex = -1;
     for (let i = currentHistory.length - 2; i >= 0; i--) {
       if (currentHistory[i].sender === 'user') {
         lastUserMessageIndex = i;
-        break; // 找到了就跳出迴圈
+        break;
       }
     }
+    if (lastUserMessageIndex === -1) return;
 
-    // 如果從頭到尾都找不到任何使用者訊息 (例如整個對話只有 AI 的開場白)，也無法重新生成。
-    if (lastUserMessageIndex === -1) {
-      console.log("找不到可以據以重新生成的使用者訊息。");
-      return;
-    }
-
-    // 步驟 3: 根據找到的索引，準備正確的「上下文」。
-    // 我們使用 .slice(0, lastUserMessageIndex + 1) 來精確地「切」出從第一則到最後一則使用者訊息為止的所有歷史紀錄。
-    // 這就是我們準備要交給 AI 的、乾淨的「筆記本」。
     const contextForRegeneration = currentHistory.slice(0, lastUserMessageIndex + 1);
-
-    // 從切出來的上下文中，取得最後一則訊息，也就是觸發這次回應的使用者訊息。
     const triggerUserMessage = contextForRegeneration[contextForRegeneration.length - 1];
     
     setIsLoading(true);
 
     try {
-      // 步驟 4: 呼叫 AI，並把「乾淨的筆記本」和「使用者的問題」交給它。
       const aiResponse = await sendToAI(triggerUserMessage.contents[0], contextForRegeneration);
 
       if (typeof aiResponse !== 'undefined') {
         
-        // 步驟 5: 將 AI 的新回覆，作為一個「新版本」加入到最後一則訊息中。
-        setChatHistories(prev => {
-          const newHistories = JSON.parse(JSON.stringify(prev));
-          const historyToUpdate = newHistories[activeChatCharacterId][activeChatId];
-          
-          // 找到要更新的那則 AI 訊息 (它一定是陣列中的最後一個)
-          const messageToUpdate = historyToUpdate[historyToUpdate.length - 1];
-          
-          // 在它的 'contents' 陣列中，加入新的回覆內容
-          messageToUpdate.contents.push(aiResponse);
-          // 同時，將 activeContentIndex 設為最新版本的索引，讓畫面上立刻顯示新回覆
-          messageToUpdate.activeContentIndex = messageToUpdate.contents.length - 1;
-          
-          return newHistories;
-        });
-
+        // 關鍵修正：我們先複製一份當前的歷史紀錄，才能對它進行修改。
+        const newHistoryArray = JSON.parse(JSON.stringify(currentHistory));
+        
+        const messageToUpdate = newHistoryArray[newHistoryArray.length - 1];
+        messageToUpdate.contents.push(aiResponse);
+        messageToUpdate.activeContentIndex = messageToUpdate.contents.length - 1;
+        
+        // 建立要儲存的完整物件
+        const newHistories = {
+            ...chatHistories,
+            [activeChatCharacterId]: {
+                ...(chatHistories[activeChatCharacterId] || {}),
+                [activeChatId]: newHistoryArray
+            }
+        };
+        // 同步更新畫面和資料庫
+        setChatHistories(newHistories);
+        await db.kvStore.put({ key: 'chatHistories', value: newHistories });
       }
     } catch (error) {
-      // 錯誤處理 (保持不變)
-      if (error.message === 'AI_EMPTY_RESPONSE') {
-        alert('AI 回傳了空的訊息，請再試一次。');
-      } else {
-        // 如果發生其他錯誤，也可以考慮在這裡顯示一則系統訊息
-        console.error("重新生成失敗:", error);
-        alert(`重新生成失敗: ${error.message}`);
-      }
+      alert(`重新生成失敗: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
-    // ✨ 這裡的依賴項陣列，請確保與您檔案中的 sendToAI 函式所使用的 state 一致 ✨
-  }, [activeChatId, activeChatCharacterId, chatHistories, sendToAI, setCharacters, apiKey, isApiConnected]);
+  }, [activeChatId, activeChatCharacterId, chatHistories, sendToAI]);
 
   const handleChangeVersion = useCallback((messageId, direction) => {
     setChatHistories(prev => {
@@ -3180,7 +3134,6 @@ useEffect(() => {
         const updatedHistory = currentHistory.filter(msg => msg.id !== messageId);
         
         newHistories[activeChatCharacterId][activeChatId] = updatedHistory;
-        db.kvStore.put({ key: 'chatHistories', value: newHistories });
         return newHistories;
       });
     }
@@ -3441,7 +3394,6 @@ const formatStDate = (date, type = 'send_date') => {
             newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
               ? [...currentChat, ...importedMessages] 
               : importedMessages;
-            db.kvStore.put({ key: 'chatHistories', value: newHistories });
             return newHistories;
           });
 
