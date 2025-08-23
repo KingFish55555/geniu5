@@ -287,7 +287,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：夏洛克·福爾摩斯"
+              placeholder="例如：夏洛克．福爾摩斯"
             />
           </div>
 
@@ -298,7 +298,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
               value={creatorNotes}
               onChange={(e) => setCreatorNotes(e.target.value)}
               rows="2"
-              placeholder="輸入一段簡短的備註..."
+              // placeholder="輸入角色的備註。例如：男性，偵探，古怪而博學的人。"
             />
           </div>
           {/* ✨✨✨ 新增結束 ✨✨✨ */}
@@ -1072,7 +1072,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows="4"
-              placeholder="描述一下你的個性和特色..."
+              placeholder="描述一下你的個性和特色。例如：男性，偵探助手，個性務實、忠誠。"
             />
           </div>
         </div>
@@ -2009,9 +2009,9 @@ useEffect(() => {
         const chars = await db.characters.toArray();
         const proms = await db.prompts.toArray();
         const configs = await db.apiConfigs.toArray();
-        const hist = await db.kvStore.get('chatHistories');
-        const meta = await db.kvStore.get('chatMetadatas');
-        const mem = await db.kvStore.get('longTermMemories');
+        const hist = (await db.kvStore.get('chatHistories'))?.value; 
+        const meta = (await db.kvStore.get('chatMetadatas'))?.value; 
+        const mem = (await db.kvStore.get('longTermMemories'))?.value;
         const profiles = (await db.kvStore.get('userProfiles'))?.value; 
         const activeId = (await db.kvStore.get('activeUserProfileId'))?.value; // ✨ 讀取預設 ID
         return [chars, proms, configs, hist, meta, mem, profiles, activeId];
@@ -3180,6 +3180,7 @@ useEffect(() => {
         const updatedHistory = currentHistory.filter(msg => msg.id !== messageId);
         
         newHistories[activeChatCharacterId][activeChatId] = updatedHistory;
+        db.kvStore.put({ key: 'chatHistories', value: newHistories });
         return newHistories;
       });
     }
@@ -3440,6 +3441,7 @@ const formatStDate = (date, type = 'send_date') => {
             newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
               ? [...currentChat, ...importedMessages] 
               : importedMessages;
+            db.kvStore.put({ key: 'chatHistories', value: newHistories });
             return newHistories;
           });
 
