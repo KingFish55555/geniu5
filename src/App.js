@@ -2557,7 +2557,7 @@ useEffect(() => {
     }
   }, [characters, currentCharacter, chatHistories]);
   
-  // ==================== ✨ 全新！支援多檔案批次匯入的版本 ✨ ====================
+// ==================== ✨ 全新！支援多檔案批次匯入的版本 (V3 卡片最終相容版) ✨ ====================
   const handleImportCharacter = useCallback(async (event) => {
     // 步驟 1: 取得使用者選擇的所有檔案 (這會是一個清單)
     const files = event.target.files;
@@ -2651,13 +2651,45 @@ useEffect(() => {
           failureCount++;
           continue;
         }
+
+        // =====================================================================
+        // ✨✨✨ 核心修改 (最終版)：組合一個更完整的角色描述 ✨✨✨
+        // =====================================================================
+        const descriptionParts = [];
+
+        // ✨ 1. 優先處理最高權重的 Depth Prompt (角色備註)
+        // 使用 ?. (optional chaining) 來安全地存取深層屬性，避免因缺少 extensions 而報錯
+        if (cardData.extensions?.depth_prompt?.prompt) {
+          descriptionParts.push(`[System Note]\n${cardData.extensions.depth_prompt.prompt}`);
+        }
+
+        // 2. 組合個性、場景和對話範例
+        if (cardData.personality) {
+          descriptionParts.push(`[Personality]\n${cardData.personality}`);
+        }
+        if (cardData.scenario) {
+          descriptionParts.push(`[Scenario]\n${cardData.scenario}`);
+        }
+        if (cardData.mes_example) {
+          descriptionParts.push(`[Dialogue Example]\n${cardData.mes_example}`);
+        }
+
+        // 3. 最後附上原始的角色描述 (如果有的話)
+        if (cardData.description) {
+          descriptionParts.push(cardData.description);
+        }
+
+        // 4. 用分隔線將它們組合起來，如果什麼都沒有，就留空
+        const combinedDescription = descriptionParts.join('\n\n---\n\n');
+        // =====================================================================
+
         const newCharacter = {
           id: Date.now() + successCount, // 加上 successCount 確保 ID 不會重複
           name: cardData.name || cardData.char_name,
-          description: cardData.description || '',
+          description: combinedDescription, // ✨ 使用我們剛剛組合好的完整描述
           firstMessage: cardData.first_mes || '',
           alternateGreetings: cardData.alternate_greetings || [],
-          creatorNotes: cardData.creator_notes || '',
+          creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '', 
           personality: cardData.personality || '',
           avatar: characterAvatar,
           characterBook: cardData.character_book || null,
@@ -2697,7 +2729,7 @@ useEffect(() => {
     if (event && event.target) {
       event.target.value = '';
     }
-  }, [characters]); // 依賴項保持不變
+  }, [characters]);
 
   // =================================================================================
   // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
