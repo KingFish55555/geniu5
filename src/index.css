@@ -2674,3 +2674,39 @@ select:focus {
   object-fit: cover; /* 核心！保持比例，填滿容器，多餘部分裁掉 */
   object-position: center; /* 裁切時以圖片中心為主 */
 }
+
+/* ✨✨✨ 全新！角色收藏按鈕樣式 ✨✨✨ */
+.fav-character-btn {
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-left: 8px; /* 和編輯按鈕保持一致的間距 */
+  transition: all 0.2s ease;
+}
+
+.fav-character-btn svg {
+  transition: all 0.2s ease;
+}
+
+/* 按鈕懸停時的效果 */
+.fav-character-btn:hover {
+  border-color: #f59e0b; /* 金黃色 */
+}
+
+/* 按鈕被收藏時的樣式 (核心！) */
+.fav-character-btn.favorited {
+  border-color: #f59e0b;
+  color: #f59e0b;
+}
+
+.fav-character-btn.favorited svg {
+  fill: #f59e0b; /* 讓星星圖示被填滿金色 */
+  transform: scale(1.1); /* 稍微放大，增加視覺回饋 */
+}

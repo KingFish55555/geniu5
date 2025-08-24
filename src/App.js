@@ -5,7 +5,7 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin
+  MoveRightIcon, Pin, Star
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -483,8 +483,24 @@ const CharacterPreview = ({ character, onClose, onStartChat, userProfiles, activ
   );
 };
 
-const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
+const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onToggleFavorite }) => {
   const [showFloatMenu, setShowFloatMenu] = useState(false);
+
+  // =====================================================================
+  // ✨✨✨ 核心修改：在這裡進行排序 ✨✨✨
+  // =====================================================================
+  const sortedCharacters = useMemo(() => {
+    // 先複製一份陣列，避免直接修改原始 state
+    return [...characters].sort((a, b) => {
+      // 規則 1: 比較 fav 狀態 (true 的排前面)
+      if (a.fav !== b.fav) {
+        return a.fav ? -1 : 1;
+      }
+      // 規則 2: 如果 fav 狀態相同，則按名稱排序
+      // localeCompare 是處理各種語言 (包含中文筆劃) 排序的最佳方式
+      return a.name.localeCompare(b.name);
+    });
+  }, [characters]); // 依賴項是 characters，代表只有角色列表變動時才重新排序
 
   return (
     <div className="page-content">
@@ -506,7 +522,8 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
         </div>
       ) : (
           <div className="character-list">
-            {characters.map((character) => (
+            {/* ✨ 使用我們排序好的 sortedCharacters 陣列來渲染列表 ✨ */}
+            {sortedCharacters.map((character) => (
               <div key={character.id} className="character-list-item">
                 <div className="character-select-area" onClick={() => onPreview(character)}>
                   <div className="character-avatar-large">
@@ -517,6 +534,13 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
                     <p>{character.creatorNotes || character.description?.split('\n')[0]}</p>
                   </div>
                 </div>
+                {/* ✨✨✨ 在這裡加入我們的收藏按鈕 ✨✨✨ */}
+                <button 
+                  className={`fav-character-btn ${character.fav ? 'favorited' : ''}`}
+                  onClick={() => onToggleFavorite(character.id)}
+                >
+                  <Star size={16} />
+                </button>
                 <button className="edit-character-btn" onClick={() => onEdit(character)}><Settings size={16} /></button>
               </div>
             ))}
@@ -2036,9 +2060,9 @@ const ChatApp = () => {
     claude: {
       name: 'Anthropic Claude',
       endpoint: 'https://api.wangfishpro.workers.dev/https://api.anthropic.com/v1/messages',
-      models: ['claude-opus-4-1', 'claude-opus-4-1-20250805', 'claude-opus-4-0', 'claude-opus-4-20250514',
+      models: ['claude-3-7-sonnet-latest', 'claude-opus-4-1', 'claude-opus-4-1-20250805', 'claude-opus-4-0', 'claude-opus-4-20250514',
             'claude-sonnet-4-0', 'claude-sonnet-4-20250514',
-            'claude-3-7-sonnet-latest', 'claude-3-7-sonnet-20250219',
+            'claude-3-7-sonnet-20250219',
             'claude-3-5-sonnet-latest', 'claude-3-5-sonnet-20241022', 'claude-3-5-sonnet-20240620',
             'claude-3-5-haiku-latest', 'claude-3-5-haiku-20241022',
             'claude-3-opus-20240229', 'claude-3-haiku-20240307'],
@@ -2556,6 +2580,29 @@ useEffect(() => {
       alert('❌ 刪除角色失敗！');
     }
   }, [characters, currentCharacter, chatHistories]);
+
+// ==================== ✨ 全新！切換角色收藏狀態的函式 ✨ ====================
+  const handleToggleFavoriteCharacter = useCallback(async (characterId) => {
+    // 步驟 1: 從目前的角色列表中找到我們要修改的那一個
+    const characterToUpdate = characters.find(c => c.id === characterId);
+    if (!characterToUpdate) return;
+
+    // 步驟 2: 建立一個更新後的角色物件，並將 fav 狀態反轉 (true 變 false, false 變 true)
+    const updatedCharacter = { ...characterToUpdate, fav: !characterToUpdate.fav };
+
+    // 步驟 3: 更新 React 的 state，讓畫面立刻重新渲染
+    setCharacters(prevCharacters => 
+      prevCharacters.map(c => c.id === characterId ? updatedCharacter : c)
+    );
+
+    // 步驟 4: 將更新後的角色資料存回 IndexedDB，確保永久保存
+    try {
+      await db.characters.put(updatedCharacter);
+    } catch (error) {
+      console.error("更新角色收藏狀態失敗:", error);
+      // 如果儲存失敗，可以選擇是否要還原畫面狀態
+    }
+  }, [characters]);  
   
 // ==================== ✨ 全新！支援多檔案批次匯入的版本 (V3 卡片最終相容版) ✨ ====================
   const handleImportCharacter = useCallback(async (event) => {
@@ -2693,6 +2740,7 @@ useEffect(() => {
           personality: cardData.personality || '',
           avatar: characterAvatar,
           characterBook: cardData.character_book || null,
+          fav: cardData.fav || false, // ✨ 讀取卡片中的 fav 狀態，如果沒有就預設為 false
         };
         
         // --- 核心修改：不是立刻更新畫面，而是先把新角色存到暫存區 ---
@@ -3811,6 +3859,7 @@ const formatStDate = (date, type = 'send_date') => {
               onEdit={openEditorForEdit}
               onImport={handleImportCharacter}
               onPreview={openPreview}
+              onToggleFavorite={handleToggleFavoriteCharacter}
             />
           )}
           {currentPage === 'chat' && (
