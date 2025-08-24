@@ -5,13 +5,13 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin
+  MoveRightIcon, Pin, Bug
 } from 'lucide-react';
 import rehypeRaw from 'rehype-raw';
 import { db } from './db';
 import html2canvas from 'html2canvas';
 
-// ==================== 組件定義 ====================
+// ==================== 長期記憶數量觸發數 ====================
 
 const MEMORY_UPDATE_INTERVAL = 3;
 
@@ -1781,6 +1781,16 @@ const SettingsPage = ({
                       <Moon size={20} />
                       暗色主題
                     </button>
+                    <button
+                      onClick={() => {
+                        setTheme('forest');
+                        localStorage.setItem('app_theme', 'forest');
+                      }}
+                      className={`theme-btn ${theme === 'forest' ? 'active' : ''}`}
+                    >
+                      <Bug size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
+                      蟲餡包綠
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1853,7 +1863,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.32</p>
+                  <p>版本：0.4.33</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">

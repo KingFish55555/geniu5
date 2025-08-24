@@ -13,6 +13,8 @@
   --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   --quote-text-color: #8ac2e6;
   --middle-color: #505050;
+  --topline-color: #222222;
+  --user-color: #313131;
 }
 
 :root[data-theme="light"] {
@@ -29,6 +31,34 @@
   --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
   --quote-text-color: #587c9a;
   --middle-color: #e7e7e7;
+  --topline-color: #f9fafb;
+  --user-color: #cfd8e7;
+}
+
+/* ✨ 全新！森語綠主題 (路徑修正版) ✨ */
+:root[data-theme="forest"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: rgb(80, 133, 78);
+  --accent-color: rgb(53, 112, 71);
+  --topline-color: rgb(80, 133, 78, 0.7);
+
+  /* --- 背景顏色 --- */
+  --background-color: rgb(205, 238, 203);
+  /* ✨✨✨ 在這裡使用正確的路徑 ✨✨✨ */
+  --surface-color: rgb(253, 250, 239);
+  --user-color: rgb(245, 241, 191, 0.5);
+  /* --- 文字顏色 --- */
+  --text-primary: rgb(104, 60, 11);
+  --text-secondary: rgb(146, 106, 58);
+  --text-muted: rgba(146, 106, 58, 0.7);
+  --quote-text-color: rgb(53, 112, 71);
+  --text-user: rgb(253, 250, 239);
+
+  /* --- 其他顏色 --- */
+  --border-color: rgba(168, 168, 168, 0.438);
+  --middle-color: #e7e7e7;
+  --shadow-light: rgba(88, 71, 12, 0.15);
+  --shadow-medium: rgba(88, 71, 12, 0.315);
 }
 
 /* 引號內文字的專屬樣式 */
@@ -95,7 +125,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background: var(--background-color);
+  background: var(--topline-color);
   border-bottom: 1px solid var(--border-color);
   padding: 0 20px;
   box-shadow: 0 1px 3px var(--shadow-light);
@@ -389,7 +419,7 @@ body {
 }
 
 .user-message .message-content {
-  background: var(--primary-color);
+  background: var(--user-color);
   color: var(--text-primary);
   border-bottom-right-radius: 4px;
 }
