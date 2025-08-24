@@ -5,8 +5,9 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Bug
+  MoveRightIcon, Pin
 } from 'lucide-react';
+import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
 import { db } from './db';
 import html2canvas from 'html2canvas';
@@ -1779,7 +1780,7 @@ const SettingsPage = ({
                       className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
                     >
                       <Moon size={20} />
-                      暗色主題
+                      深色主題
                     </button>
                     <button
                       onClick={() => {
@@ -1788,8 +1789,8 @@ const SettingsPage = ({
                       }}
                       className={`theme-btn ${theme === 'forest' ? 'active' : ''}`}
                     >
-                      <Bug size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
-                      蟲餡包綠
+                      <CaterpillarIcon size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
+                      蟲餡包綠主題
                     </button>
                   </div>
                 </div>
