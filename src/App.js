@@ -729,12 +729,15 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
 
   // 步驟 2: 使用正規表示式，找到所有「全形冒號後面緊跟著一個上引號」的地方
   // g 的意思是 global，代表取代所有符合條件的地方，而不只是第一個
-  const regex = /：(「|“|"|『|【)/g;
+  const regex = /(：|，|。|；|？|！|…|、|—|"|『)(「|“|"|『|【)/g;
+  // 處理引號後緊跟星號的情況
+  const quoteStarRegex = /(「|“|"|『|【)\*/g;
   
   // 步驟 3: 進行替換
   // '$1' 代表的是第一個括號裡捕捉到的內容 (也就是那個上引號本身)
   // 所以 '：「' 會被換成 '： 「'
-  textToProcess = textToProcess.replace(regex, '： $1');
+  textToProcess = textToProcess.replace(regex, '$1 $2');
+  textToProcess = textToProcess.replace(quoteStarRegex, '$1 *');
   
   // 步驟 4: 將處理過的文字，再交給我們原本的引號高亮函式
   const processedText = highlightQuotedText(textToProcess);
@@ -1850,7 +1853,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.31</p>
+                  <p>版本：0.4.32</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2167,6 +2170,22 @@ useEffect(() => {
           db.kvStore.put({ key: 'chatHistories', value: chatHistories });
       }
   }, [chatHistories]); // 這個管家只監控 chatHistories
+
+  // ✨✨✨ 全新！聊天室元數據 (備註/作者備註) 的存檔管家 ✨✨✨
+  useEffect(() => {
+      if (Object.keys(chatMetadatas).length > 0) {
+          console.log("偵測到聊天室元數據變更，正在存入 IndexedDB...");
+          db.kvStore.put({ key: 'chatMetadatas', value: chatMetadatas });
+      }
+  }, [chatMetadatas]); // 這個管家只監控 chatMetadatas
+
+  // ✨✨✨ 全新！長期記憶的存檔管家 ✨✨✨
+  useEffect(() => {
+      if (Object.keys(longTermMemories).length > 0) {
+          console.log("偵測到長期記憶變更，正在存入 IndexedDB...");
+          db.kvStore.put({ key: 'longTermMemories', value: longTermMemories });
+      }
+  }, [longTermMemories]); // 這個管家只監控 longTermMemories
 
     // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
     // 這段程式碼會決定現在該用哪個 user profile
@@ -3372,8 +3391,16 @@ useEffect(() => {
 
 // ==================== 全新！開啟聊天備註編輯器的函式 ====================
   const handleOpenMetadataEditor = useCallback((charId, chatId) => {
-    setEditingMetadata({ charId, chatId });
-  }, []);
+    // 步驟 1: 先從 chatMetadatas 中，根據 ID 找出完整的元數據物件
+    const fullMetadata = chatMetadatas[charId]?.[chatId] || {}; // 使用 || {} 避免 undefined
+
+    // 步驟 2: 將 ID 和完整的元數據合併後，再設定給 state
+    setEditingMetadata({
+      charId,
+      chatId,
+      ...fullMetadata // 這會把 .notes, .pinned 等所有已存在的屬性都放進來
+    });
+  }, [chatMetadatas]); // ✨ 非常重要：要把 chatMetadatas 加入依賴項！
 
   // ✨ 2. 新增儲存聊天備註的函式 ✨
   const handleSaveChatNotes = useCallback((newNotes) => {
