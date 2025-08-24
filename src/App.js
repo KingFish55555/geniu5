@@ -1850,7 +1850,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.3</p>
+                  <p>版本：0.4.31</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3087,10 +3087,12 @@ useEffect(() => {
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
 
+    const processedInput = applyPlaceholders(inputMessage, currentCharacter, currentUserProfile);
+
     const userMessage = {
       id: Date.now(),
       sender: 'user',
-      contents: [inputMessage],
+      contents: [processedInput],
       activeContentIndex: 0,
       timestamp: getFormattedTimestamp(),
     };
