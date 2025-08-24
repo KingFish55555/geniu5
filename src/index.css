@@ -36,6 +36,31 @@
   color: var(--quote-text-color);
 }
 
+/* 
+  ✨ 核心修正：使用 ::before 偽元素 ✨
+  這段 CSS 的意思是：在每一個 class 為 "quoted-text" 的元素內容【之前】，
+  插入一個看不見的元素，這個元素的內容是一個單一的空格。
+*/
+.quoted-text::before {
+  content: " ";
+  /* 
+    letter-spacing 可以用來微調這個假空格的寬度，
+    負值會讓它變窄，正值會讓它變寬。
+    -0.3em 通常是一個不錯的起始點，可以讓引號和文字分開，但又不會太開。
+    您可以微調這個數值，直到您覺得看起來最舒服為止。
+  */
+  letter-spacing: -0.3em;
+}
+
+/* 
+  為了避免在段落開頭的引號前面也加上一個多餘的空格，
+  我們告訴 CSS：如果這個引號是段落的第一個子元素，
+  那就不要插入任何內容。
+*/
+p > .quoted-text:first-child::before {
+  content: none;
+}
+
 /* Reset and Base Styles */
 * {
   margin: 0;
@@ -2533,4 +2558,89 @@ select:focus {
 .custom-select-option.selected {
   background-color: var(--primary-color);
   color: white;
+}
+
+/* in index.css */
+
+/* =================================== */
+/*  訊息截圖模式樣式                  */
+/* =================================== */
+
+/* 當進入截圖模式時，讓訊息顯示為可點擊的手指圖示 */
+.message.screenshot-mode {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* 當滑鼠移到可選擇的訊息上時，稍微放大 */
+.message.screenshot-mode:hover {
+  transform: scale(1.02);
+}
+
+/* 被選中的訊息樣式，顯示一個漂亮的發光外框 */
+.message.selected {
+  border-radius: 12px; /* 加上圓角，讓外框更好看 */
+  box-shadow: 0 0 0 3px var(--primary-color);
+}
+
+/* 截圖模式下的底部工具列 */
+.screenshot-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  width: 100%;
+}
+
+.screenshot-info {
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.screenshot-btn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.screenshot-btn.cancel:hover {
+  background-color: #ef4444;
+  border-color: #ef4444;
+  color: white;
+}
+
+.screenshot-btn.confirm {
+  background-color: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.screenshot-btn.confirm:hover:not(:disabled) {
+  background-color: #059669;
+  border-color: #059669;
+}
+
+.screenshot-btn:disabled {
+  background-color: var(--text-muted);
+  border-color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* === 全新！修正頭像圖片比例的魔法 === */
+.avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 核心！保持比例，填滿容器，多餘部分裁掉 */
+  object-position: center; /* 裁切時以圖片中心為主 */
 }

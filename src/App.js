@@ -9,10 +9,11 @@ import {
 } from 'lucide-react';
 import rehypeRaw from 'rehype-raw';
 import { db } from './db';
+import html2canvas from 'html2canvas';
 
 // ==================== 組件定義 ====================
 
-const MEMORY_UPDATE_INTERVAL = 5;
+const MEMORY_UPDATE_INTERVAL = 3;
 
 // 頂部導航組件
 const TopNavigation = ({ currentPage, navigateToPage }) => (
@@ -66,7 +67,7 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
         <div className="selected-option">
           <div className="option-avatar">
             {selectedProfile?.avatar?.type === 'image' ? (
-              <img src={selectedProfile.avatar.data} alt={selectedProfile.name} />
+              <img src={selectedProfile.avatar.data} alt={selectedProfile.name} className="avatar-image" />
             ) : (
               <UserCircle size={24} />
             )}
@@ -91,7 +92,7 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
             >
               <div className="option-avatar">
                 {profile.avatar?.type === 'image' ? (
-                  <img src={profile.avatar.data} alt={profile.name} />
+                  <img src={profile.avatar.data} alt={profile.name} className="avatar-image" />
                 ) : (
                   <UserCircle size={24} />
                 )}
@@ -255,7 +256,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
             <div className="avatar-editor">
               <div className="avatar-preview-large">
                 {avatar.type === 'image' ? (
-                  <img src={avatar.data} alt="頭像" />
+                  <img src={avatar.data} alt="頭像" className="avatar-image" />
                 ) : (
                   <UserCircle size={48} />
                 )}
@@ -447,7 +448,7 @@ const CharacterPreview = ({ character, onClose, onStartChat, userProfiles, activ
           <div className="preview-top-section">
             <div className="preview-character-image">
               {character.avatar?.type === 'image' ? (
-                <img src={character.avatar.data} alt={character.name} />
+                <img src={character.avatar.data} alt={character.name} className="avatar-image" />
               ) : (
                 <div className="image-placeholder"><UserCircle size={64} /></div>
               )}
@@ -508,7 +509,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview }) => {
               <div key={character.id} className="character-list-item">
                 <div className="character-select-area" onClick={() => onPreview(character)}>
                   <div className="character-avatar-large">
-                    {character.avatar?.type === 'image' ? (<img src={character.avatar.data} alt={character.name} />) : (<UserCircle size={32} />)}
+                    {character.avatar?.type === 'image' ? (<img src={character.avatar.data} alt={character.name} className="avatar-image" />) : (<UserCircle size={32} />)}
                   </div>
                   <div className="character-info">
                     <h4>{character.name}</h4>
@@ -654,7 +655,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                   <div className="character-select-area">
                     <div className="avatar-wrapper">
                         <div className="character-avatar-large">
-                        {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} />) : (<UserCircle size={32} />)}
+                        {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} className="avatar-image" />) : (<UserCircle size={32} />)}
                         </div>
                         {isPinned && (
                             <div className="pin-badge">
@@ -694,7 +695,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
 };
 
 // ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
-const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion }) => {
+const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage }) => {
   const showActions = showActionsMessageId === msg.id;
 
   const handleBubbleClick = () => {
@@ -719,77 +720,105 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
 
   const currentText = msg.contents[msg.activeContentIndex];
 
-  // ✨✨✨ 核心修改：我們先用 highlightQuotedText 處理文字，再交給 ReactMarkdown ✨✨✨
-  const processedText = highlightQuotedText(currentText);
+  // ==========================================================
+  // ✨✨✨ 在這裡進行冒號的處理 ✨✨✨
+  // ==========================================================
+  
+  // 步驟 1: 先複製一份原始訊息
+  let textToProcess = currentText;
+
+  // 步驟 2: 使用正規表示式，找到所有「全形冒號後面緊跟著一個上引號」的地方
+  // g 的意思是 global，代表取代所有符合條件的地方，而不只是第一個
+  const regex = /：(「|“|"|『|【)/g;
+  
+  // 步驟 3: 進行替換
+  // '$1' 代表的是第一個括號裡捕捉到的內容 (也就是那個上引號本身)
+  // 所以 '：「' 會被換成 '： 「'
+  textToProcess = textToProcess.replace(regex, '： $1');
+  
+  // 步驟 4: 將處理過的文字，再交給我們原本的引號高亮函式
+  const processedText = highlightQuotedText(textToProcess);
 
   return (
-    <div className={`message ${messageClass}`}>
+    // ==================================================
+    // ✨✨✨ 修改最外層的這個 div ✨✨✨
+    // ==================================================
+    <div
+      className={`message ${messageClass} ${isScreenshotMode ? 'screenshot-mode' : ''} ${isSelected ? 'selected' : ''}`}
+      onClick={() => onSelectMessage(msg.id)} // 點擊時，呼叫從 props 傳來的函式
+      data-message-id={msg.id} // 新增一個屬性，方便我們之後在 DOM 中找到它
+    >
       {msg.sender !== 'system' && (
         <div className="message-avatar">
-          <img src={avatarUrl} alt={msg.sender} />
+          <img src={avatarUrl} alt={msg.sender} className="avatar-image" />
         </div>
       )}
       <div className="message-content">
-        <div className="bubble-wrapper" onClick={handleBubbleClick}>
-          {/* ✨ 核心修改：使用 ReactMarkdown，並傳入 rehypeRaw 外掛 ✨ */}
+        {/*
+          ✨ 關鍵修改：在截圖模式下，我們不希望點擊泡泡還會觸發顯示編輯按鈕，
+          所以我們把 onClick 事件從 bubble-wrapper 移到了最外層的 div。
+          但在正常模式下，我們保留原本的功能。
+        */}
+        <div className="bubble-wrapper" onClick={isScreenshotMode ? (e) => e.stopPropagation() : handleBubbleClick}>
+
           <ReactMarkdown rehypePlugins={[rehypeRaw]}>
             {processedText}
           </ReactMarkdown>
-          
-          <span className="timestamp">{msg.timestamp}</span>
-          
-          {/* 🔥 主要變化 1：刪除按鈕移到外面，所有訊息（包括系統訊息）都可以刪除 */}
-          <button 
-            onClick={onDelete} 
-            className={`delete-message-btn ${showActions ? 'visible' : ''}`} 
-            title={msg.sender === 'system' ? '刪除系統訊息' : '刪除訊息'}
-          >
-            <Trash2 size={14} />
-          </button>
 
-          {/* 🔥 主要變化 2：編輯按鈕只對非系統訊息顯示 */}
-          {msg.sender !== 'system' && (
-            <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-            </button>
-          )}
+          {/* 我們不希望截圖中出現時間戳，所以在截圖模式下隱藏它 */}
+          {!isScreenshotMode && <span className="timestamp">{msg.timestamp}</span>}
 
-          {/* 🔥 主要變化 3：AI 訊息的版本切換功能保持不變 */}
-          {msg.sender === 'ai' && msg.contents.length > 1 && showActions && (
-              <div className="message-actions-toolbar">
-                  <button 
-                  className="action-btn"
-                  disabled={msg.activeContentIndex === 0}
-                  onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'prev'); }}
-                  >
-                  ‹
-                  </button>
-                  <span className="version-indicator">
-                  {msg.activeContentIndex + 1} / {msg.contents.length}
-                  </span>
-                  <button 
-                  className="action-btn"
-                  disabled={msg.activeContentIndex === msg.contents.length - 1}
-                  onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'next'); }}
-                  >
-                  ›
-                  </button>
-              </div>
-          )}
-          
-          {/* 🔥 主要變化 4：重新生成按鈕保持不變 */}
-          {isLastMessage && msg.sender === 'ai' && showActions && (
-             <button className="regenerate-btn" onClick={(e) => { e.stopPropagation(); handleRegenerate(); }} title="重新生成">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M3 21a9 9 0 0 1 .5-4.5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-            </button>
-          )}
+          {/* 下面的編輯、刪除、版本切換等按鈕，在截圖模式下也都不顯示 */}
+          {!isScreenshotMode && (
+            <>
+              <button
+                onClick={onDelete}
+                className={`delete-message-btn ${showActions ? 'visible' : ''}`}
+                title={msg.sender === 'system' ? '刪除系統訊息' : '刪除訊息'}
+              >
+                <Trash2 size={14} />
+              </button>
 
+              {msg.sender !== 'system' && (
+                <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                </button>
+              )}
+
+              {msg.sender === 'ai' && msg.contents.length > 1 && showActions && (
+                  <div className="message-actions-toolbar">
+                      <button
+                      className="action-btn"
+                      disabled={msg.activeContentIndex === 0}
+                      onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'prev'); }}
+                      >
+                      ‹
+                      </button>
+                      <span className="version-indicator">
+                      {msg.activeContentIndex + 1} / {msg.contents.length}
+                      </span>
+                      <button
+                      className="action-btn"
+                      disabled={msg.activeContentIndex === msg.contents.length - 1}
+                      onClick={(e) => { e.stopPropagation(); onChangeVersion(msg.id, 'next'); }}
+                      >
+                      ›
+                      </button>
+                  </div>
+              )}
+
+              {isLastMessage && msg.sender === 'ai' && showActions && (
+                 <button className="regenerate-btn" onClick={(e) => { e.stopPropagation(); handleRegenerate(); }} title="重新生成">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M3 21a9 9 0 0 1 .5-4.5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 };
-
 const MessageEditorModal = ({ editingMessage, onSave, onClose }) => {
   const [modalText, setModalText] = useState('');
 
@@ -1111,7 +1140,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport }) => {
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot }) => {
   
   const textareaRef = useRef(null);
 
@@ -1182,6 +1211,9 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               setShowActionsMessageId={setShowActionsMessageId}
               handleRegenerate={handleRegenerate}
               onChangeVersion={onChangeVersion}
+              isScreenshotMode={isScreenshotMode}
+              isSelected={selectedMessageIds.includes(message.id)}
+              onSelectMessage={handleSelectMessage}
               isLastMessage={index === messages.length - 1}
             />
         ))}
@@ -1199,82 +1231,104 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
       </div>
   
       <div className="input-area-wrapper">
-        
-        {isInputMenuOpen && (
-          <div className="input-menu">
-            <button className="input-menu-item" onClick={() => {
-                setIsMemoryModalOpen(true);
-                setIsInputMenuOpen(false);
-            }}>
-              <BookOpen size={20} />
-              <span>長期記憶</span>
+        {isScreenshotMode ? (
+          // ===================================
+          //  ✨ 如果是截圖模式，就顯示這個工具列 ✨
+          // ===================================
+          <div className="screenshot-toolbar">
+            <button className="screenshot-btn cancel" onClick={handleToggleScreenshotMode}>
+              <X size={18} />
+              <span>取消</span>
             </button>
-            {/* ✨ 在這裡新增一個按鈕，點擊後打開作者備註編輯器 ✨ */}
-            <button className="input-menu-item" onClick={() => {
-                setIsAuthorsNoteModalOpen(true); // ✨ 直接呼叫我們傳進來的開關
-                setIsInputMenuOpen(false);
-            }}>
-              <Settings size={20} />
-              <span>Author's Note</span>
-            </button>
-            <button className="input-menu-item" onClick={() => {
-                exportChat(); // 呼叫我們的大腦函式
-                setIsInputMenuOpen(false); // 點擊後關閉選單
-            }}>
-              <Download size={20} />
-              <span>匯出聊天 (.jsonl)</span>
-            </button>
-            {/* ✨ 1. 在這裡新增匯入按鈕 ✨ */}
-            <button className="input-menu-item" onClick={() => {
-                document.getElementById('st-import-input').click(); // 點擊隱藏的選擇器
-                setIsInputMenuOpen(false);
-            }}>
-              <Upload size={20} />
-              <span>匯入聊天 (.jsonl)</span>
+            <span className="screenshot-info">
+              已選擇 {selectedMessageIds.length} 則訊息
+            </span>
+            <button 
+              className="screenshot-btn confirm" 
+              onClick={handleGenerateScreenshot}
+              disabled={selectedMessageIds.length === 0}
+            >
+              <Check size={18} />
+              <span>生成圖片</span>
             </button>
           </div>
-        )}
-
-        {/* ✨ 2. 在這裡新增隱藏的檔案選擇器 ✨ */}
-        <input 
-          type="file" 
-          id="st-import-input" 
-          accept=".jsonl" 
-          style={{ display: 'none' }} 
-          onChange={handleImport} 
-        />
-
-        <div className="input-area">
-          <button 
-            className={`input-menu-btn ${isInputMenuOpen ? 'open' : ''}`}
-            onClick={() => setIsInputMenuOpen(!isInputMenuOpen)}
-          >
-            <Plus size={22} />
-          </button>
-
-          <textarea
-            ref={textareaRef}
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            //onKeyDown={handleKeyPress}
-            placeholder={currentCharacter ? `向 ${currentCharacter.name} 說話` : "輸入訊息..."}
-            className="message-input"
-            disabled={isLoading}
-            rows={1}
-          />
-          
-          <button 
-            onClick={handleSend}
-            disabled={isButtonDisabled}
-            className="send-button"
-          >
-            {inputMessage.trim() ? (
-              <Send size={18} />
-            ) : (
-              <MoveRightIcon size={20} /> 
+        ) : (
+          // ===================================
+          //  ✨ 如果是正常模式，就顯示原本的內容 ✨
+          // ===================================
+          <>
+            {isInputMenuOpen && (
+              <div className="input-menu">
+                <button className="input-menu-item" onClick={() => {
+                    setIsMemoryModalOpen(true);
+                    setIsInputMenuOpen(false);
+                }}>
+                  <BookOpen size={20} />
+                  <span>長期記憶</span>
+                </button>
+                <button className="input-menu-item" onClick={() => {
+                    setIsAuthorsNoteModalOpen(true);
+                    setIsInputMenuOpen(false);
+                }}>
+                  <Settings size={20} />
+                  <span>Author's Note</span>
+                </button>
+                <button className="input-menu-item" onClick={() => {
+                    exportChat();
+                    setIsInputMenuOpen(false);
+                }}>
+                  <Download size={20} />
+                  <span>匯出聊天 (.jsonl)</span>
+                </button>
+                <button className="input-menu-item" onClick={() => {
+                    document.getElementById('st-import-input').click();
+                    setIsInputMenuOpen(false);
+                }}>
+                  <Upload size={20} />
+                  <span>匯入聊天 (.jsonl)</span>
+                </button>
+                {/* 這是我們之前新增的截圖按鈕 */}
+                <button className="input-menu-item" onClick={handleToggleScreenshotMode}>
+                  <Camera size={20} />
+                  <span>訊息截圖</span>
+                </button>
+              </div>
             )}
-          </button>
-        </div>
+
+            <input 
+              type="file" 
+              id="st-import-input" 
+              accept=".jsonl" 
+              style={{ display: 'none' }} 
+              onChange={handleImport} 
+            />
+
+            <div className="input-area">
+              <button 
+                className={`input-menu-btn ${isInputMenuOpen ? 'open' : ''}`}
+                onClick={() => setIsInputMenuOpen(!isInputMenuOpen)}
+              >
+                <Plus size={22} />
+              </button>
+              <textarea
+                ref={textareaRef}
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder={currentCharacter ? `向 ${currentCharacter.name} 說話` : "輸入訊息..."}
+                className="message-input"
+                disabled={isLoading}
+                rows={1}
+              />
+              <button 
+                onClick={handleSend}
+                disabled={isButtonDisabled}
+                className="send-button"
+              >
+                {inputMessage.trim() ? <Send size={18} /> : <MoveRightIcon size={20} />}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1562,7 +1616,7 @@ const SettingsPage = ({
                       <div key={profile.id} className="character-list-item">
                          <div className="character-select-area">
                           <div className="character-avatar-large">
-                            {profile.avatar?.type === 'image' ? (<img src={profile.avatar.data} alt={profile.name} />) : (<UserCircle size={32} />)}
+                            {profile.avatar?.type === 'image' ? (<img src={profile.avatar.data} alt={profile.name} className="avatar-image" />) : (<UserCircle size={32} />)}
                           </div>
                           <div className="character-info">
                             <h4>{profile.name}</h4>
@@ -1796,7 +1850,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.2</p>
+                  <p>版本：0.4.3</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1931,6 +1985,9 @@ const ChatApp = () => {
   const [swipedChatId, setSwipedChatId] = useState(null);
   const [showActionsMessageId, setShowActionsMessageId] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const [isScreenshotMode, setIsScreenshotMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState([]);
 
   // ✨✨✨ 全新！使用者個人檔案編輯器 Modal 的 State ✨✨✨
   const [isUserProfileEditorOpen, setIsUserProfileEditorOpen] = useState(false);
@@ -2102,41 +2159,150 @@ useEffect(() => {
   loadData();
 }, []); // 這個 effect 只在啟動時執行一次，所以依賴項是空的
 
-// ✨✨✨ 全新！聊天記錄的專屬存檔管家 ✨✨✨  <--- 就是這一段！
-useEffect(() => {
-    // 加上這個判斷，是為了避免在程式剛啟動、資料還沒載入時就存入一筆空資料
-    if (Object.keys(chatHistories).length > 0) {
-        console.log("偵測到聊天記錄變更，正在存入 IndexedDB...");
-        db.kvStore.put({ key: 'chatHistories', value: chatHistories });
-    }
-}, [chatHistories]); // 這個管家只監控 chatHistories
-
-  // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
-  // 這段程式碼會決定現在該用哪個 user profile
-  const currentUserProfile = useMemo(() => {
-    let profileIdToUse = activeUserProfileId; // 預設使用全域設定的 ID
-
-    // 如果我們正在一個聊天室裡，就以聊天室的設定為優先
-    if (activeChatCharacterId && activeChatId) {
-      const chatMeta = chatMetadatas[activeChatCharacterId]?.[activeChatId];
-      if (chatMeta?.userProfileId) {
-        profileIdToUse = chatMeta.userProfileId;
+  // ✨✨✨ 全新！聊天記錄的專屬存檔管家 ✨✨✨  <--- 就是這一段！
+  useEffect(() => {
+      // 加上這個判斷，是為了避免在程式剛啟動、資料還沒載入時就存入一筆空資料
+      if (Object.keys(chatHistories).length > 0) {
+          console.log("偵測到聊天記錄變更，正在存入 IndexedDB...");
+          db.kvStore.put({ key: 'chatHistories', value: chatHistories });
       }
-    }
+  }, [chatHistories]); // 這個管家只監控 chatHistories
 
-    // 從總列表中找出對應的 profile，如果找不到，就用第一個作為備用
-    return userProfiles.find(p => p.id === profileIdToUse) || userProfiles[0];
-  }, [activeChatCharacterId, activeChatId, chatMetadatas, userProfiles, activeUserProfileId]);
+    // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
+    // 這段程式碼會決定現在該用哪個 user profile
+    const currentUserProfile = useMemo(() => {
+      let profileIdToUse = activeUserProfileId; // 預設使用全域設定的 ID
 
-  const navigateToPage = useCallback((page) => {
-    if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
-      setActiveChatCharacterId(null);
-      setActiveChatId(null);
-      setCurrentCharacter(null);
-    } else {
-      setCurrentPage(page);
+      // 如果我們正在一個聊天室裡，就以聊天室的設定為優先
+      if (activeChatCharacterId && activeChatId) {
+        const chatMeta = chatMetadatas[activeChatCharacterId]?.[activeChatId];
+        if (chatMeta?.userProfileId) {
+          profileIdToUse = chatMeta.userProfileId;
+        }
+      }
+
+      // 從總列表中找出對應的 profile，如果找不到，就用第一個作為備用
+      return userProfiles.find(p => p.id === profileIdToUse) || userProfiles[0];
+    }, [activeChatCharacterId, activeChatId, chatMetadatas, userProfiles, activeUserProfileId]);
+
+    const navigateToPage = useCallback((page) => {
+      if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
+        setActiveChatCharacterId(null);
+        setActiveChatId(null);
+        setCurrentCharacter(null);
+      } else {
+        setCurrentPage(page);
+      }
+    }, [currentPage, activeChatCharacterId]);
+
+  // =================================================================================
+  // ✨✨✨ 全新！截圖模式相關函式 ✨✨✨
+  // =================================================================================
+
+  // 1. 負責進入與退出截圖模式
+  const handleToggleScreenshotMode = useCallback(() => {
+    setIsScreenshotMode(prev => !prev);
+    // 退出模式時，清空所有已選擇的訊息
+    setSelectedMessageIds([]);
+    // 順便關閉可能還開著的輸入框選單
+    setIsInputMenuOpen(false);
+  }, []);
+
+  // 2. 負責處理使用者點擊訊息的行為
+  const handleSelectMessage = useCallback((messageId) => {
+    // 只有在截圖模式下才允許選擇
+    if (!isScreenshotMode) return;
+
+    setSelectedMessageIds(prevIds => {
+      // 檢查這個 messageId 是不是已經在陣列裡了
+      if (prevIds.includes(messageId)) {
+        // 如果已經在裡面，就把它過濾掉 (取消選擇)
+        return prevIds.filter(id => id !== messageId);
+      } else {
+        // 如果不在裡面，就把它加進去 (選擇)
+        return [...prevIds, messageId];
+      }
+    });
+  }, [isScreenshotMode]);
+
+// =================================================================================
+// ✨✨✨ 核心！負責生成圖片的函式 (最終整合修正版) ✨✨✨
+// =================================================================================
+  const handleGenerateScreenshot = useCallback(async () => {
+    // 步驟 1: 基本檢查
+    if (selectedMessageIds.length === 0) {
+      alert('請先選擇至少一則訊息！');
+      return;
     }
-  }, [currentPage, activeChatCharacterId]);
+    alert(`正在生成 ${selectedMessageIds.length} 則訊息的截圖，按下確定後請稍候...`);
+
+    // 步驟 2: 建立一個隱形的「截圖專用容器」
+    const screenshotContainer = document.createElement('div');
+    screenshotContainer.style.backgroundColor = theme === 'dark' ? '#222222' : '#f9fafb';
+    screenshotContainer.style.padding = '25px';
+    screenshotContainer.style.width = '600px';
+    screenshotContainer.style.display = 'flex';
+    screenshotContainer.style.flexDirection = 'column';
+    screenshotContainer.style.gap = '15px';
+    screenshotContainer.style.position = 'absolute';
+    screenshotContainer.style.left = '-9999px';
+    screenshotContainer.style.top = '0px';
+
+    // 步驟 3: 排序並複製訊息到新容器中
+    const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    const sortedSelectedIds = currentHistory
+      .map(msg => msg.id)
+      .filter(id => selectedMessageIds.includes(id));
+
+    const allMessagesInDom = Array.from(document.querySelectorAll('.messages-area .message'));
+    
+    sortedSelectedIds.forEach(msgId => {
+      const originalMessageNode = allMessagesInDom.find(node => node.dataset.messageId == msgId);
+      if (originalMessageNode) {
+        const clonedMessageNode = originalMessageNode.cloneNode(true);
+        
+        clonedMessageNode.classList.remove('screenshot-mode', 'selected');
+        const bubbleWrapper = clonedMessageNode.querySelector('.bubble-wrapper');
+        if (bubbleWrapper) {
+          bubbleWrapper.onclick = null;
+        }
+        
+        // ✨ 這裡使用我們在步驟 2 中建立的 screenshotContainer
+        screenshotContainer.appendChild(clonedMessageNode);
+      }
+    });
+
+    // 步驟 4: 將準備好的容器暫時加入到網頁中
+    document.body.appendChild(screenshotContainer);
+
+    try {
+      // 步驟 5: 呼叫 html2canvas 進行「拍攝」
+      const canvas = await html2canvas(screenshotContainer, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+
+      // 步驟 6: 將畫布轉換成圖片並觸發下載
+      const image = canvas.toDataURL('image/png', 1.0);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
+      link.download = `chat-screenshot-${timestamp}.png`;
+      link.href = image;
+      link.click();
+
+    } catch (error) {
+      console.error('截圖生成失敗:', error);
+      alert('抱歉，生成截圖時發生錯誤，請查看主控台以獲取詳細資訊。');
+    } finally {
+      // 步驟 7: 清理戰場！
+      document.body.removeChild(screenshotContainer);
+      
+      // 步驟 8: 退出截圖模式
+      handleToggleScreenshotMode();
+    }
+    
+  }, [selectedMessageIds, theme, handleToggleScreenshotMode, chatHistories, activeChatCharacterId, activeChatId]); // 確保依賴項包含所有用到的 state
 
   const handleProviderChange = useCallback((provider) => {
     setApiProvider(provider);
@@ -2878,8 +3044,8 @@ useEffect(() => {
 
       try {
         const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-        const summaryPrompt = `忽略之前的指示。總結故事中迄今為止最重要的事實和事件。如果你的記憶中已經有了總結，請以此為基礎，並補充新的事實。總結字數限制在300字以內。你的回覆應該只包含總結。\n\n對話內容：\n${conversationText}`;
-        
+        const summaryPrompt = `請將以下的對話創造一個簡潔的總結，應以第三人稱書寫。重點關注關鍵情節點、人物發展以及關鍵訊息交流。這份總結將作為其中一個角色的長期記憶，因此準確性和客觀性至關重要。\n\n對話內容：\n${conversationText}`;
+
         const summary = await sendToAI(summaryPrompt, []);
 
         setLongTermMemories(prev => {
@@ -3625,6 +3791,11 @@ const formatStDate = (date, type = 'send_date') => {
                 loadedConfigName={loadedConfigName}
                 apiModel={apiModel}
                 exportChat={exportChatToSillyTavernFormat}
+                isScreenshotMode={isScreenshotMode}
+                selectedMessageIds={selectedMessageIds}
+                handleToggleScreenshotMode={handleToggleScreenshotMode}
+                handleSelectMessage={handleSelectMessage}
+                handleGenerateScreenshot={handleGenerateScreenshot}
                 handleImport={handleImportFromSillyTavern}
               />
             )
@@ -3740,8 +3911,6 @@ const formatStDate = (date, type = 'send_date') => {
   );
 };
 
-export default ChatApp;
-
 const compressImage = (base64Str, options = {}) => {
   const { maxSizeKB = 150, maxWidthOrHeight = 512 } = options;
   
@@ -3817,19 +3986,15 @@ const applyPlaceholders = (text, character, user) => {
 };
 
 // ==================== ✨ 全新升級版！引號高亮函式 ✨ ====================
-// 這個版本會回傳一個包含 HTML <span> 標籤的字串
 const highlightQuotedText = (text) => {
   if (!text) return '';
 
-  // 我們用正規表示式去尋找所有被引號包住的內容
-  // 「...」 “...” "..." 『...』 【...】
-  const regex = /(「.*?」|“.*?”|".*?"|『.*?』|【.*?】)/g;
+  // ✨ 核心修改：使用捕獲組 (括號) 將引號和內容分開
+  const regex = /(「|“|"|『|【)(.*?)(」|”|"|』|】)/g;
   
-  // 使用 String.prototype.replace() 的強大功能
-  // 它可以找到所有匹配的引號部分 (match)，然後用我們提供的內容替換它
-  return text.replace(regex, (match) => {
-    // 對於每一個找到的引號部分，我們都用一個帶有 'quoted-text' class 的 <span> 包起來
-    return `<span class="quoted-text">${match}</span>`;
+  return text.replace(regex, (match, openQuote, content, closeQuote) => {
+    // ✨ 我們將引號和內容分別用 span 包起來，並加上專屬的 class
+    return `<span class="quoted-text"><span class="quote-char open-quote">${openQuote}</span>${content}<span class="quote-char close-quote">${closeQuote}</span></span>`;
   });
 };
 
@@ -3974,3 +4139,5 @@ async function createPngWithCharaChunk(imageDataSource, characterData) {
   // 返回 Blob 物件，以便下載
   return new Blob([newPngBytes], { type: 'image/png' });
 }
+
+export default ChatApp;
