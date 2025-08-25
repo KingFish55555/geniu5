@@ -2752,3 +2752,39 @@ select:focus {
   fill: #f59e0b; /* 讓星星圖示被填滿金色 */
   transform: scale(1.1); /* 稍微放大，增加視覺回饋 */
 }
+
+/* =================================== */
+/*  頂部面板 - 使用者資訊顯示樣式       */
+/* =================================== */
+
+.current-user-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.current-user-display .message-avatar {
+  width: 40px;
+  height: 40px;
+}
+
+.chat-info-details {
+  display: flex;
+  flex-direction: column;
+}
+
+/* =================================== */
+/*  身份切換器 Modal - 項目高亮樣式   */
+/* =================================== */
+
+/* 當 User Profile 被選中時，讓整個項目有一個明顯的外框 */
+.character-list-item.active {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px var(--primary-color);
+}
+
+/* 用來顯示勾勾圖示的容器 */
+.active-check-icon {
+  color: var(--primary-color);
+  margin-left: auto; /* 讓勾勾自動靠到最右邊 */
+}

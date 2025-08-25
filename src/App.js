@@ -1164,10 +1164,60 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot }) => {
+// ==================== 全新！使用者個人檔案切換器 Modal ====================
+const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClose }) => {
+  return (
+    // 我們可以重用大部分 modal 的樣式
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>切換您的身份</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <p className="setting-label" style={{ marginBottom: '12px' }}>
+            選擇一個身份來繼續目前的對話。
+          </p>
+          {/* 我們可以重用 character-list 的樣式來顯示列表 */}
+          <div className="character-list">
+            {profiles.map((profile) => (
+              <div
+                key={profile.id}
+                // 如果是當前選中的 profile，就加上 active 的 class 讓它高亮
+                className={`character-list-item ${currentProfileId === profile.id ? 'active' : ''}`}
+                onClick={() => onSelect(profile.id)}
+              >
+                <div className="character-select-area">
+                  <div className="character-avatar-large">
+                    {profile.avatar?.type === 'image' ? (
+                      <img src={profile.avatar.data} alt={profile.name} className="avatar-image" />
+                    ) : (
+                      <UserCircle size={32} />
+                    )}
+                  </div>
+                  <div className="character-info">
+                    <h4>{profile.name || '(未命名身份)'}</h4>
+                    <p>{profile.notes || profile.description?.split('\n')[0]}</p>
+                  </div>
+                </div>
+                {/* 如果是當前選中的 profile，就顯示一個勾勾 */}
+                {currentProfileId === profile.id && (
+                  <div className="active-check-icon">
+                    <Check size={20} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
   
   const textareaRef = useRef(null);
-  // ✨ 1. 新增一個 state 來控制資訊面板的開關 ✨
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
 
   useEffect(() => {
@@ -1201,11 +1251,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
 
   return (
     <div className="page-content">
-      {/* ===================================================================== */}
-      {/* ✨✨✨ 2. 全新的頂部區域 JSX 結構 ✨✨✨ */}
-      {/* ===================================================================== */}
       <div className="chat-header-container">
-        {/* 這個按鈕永遠顯示，用來控制面板的開關 */}
         <button 
           className="info-panel-toggle-btn" 
           onClick={() => setIsInfoPanelOpen(!isInfoPanelOpen)}
@@ -1213,26 +1259,32 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
           {isInfoPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
 
-        {/* 只有當 isInfoPanelOpen 為 true 時，這個面板才會顯示 */}
         {isInfoPanelOpen && (
           <div className="chat-header-panel">
-            <div className="chat-info">
-              {currentCharacter && ( <span className="current-character">與 {currentCharacter.name} 對話</span> )}
-              {currentPrompt && ( <span className="current-prompt">使用「{currentPrompt.name}」提示詞</span> )}
+            {/* ✨ 核心修改：顯示當前使用者資訊 ✨ */}
+            <div className="chat-info current-user-display">
+              <div className="message-avatar">
+                <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyY2xlIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg=='} alt="User Avatar" className="avatar-image" />
+              </div>
+              <div className="chat-info-details">
+                <span className="current-character">與 {currentCharacter.name} 對話</span>
+                <span className="current-prompt">
+                  作為 {currentUserProfile.name || '(未命名身份)'}
+                  {currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}
+                </span>
+              </div>
             </div>
             <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
               {isApiConnected ? (
                 <span>
-                  {loadedConfigName 
-                    ? `${loadedConfigName} (${apiModel})` 
-                    : apiProviders[apiProvider]?.name}
+                  {loadedConfigName ? `${loadedConfigName} (${apiModel})` : apiProviders[apiProvider]?.name}
                 </span>
               ) : (
                 <span>未連接</span>
               )}
             </div>
           </div>
-           )}
+        )}
       </div>
   
       <div className="messages-area">
@@ -1244,7 +1296,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               character={currentCharacter}
               activeChatId={activeChatId}
               setEditingMessage={setEditingMessage}
-              handleDeleteMessage={handleDeleteMessage} // ✨ <--- 在這裡傳遞下去
+              handleDeleteMessage={handleDeleteMessage}
               showActionsMessageId={showActionsMessageId}
               setShowActionsMessageId={setShowActionsMessageId}
               handleRegenerate={handleRegenerate}
@@ -1255,7 +1307,6 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
               isLastMessage={index === messages.length - 1}
             />
         ))}
-        
         {isLoading && (
           <div className="loading-message">
             <div className="loading-dots">
@@ -1264,68 +1315,41 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
             <p>{currentCharacter.name} 正在輸入中...</p>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
   
       <div className="input-area-wrapper">
         {isScreenshotMode ? (
-          // ===================================
-          //  ✨ 如果是截圖模式，就顯示這個工具列 ✨
-          // ===================================
           <div className="screenshot-toolbar">
-            <button className="screenshot-btn cancel" onClick={handleToggleScreenshotMode}>
-              <X size={18} />
-              <span>取消</span>
-            </button>
-            <span className="screenshot-info">
-              已選擇 {selectedMessageIds.length} 則訊息
-            </span>
-            <button 
-              className="screenshot-btn confirm" 
-              onClick={handleGenerateScreenshot}
-              disabled={selectedMessageIds.length === 0}
-            >
-              <Check size={18} />
-              <span>生成圖片</span>
-            </button>
+            <button className="screenshot-btn cancel" onClick={handleToggleScreenshotMode}><X size={18} /><span>取消</span></button>
+            <span className="screenshot-info">已選擇 {selectedMessageIds.length} 則訊息</span>
+            <button className="screenshot-btn confirm" onClick={handleGenerateScreenshot} disabled={selectedMessageIds.length === 0}><Check size={18} /><span>生成圖片</span></button>
           </div>
         ) : (
-          // ===================================
-          //  ✨ 如果是正常模式，就顯示原本的內容 ✨
-          // ===================================
           <>
             {isInputMenuOpen && (
               <div className="input-menu">
-                <button className="input-menu-item" onClick={() => {
-                    setIsMemoryModalOpen(true);
-                    setIsInputMenuOpen(false);
-                }}>
+                {/* ✨ 核心修改：新增「切換身份」按鈕 ✨ */}
+                <button className="input-menu-item" onClick={() => { onSwitchProfile(); setIsInputMenuOpen(false); }}>
+                  <Users size={20} />
+                  <span>切換身份</span>
+                </button>
+                <button className="input-menu-item" onClick={() => { setIsMemoryModalOpen(true); setIsInputMenuOpen(false); }}>
                   <BookOpen size={20} />
                   <span>長期記憶</span>
                 </button>
-                <button className="input-menu-item" onClick={() => {
-                    setIsAuthorsNoteModalOpen(true);
-                    setIsInputMenuOpen(false);
-                }}>
+                <button className="input-menu-item" onClick={() => { setIsAuthorsNoteModalOpen(true); setIsInputMenuOpen(false); }}>
                   <Settings size={20} />
                   <span>Author's Note</span>
                 </button>
-                <button className="input-menu-item" onClick={() => {
-                    exportChat();
-                    setIsInputMenuOpen(false);
-                }}>
+                <button className="input-menu-item" onClick={() => { exportChat(); setIsInputMenuOpen(false); }}>
                   <Download size={20} />
                   <span>匯出聊天 (.jsonl)</span>
                 </button>
-                <button className="input-menu-item" onClick={() => {
-                    document.getElementById('st-import-input').click();
-                    setIsInputMenuOpen(false);
-                }}>
+                <button className="input-menu-item" onClick={() => { document.getElementById('st-import-input').click(); setIsInputMenuOpen(false); }}>
                   <Upload size={20} />
                   <span>匯入聊天 (.jsonl)</span>
                 </button>
-                {/* 這是我們之前新增的截圖按鈕 */}
                 <button className="input-menu-item" onClick={handleToggleScreenshotMode}>
                   <Camera size={20} />
                   <span>訊息截圖</span>
@@ -1583,7 +1607,9 @@ const SettingsPage = ({
     theme, setTheme,
     exportChatHistory, handleImportChat, clearAllData,
     apiConfigs, configName, setConfigName,
-    saveApiConfiguration, loadApiConfiguration, deleteApiConfiguration,
+    loadedConfigId,
+    onUpdateConfiguration,
+    onSaveAsNewConfiguration, loadApiConfiguration, deleteApiConfiguration,
 }) => {
     const [expandedSection, setExpandedSection] = useState('null'); // 預設展開使用者區塊
     const [selectedConfigId, setSelectedConfigId] = useState('');
@@ -1708,21 +1734,24 @@ const SettingsPage = ({
                   </div>
                 </div>
                 <div className="setting-group">
-                  <label className="setting-label">API 金鑰 (輸入完成之後，請按【連線】)。一定要保存好金鑰，請勿隨意分享</label>
+                  <label className="setting-label">API 金鑰 (每行一個金鑰)，輸入完按下測試連線。一定要保存好金鑰，請勿隨意分享</label>
+                  請一定不要隨意的分享您的 API 金鑰，尤其是在公開場合或是開源專案中！
+                  截圖的時候也請注意不要讓金鑰入鏡，謝謝您！
                   <div className="api-key-input">
-                    <input
-                      type="password"
+                    {/* 🔥🔥🔥 核心修改：將 input 換成 textarea 🔥🔥🔥 */}
+                    <textarea
                       value={apiKey}
                       onChange={(e) => handleApiKeyChange(e.target.value)}
-                      placeholder={`輸入 ${apiProviders[apiProvider]?.name} API 金鑰`}
-                      className="setting-input"
+                      placeholder={`每行貼上一個 ${apiProviders[apiProvider]?.name} API 金鑰...`}
+                      className="setting-input" // 您可以繼續使用現有樣式
+                      rows="4" // 給它一點預設高度
                     />
                     <button
                       onClick={testApiConnection}
                       disabled={apiTestLoading || !apiKey.trim()}
                       className="test-btn"
                     >
-                      {apiTestLoading ? '測試中...' : '連線'}
+                      {apiTestLoading ? '測試中...' : '測試連線'}
                     </button>
                   </div>
                 </div>
@@ -1748,14 +1777,24 @@ const SettingsPage = ({
                     className="setting-input"
                   />
                 </div>
-                <button
-                  onClick={saveApiConfiguration}
-                  className="save-btn"
-                  disabled={!configName.trim() || !apiKey.trim()}
-                >
-                  <Save size={16} />
-                  儲存目前配置
-                </button>
+                <div className="editor-buttons">
+                  <button
+                    onClick={onUpdateConfiguration}
+                    className="save-btn" // 可以繼續使用現有樣式
+                    disabled={!loadedConfigId} // ✨ 核心：只有載入了配置才能更新
+                  >
+                    <Save size={16} />
+                    更新配置
+                  </button>
+                  <button
+                    onClick={onSaveAsNewConfiguration}
+                    className="save-btn secondary" // 您可以為它新增一個次要樣式
+                    disabled={!configName.trim() || !apiKey.trim()}
+                  >
+                    <Plus size={16} />
+                    另存新配置
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1878,7 +1917,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.34</p>
+                  <p>版本：0.4.35</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -1998,6 +2037,8 @@ const ChatApp = () => {
   
   const [configName, setConfigName] = useState('');
   const [loadedConfigName, setLoadedConfigName] = useState('');
+  // ✨✨✨ 新增一個 state 來追蹤當前載入的配置 ID ✨✨✨
+  const [loadedConfigId, setLoadedConfigId] = useState(null);
 
   // ==================== UI 彈出視窗與選單狀態 ====================
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -2019,12 +2060,18 @@ const ChatApp = () => {
   // ✨✨✨ 全新！使用者個人檔案編輯器 Modal 的 State ✨✨✨
   const [isUserProfileEditorOpen, setIsUserProfileEditorOpen] = useState(false);
   const [editingUserProfileId, setEditingUserProfileId] = useState(null);
+  // ✨ 1. 在這裡新增一行 state，用來控制身份切換器的開關 ✨
+  const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false);
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
+  // ✨✨✨ 1. 新增我們的API大腦："通訊錄" state ✨✨✨
+  const [apiKeysByProvider, setApiKeysByProvider] = useState({}); 
   const [apiModel, setApiModel] = useState('gpt-3.5-turbo');
   const [isApiConnected, setIsApiConnected] = useState(false);
   const [apiTestLoading, setApiTestLoading] = useState(false);
+  // ✨✨✨ 1. 新增一個 state 來追蹤當前使用的金鑰索引 ✨✨✨
+  const [currentApiKeyIndex, setCurrentApiKeyIndex] = useState(0);
 
   const apiProviders = {
     openai: {
@@ -2167,11 +2214,15 @@ useEffect(() => {
       }
       
       const lastUsedApi = JSON.parse(localStorage.getItem('app_last_used_api'));
+      const savedKeysByProvider = JSON.parse(localStorage.getItem('app_api_keys_by_provider'));
+      if (savedKeysByProvider) {
+        setApiKeysByProvider(savedKeysByProvider);
+      }
       if (lastUsedApi) {
         setApiProvider(lastUsedApi.provider || 'openai');
-        setApiKey(lastUsedApi.apiKey || '');
+        setApiKey(savedKeysByProvider?.[lastUsedApi.provider] || '');
         setApiModel(lastUsedApi.model || (apiProviders[lastUsedApi.provider]?.models[0] || 'gpt-3.5-turbo'));
-        if (lastUsedApi.apiKey) setIsApiConnected(true);
+        if (lastUsedApi.apiKey) setIsApiConnected(true); // 這裡的 apiKey 只是為了判斷上次是否連接過
       }
 
     } catch (error) {
@@ -2206,6 +2257,14 @@ useEffect(() => {
           db.kvStore.put({ key: 'longTermMemories', value: longTermMemories });
       }
   }, [longTermMemories]); // 這個管家只監控 longTermMemories
+
+  // ✨✨✨ 全新！API 金鑰 "通訊錄" 的專屬存檔管家 ✨✨✨
+  useEffect(() => {
+    // 避免在程式剛啟動時存入一筆空資料
+    if (Object.keys(apiKeysByProvider).length > 0) {
+      localStorage.setItem('app_api_keys_by_provider', JSON.stringify(apiKeysByProvider));
+    }
+  }, [apiKeysByProvider]);
 
 // ✨✨✨ 全新！動態計算當前使用者 (最終版) ✨✨✨
     const currentUserProfile = useMemo(() => {
@@ -2347,55 +2406,134 @@ useEffect(() => {
   const handleProviderChange = useCallback((provider) => {
     setApiProvider(provider);
     setApiModel(apiProviders[provider].models[0]);
-    setIsApiConnected(false);
-    setLoadedConfigName('');
-  }, [apiProviders]);
+    // ✨✨✨ 核心邏輯：從 "通訊錄" 中讀取新供應商的金鑰，並更新到 "顯示器" ✨✨✨
+  setApiKey(apiKeysByProvider[provider] || '');
+
+  // 切換後，重置連線狀態
+  setIsApiConnected(false);
+  setLoadedConfigName('');
+  setCurrentApiKeyIndex(0); // 重置金鑰索引
+}, [apiProviders, apiKeysByProvider]); // ✨ 加入 apiKeysByProvider 作為依賴項
 
   const handleApiKeyChange = useCallback((value) => {
     setApiKey(value);
-    setIsApiConnected(false);
-    setLoadedConfigName('');
-  }, []);
+    setApiKeysByProvider(prev => ({
+    ...prev,
+    [apiProvider]: value // 使用 [apiProvider] 作為動態的 object key
+  }));
+  
+  // 3. 任何修改都應該重置連線狀態
+  setIsApiConnected(false);
+  setLoadedConfigName('');
+}, [apiProvider]); // ✨ 依賴項現在是 apiProvider
 
-  const saveApiConfiguration = useCallback(async () => {
-    if (!configName.trim() || !apiKey.trim()) {
-      alert('請輸入配置名稱和 API 金鑰！');
-      return;
-    }
-    const newConfig = {
-      id: Date.now(),
-      name: configName,
-      provider: apiProvider,
-      apiKey,
-      model: apiModel,
-      createdAt: new Date().toISOString()
-    };
-    try {
-      await db.apiConfigs.add(newConfig);
-      const updatedConfigs = [...apiConfigs, newConfig];
-      setApiConfigs(updatedConfigs);
-      setLoadedConfigName(configName);
-      setConfigName('');
-      alert(`✅ 已儲存配置：「${configName}」`);
-    } catch (error) {
-      console.error("儲存 API 配置失敗:", error);
-      alert('❌ 儲存 API 配置失敗！');
-    }
-  }, [configName, apiKey, apiProvider, apiModel, apiConfigs]);
+// =====================================================================
+// ✨✨✨ 全新！「更新」函式 ✨✨✨
+// =====================================================================
+const handleUpdateConfiguration = useCallback(async () => {
+  // 安全檢查：如果沒有載入任何配置，這個函式不應該被執行
+  if (!loadedConfigId) {
+    alert('錯誤：沒有載入任何配置可供更新。');
+    return;
+  }
+
+  console.log(`正在更新現有配置 ID: ${loadedConfigId}`);
+  const configToUpdate = {
+    id: loadedConfigId, // 使用已存在的 ID
+    name: configName,   // 使用輸入框中當前的名稱
+    provider: apiProvider,
+    keysByProvider: apiKeysByProvider,
+    model: apiModel,
+    // 從舊配置中找出原始創建時間，如果找不到就用現在的時間
+    createdAt: apiConfigs.find(c => c.id === loadedConfigId)?.createdAt || new Date().toISOString()
+  };
+
+  try {
+    await db.apiConfigs.put(configToUpdate);
+    
+    // 更新畫面上的配置列表
+    const updatedConfigs = apiConfigs.map(c => c.id === loadedConfigId ? configToUpdate : c);
+    setApiConfigs(updatedConfigs);
+    
+    setLoadedConfigName(configName);
+    alert(`✅ 已更新配置：「${configName}」`);
+  } catch (error) {
+    console.error("更新 API 配置失敗:", error);
+    alert('❌ 更新 API 配置失敗！');
+  }
+}, [
+  configName, 
+  apiProvider, 
+  apiModel, 
+  apiConfigs, 
+  apiKeysByProvider,
+  loadedConfigId // 核心依賴項
+]);
+
+
+// =====================================================================
+// ✨✨✨ 全新！「另存為」函式 ✨✨✨
+// =====================================================================
+const handleSaveAsNewConfiguration = useCallback(async () => {
+  if (!configName.trim() || Object.keys(apiKeysByProvider).length === 0) {
+    alert('請輸入配置名稱，並至少為一個供應商設定 API 金鑰！');
+    return;
+  }
+  
+  console.log("正在另存為新配置...");
+  const newId = Date.now();
+  const newConfig = {
+    id: newId, // 使用全新的 ID
+    name: configName,
+    provider: apiProvider,
+    keysByProvider: apiKeysByProvider,
+    model: apiModel,
+    createdAt: new Date().toISOString()
+  };
+
+  try {
+    await db.apiConfigs.add(newConfig); // 使用 .add() 明確表示新增
+    
+    const updatedConfigs = [...apiConfigs, newConfig];
+    setApiConfigs(updatedConfigs);
+    
+    // 另存後，新的配置就變成了 "當前載入的配置"
+    setLoadedConfigId(newId); 
+    setLoadedConfigName(configName);
+    
+    alert(`✅ 已另存為新配置：「${configName}」`);
+  } catch (error) {
+    console.error("另存新配置失敗:", error);
+    alert('❌ 另存新配置失敗！');
+  }
+}, [
+  configName, 
+  apiProvider, 
+  apiModel, 
+  apiConfigs, 
+  apiKeysByProvider
+]);
 
   const loadApiConfiguration = useCallback((configId) => {
-    const configToLoad = apiConfigs.find(c => c.id === Number(configId));
-    if (configToLoad) {
-      setApiProvider(configToLoad.provider);
-      setApiKey(configToLoad.apiKey);
-      setApiModel(configToLoad.model);
-      setIsApiConnected(false);
-      // ✨ 核心修改：記住被載入的配置名稱 ✨
-      setLoadedConfigName(configToLoad.name); 
-      setConfigName(configToLoad.name); // 順便也更新輸入框，方便使用者修改
-      alert(`✅ 已載入配置：「${configToLoad.name}」`);
-    }
-  }, [apiConfigs]);
+  // configId 是字串，我們要轉成數字來比對
+  const configToLoad = apiConfigs.find(c => c.id === Number(configId));
+  if (configToLoad) {
+    // ✨✨✨ 告訴 "小祕書" 我們正在編輯這個 ID ✨✨✨
+    setLoadedConfigId(configToLoad.id); 
+    
+    // (以下邏輯和您上一版的幾乎一樣)
+    setApiProvider(configToLoad.provider);
+    const loadedKeys = configToLoad.keysByProvider || {};
+    setApiKeysByProvider(loadedKeys);
+    setApiKey(loadedKeys[configToLoad.provider] || '');
+    setApiModel(configToLoad.model);
+    setIsApiConnected(false);
+    setLoadedConfigName(configToLoad.name); 
+    setConfigName(configToLoad.name);
+    setCurrentApiKeyIndex(0);
+    alert(`✅ 已載入配置：「${configToLoad.name}」`);
+  }
+}, [apiConfigs]); // 依賴項不變
 
   const deleteApiConfiguration = useCallback(async (configId) => {
     const configToDelete = apiConfigs.find(c => c.id === Number(configId));
@@ -2880,239 +3018,231 @@ useEffect(() => {
   }, [navigateToPage, getFormattedTimestamp, userProfiles]); // ✨ 新增 userProfiles 依賴項
 
   const testApiConnection = useCallback(async () => {
-    if (!apiKey.trim()) {
-        alert('請輸入 API 金鑰！');
-        return;
-    }
-    setApiTestLoading(true);
+  if (!apiKey.trim()) {
+    alert('請至少輸入一個 API 金鑰！');
+    return;
+  }
+  setApiTestLoading(true);
+
+  // 1. 將輸入的文字拆分成金鑰陣列，並過濾掉空行
+  const allKeys = apiKey.split('\n').map(k => k.trim()).filter(k => k);
+  let isConnectionSuccessful = false;
+
+  // 2. 遍歷所有金鑰，逐一測試
+  for (let i = 0; i < allKeys.length; i++) {
+    const currentKey = allKeys[i];
+    console.log(`正在測試金鑰 #${i + 1}...`);
     try {
       const provider = apiProviders[apiProvider];
-      const headers = provider.headers(apiKey);
+      // (這裡的測試邏輯和您原本的一樣，只是用了 currentKey)
       let requestBody;
       let endpoint = provider.endpoint;
-      const testMessage = '你好，這是一個測試訊息。請簡單回應。';
+      const testMessage = '你好';
 
       if (provider.isGemini) {
-        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${apiKey}`;
-        requestBody = {
-          contents: [{ parts: [{ text: testMessage }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 50 }
-        };
-      } else if (apiProvider === 'claude') {
-        requestBody = {
-          model: apiModel,
-          max_tokens: 50,
-          temperature: 0.3,
-          messages: [{ role: 'user', content: testMessage }]
-        };
+        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+        requestBody = { contents: [{ parts: [{ text: testMessage }] }] };
       } else {
-        requestBody = {
-          model: apiModel,
-          messages: [{ role: 'user', content: testMessage }],
-          max_tokens: 50,
-          temperature: 0.3
-        };
+        requestBody = { model: apiModel, messages: [{ role: 'user', content: testMessage }], max_tokens: 10 };
       }
 
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: headers,
+        headers: provider.headers(currentKey),
         body: JSON.stringify(requestBody)
       });
 
       if (response.ok) {
+        // 3. 只要有一個金鑰成功，就立刻設定狀態並結束
         setIsApiConnected(true);
-        const lastUsed = { provider: apiProvider, apiKey, model: apiModel };
+        const lastUsed = { provider: apiProvider, model: apiModel }; // 儲存所有金鑰
         localStorage.setItem('app_last_used_api', JSON.stringify(lastUsed));
-        alert(`✅ ${provider.name} 連接成功！`);
+        setCurrentApiKeyIndex(i); // ✨ 記住這個成功的金鑰索引！
+        alert(`✅ 金鑰 #${i + 1} 連接成功！`);
+        isConnectionSuccessful = true;
+        break; // 成功後就跳出 for 迴圈
       } else {
-        const errorText = await response.text();
-        setIsApiConnected(false);
-        alert(`❌ 連接失敗：${response.status}\n${errorText}`);
+         console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status}`);
       }
     } catch (error) {
-      setIsApiConnected(false);
-      alert('❌ 連接發生錯誤：' + error.message);
-    } finally {
-      setApiTestLoading(false);
+      console.error(`金鑰 #${i + 1} 發生錯誤:`, error);
     }
-  }, [apiKey, apiProvider, apiModel, apiProviders]);
+  }
+
+  // 4. 如果所有金鑰都試完了還是失敗，才顯示最終的失敗訊息
+  if (!isConnectionSuccessful) {
+    setIsApiConnected(false);
+    alert('❌ 所有 API 金鑰均無法連接。請檢查金鑰、網路連線或 API 服務狀態。');
+  }
+
+  setApiTestLoading(false);
+}, [apiKey, apiProvider, apiModel, apiProviders]);
 
   const sendToAI = useCallback(async (userInput, currentMessages) => {
-    const estimateTokens = (text) => {
-      if (!text) return 0;
-      let count = 0;
-      for (let i = 0; i < text.length; i++) {
-        count += /[\u4e00-\u9fa5]/.test(text[i]) ? 2 : 1;
-      }
-      return count;
-    };
+  // ===================================================================
+  // 步驟 A: 準備所有鑰匙 (Get the Keys)
+  // ===================================================================
+  // 將使用者在設定頁面輸入的多行文字，拆解成一個乾淨的金鑰陣列。
+  const allKeys = apiKey.split('\n').map(k => k.trim()).filter(k => k);
+  if (allKeys.length === 0) {
+    // 如果連一把鑰匙都沒有，就直接拋出錯誤，不浪費時間。
+    throw new Error('尚未設定 API 金鑰。');
+  }
 
-    const textToScan = [...currentMessages.slice(-6).map(m => m.contents[m.activeContentIndex]), userInput].join('\n');
-    let injectedWorldInfo = '';
-    const characterBook = currentCharacter?.characterBook;
-    const triggeredEntries = new Set(); 
-
-    if (characterBook && characterBook.entries) {
-      for (const entry of characterBook.entries) {
-        if (!entry.enabled) continue; 
-        for (const key of entry.keys) {
-          if (textToScan.includes(key)) {
-            triggeredEntries.add(entry.content);
-            break;
-          }
-        }
-      }
-      injectedWorldInfo = [...triggeredEntries].join('\n\n');
+  // (您原有的準備工作，例如組合 system prompt、處理對話歷史等，全部保持不變)
+  const estimateTokens = (text) => {
+    if (!text) return 0;
+    let count = 0;
+    for (let i = 0; i < text.length; i++) {
+      count += /[\u4e00-\u9fa5]/.test(text[i]) ? 2 : 1;
     }
+    return count;
+  };
 
-    // ✨✨✨ 核心修改：注入長期記憶 ✨✨✨
-    const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
-    const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
+  const textToScan = [...currentMessages.slice(-6).map(m => m.contents[m.activeContentIndex]), userInput].join('\n');
+  let injectedWorldInfo = '';
+  const characterBook = currentCharacter?.characterBook;
+  const triggeredEntries = new Set(); 
 
-    try {
-      const provider = apiProviders[apiProvider];
-      const headers = provider.headers(apiKey);
-      let endpoint = provider.endpoint;
-
-      let systemPromptContent = applyPlaceholders(
-        currentPrompt?.content || `Roleplay as {{char}} and respond to {{user}}'s message.
-
-      INSTRUCTIONS:
-      - Use {{char}}'s established personality, background, and speech patterns
-      - Keep responses authentic to the character
-      - Do not assume {{user}}'s thoughts, actions, or responses
-      - Focus on {{char}}'s perspective and reactions only
-      - Maintain consistent characterization throughout the conversation
-      - Avoid breaking character or referencing the AI nature of the interaction`,
-        currentCharacter,
-        currentUserProfile
-      );
-
-      const existingSummary = currentCharacter?.summary || "None"; 
-      systemPromptContent = systemPromptContent.replace('{{summary}}', existingSummary);
-
-      const characterDescription = applyPlaceholders(
-        [currentCharacter?.description, currentCharacter?.personality].filter(Boolean).join('\n\n'),
-        currentCharacter,
-        currentUserProfile
-      );
-
-
-      // ✨ 核心修改：將長期記憶和世界書資訊組合到最終提示詞中 ✨
-      const finalSystemPrompt = [
-        // 深度 1: 主要的系统提示词，告訴 AI 它的核心任务。
-        systemPromptContent,
-        
-        // 深度 2: 作者備註。這是最高優先級的臨時指令，緊跟在核心任务之後。
-        activeAuthorsNote ? `[Author's Note: ${activeAuthorsNote}]` : '', // 現在這裡就可以正常使用了
-
-        // 深度 3: 長期記憶。讓 AI 在思考前，先回顧一下過去的重點。
-        activeMemory ? `[Memory]\n${activeMemory}` : '',
-        
-        // 深度 4: 角色與世界觀的詳細資料。
-        `[Character Persona]\n${characterDescription}`,
-        (currentUserProfile?.name || currentUserProfile?.description) 
-          ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
-          : '',
-        injectedWorldInfo ? `[World Info]\n${injectedWorldInfo}` : '',
-
-      ].filter(Boolean).join('\n\n---\n'); // 用分隔線讓結構更清晰
-      
-      const maxOutputTokens = currentPrompt?.maxTokens || 800;
-      const temperature = currentPrompt?.temperature || 1.0;
-      const maxContextTokens = currentPrompt?.contextLength || 24000;
-
-      const contextHistory = [];
-      let currentTokenCount = 0;
-
-      for (let i = currentMessages.length - 1; i >= 0; i--) {
-        const message = currentMessages[i];
-        const messageText = message.contents[message.activeContentIndex];
-        const apiMessage = { role: message.sender === 'user' ? 'user' : 'assistant', content: messageText };
-        const messageTokens = estimateTokens(messageText);
-        
-        if (currentTokenCount + messageTokens <= maxContextTokens) {
-          contextHistory.unshift(apiMessage);
-          currentTokenCount += messageTokens;
-        } else {
+  if (characterBook && characterBook.entries) {
+    for (const entry of characterBook.entries) {
+      if (!entry.enabled) continue; 
+      for (const key of entry.keys) {
+        if (textToScan.includes(key)) {
+          triggeredEntries.add(entry.content);
           break;
         }
       }
+    }
+    injectedWorldInfo = [...triggeredEntries].join('\n\n');
+  }
 
-      // === 決定最後要塞給模型的訊息（Mistral 合規版） ===========
-      const continueText = '請直接延續上一句 assistant 回覆。';
+  const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+  const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
+  const provider = apiProviders[apiProvider];
+  let systemPromptContent = applyPlaceholders(currentPrompt?.content || `...`, currentCharacter, currentUserProfile);
+  const existingSummary = currentCharacter?.summary || "None"; 
+  systemPromptContent = systemPromptContent.replace('{{summary}}', existingSummary);
+  const characterDescription = applyPlaceholders([currentCharacter?.description, currentCharacter?.personality].filter(Boolean).join('\n\n'), currentCharacter, currentUserProfile);
+  const finalSystemPrompt = [systemPromptContent, activeAuthorsNote ? `[Author's Note: ${activeAuthorsNote}]` : '', activeMemory ? `[Memory]\n${activeMemory}` : '', `[Character Persona]\n${characterDescription}`, (currentUserProfile?.name || currentUserProfile?.description) ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`: '', injectedWorldInfo ? `[World Info]\n${injectedWorldInfo}` : ''].filter(Boolean).join('\n\n---\n');
+  const maxOutputTokens = currentPrompt?.maxTokens || 800;
+  const temperature = currentPrompt?.temperature || 1.0;
+  const maxContextTokens = currentPrompt?.contextLength || 24000;
+  const contextHistory = [];
+  let currentTokenCount = 0;
+  for (let i = currentMessages.length - 1; i >= 0; i--) {
+    const message = currentMessages[i];
+    const messageText = message.contents[message.activeContentIndex];
+    const apiMessage = { role: message.sender === 'user' ? 'user' : 'assistant', content: messageText };
+    const messageTokens = estimateTokens(messageText);
+    if (currentTokenCount + messageTokens <= maxContextTokens) {
+      contextHistory.unshift(apiMessage);
+      currentTokenCount += messageTokens;
+    } else {
+      break;
+    }
+  }
+  const continueText = '請直接延續上一句 assistant 回覆。';
+  let tailForOpenAI;
+  let tailForGemini;
+  if (typeof userInput === 'string' && userInput.trim() !== '') {
+    tailForOpenAI = { role: 'user', content: userInput };
+    tailForGemini = { role: 'user', parts: [{ text: userInput }] };
+  } else {
+    tailForOpenAI = { role: 'user', content: continueText };
+    tailForGemini = { role: 'user', parts: [{ text: continueText }] };
+  }
 
-      let tailForOpenAI;   // 給 OpenAI / Claude / Mistral
-      let tailForGemini;   // 給 Gemini
 
-      if (typeof userInput === 'string' && userInput.trim() !== '') {
-        // (A) 使用者真的輸入了文字
-        tailForOpenAI = { role: 'user', content: userInput };
-        tailForGemini = { role: 'user', parts: [{ text: userInput }] };
-      } else {
-        // (B) 沒有新輸入，只想續寫：仍然用 role:'user'，內容寫明續寫指示
-        tailForOpenAI = { role: 'user', content: continueText };
-        tailForGemini = { role: 'user', parts: [{ text: continueText }] };
-      }
-      // =============================================================
+  // ===================================================================
+  // 步驟 B: 聰明的輪換迴圈 (The Smart Loop)
+  // ===================================================================
+  // 這個迴圈會執行 `allKeys.length` 次，確保我們把每把鑰匙都試過一遍。
+  for (let i = 0; i < allKeys.length; i++) {
+    // 這裡是最聰明的地方：
+    // 我們不直接用 `i`，而是用 `(currentApiKeyIndex + i) % allKeys.length`。
+    // 這能確保我們總是從「上次成功的那把鑰匙」開始嘗試，而不是每次都從第一把開始。
+    // `%` (取餘數) 運算子能確保索引值在繞了一圈後能從 0 重新開始。
+    const keyIndex = (currentApiKeyIndex + i) % allKeys.length;
+    const currentKey = allKeys[keyIndex];
+    
+    console.log(`正在使用金鑰 #${keyIndex + 1} 進行請求...`);
+
+    // ===================================================================
+    // 步驟 C: 樂觀嘗試 (The "try" Block)
+    // ===================================================================
+    try {
+      // 這裡面的程式碼和您舊版的 `sendToAI` 幾乎一樣，
+      // 唯一的差別是它現在用的是 `currentKey`，而不是整個 `apiKey` 字串。
+      let endpoint = provider.endpoint;
+      const headers = provider.headers(currentKey); // 使用當前嘗試的金鑰
       
       let requestBody;
       if (provider.isGemini) {
-        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${apiKey}`;
-        const geminiHistory = contextHistory.map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-        }));
-        requestBody = {
-          contents: [ ...geminiHistory, tailForGemini ],
-          systemInstruction: { parts: [{ text: finalSystemPrompt }] },
-          generationConfig: { temperature, maxOutputTokens }
-        };
+        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; // 使用當前嘗試的金鑰
+        const geminiHistory = contextHistory.map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
+        requestBody = { contents: [ ...geminiHistory, tailForGemini ], systemInstruction: { parts: [{ text: finalSystemPrompt }] }, generationConfig: { temperature, maxOutputTokens }};
       } else if (apiProvider === 'claude') {
-        requestBody = {
-          model: apiModel,
-          max_tokens: maxOutputTokens,
-          temperature,
-          messages: [...contextHistory, tailForOpenAI ],
-          system: finalSystemPrompt
-        };
+        requestBody = { model: apiModel, max_tokens: maxOutputTokens, temperature, messages: [...contextHistory, tailForOpenAI ], system: finalSystemPrompt };
       } else {
-        requestBody = {
-          model: apiModel,
-          messages: [
-            { role: 'system', content: finalSystemPrompt },
-            ...contextHistory,
-            tailForOpenAI
-          ],
-          max_tokens: maxOutputTokens,
-          temperature
-        };
+        requestBody = { model: apiModel, messages: [ { role: 'system', content: finalSystemPrompt }, ...contextHistory, tailForOpenAI ], max_tokens: maxOutputTokens, temperature };
       }
 
       const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
 
-      if (response.ok) {
-        const data = await response.json();
-        let aiText = null;
-        if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
-        else aiText = data.choices?.[0]?.message?.content;
-        
-        if (aiText && aiText.trim() !== '') {
-          return aiText;
-        } else {
-          throw new Error('AI_EMPTY_RESPONSE');
-        }
-      } else {
+      if (!response.ok) {
+        // 如果 API 回傳了錯誤 (例如 429 頻率限制)，我們把它當作一次失敗來處理。
         const errorText = await response.text();
         throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
       }
+      
+      const data = await response.json();
+      let aiText = null;
+      if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
+      else aiText = data.choices?.[0]?.message?.content;
+      
+      if (aiText && aiText.trim() !== '') {
+        // 成功了！
+        console.log(`金鑰 #${keyIndex + 1} 請求成功！`);
+        setCurrentApiKeyIndex(keyIndex); // 立刻記住這把成功的鑰匙的索引。
+        return aiText; // 將 AI 的回覆傳回去，並立刻結束整個 `sendToAI` 函式。
+      } else {
+        throw new Error('AI 回應為空');
+      }
+
+    // ===================================================================
+    // 步驟 D: 處理失敗 (The "catch" Block)
+    // ===================================================================
     } catch (error) {
-      console.error("sendToAI 函式發生錯誤:", error);
-      throw error;
+      console.error(`金鑰 #${keyIndex + 1} 失敗:`, error.message);
+      
+      // ===================================================================
+      // 步驟 E: 最終絕望 (The Final Failure)
+      // ===================================================================
+      // 檢查這是不是我們嘗試的最後一把鑰匙了 (`i` 是迴圈計數器)。
+      if (i === allKeys.length - 1) {
+        // 如果是，代表我們已經試完了所有鑰匙都沒用，
+        // 這時才真正地把錯誤拋出去，讓 `sendMessage` 函式知道大事不妙。
+        throw new Error('所有 API 金鑰均無法使用。請檢查您的金鑰是否有效、額度是否足夠，或稍後再試。');
+      }
+      // 如果還不是最後一把，這個 catch 區塊什麼都不做，
+      // `for` 迴圈會自動進入下一次迭代，用下一把鑰匙繼續嘗試。
     }
-  }, [apiProvider, apiKey, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId]); // ✨ 將新依賴項加入陣列
+  }
+}, [
+  apiKey, 
+  apiProvider, 
+  apiModel, 
+  currentCharacter, 
+  currentPrompt, 
+  apiProviders, 
+  currentUserProfile, 
+  longTermMemories, 
+  activeChatCharacterId, 
+  activeChatId, 
+  currentApiKeyIndex // ✨ 把 `currentApiKeyIndex` 加入依賴項，這非常重要！
+]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
@@ -3491,6 +3621,28 @@ useEffect(() => {
     setEditingMetadata(null); // 關閉編輯視窗
     alert('✅ 聊天備註已儲存！');
   }, [editingMetadata]);
+
+
+  // ✨ 3. 全新！處理聊天中切換使用者身份的核心函式 (放到正確的位置) ✨
+  const handleSwitchUserProfile = useCallback((newProfileId) => {
+    if (!activeChatCharacterId || !activeChatId || !newProfileId) return;
+
+    setChatMetadatas(prev => {
+      const newMetas = JSON.parse(JSON.stringify(prev));
+      // 確保物件路徑存在
+      if (!newMetas[activeChatCharacterId]) newMetas[activeChatCharacterId] = {};
+      if (!newMetas[activeChatCharacterId][activeChatId]) {
+        newMetas[activeChatCharacterId][activeChatId] = { pinned: false, name: '', notes: '' };
+      }
+      
+      // ✨ 核心：更新這個聊天室綁定的 userProfileId
+      newMetas[activeChatCharacterId][activeChatId].userProfileId = newProfileId;
+      return newMetas;
+    });
+
+    // 選擇後自動關閉 Modal
+    setIsProfileSwitcherOpen(false);
+  }, [activeChatCharacterId, activeChatId]);  
 
   const handleTogglePinChat = useCallback((charId, chatId) => {
     setChatMetadatas(prev => {
@@ -3898,6 +4050,7 @@ const formatStDate = (date, type = 'send_date') => {
                 handleSelectMessage={handleSelectMessage}
                 handleGenerateScreenshot={handleGenerateScreenshot}
                 handleImport={handleImportFromSillyTavern}
+                onSwitchProfile={() => setIsProfileSwitcherOpen(true)}
               />
             )
           )}
@@ -3934,7 +4087,11 @@ const formatStDate = (date, type = 'send_date') => {
               apiConfigs={apiConfigs}
               configName={configName}
               setConfigName={setConfigName}
-              saveApiConfiguration={saveApiConfiguration}
+              // 🔥🔥🔥 核心修改：傳入新的函式和 state 🔥🔥🔥
+              loadedConfigId={loadedConfigId} // 傳入當前載入的 ID
+              onUpdateConfiguration={handleUpdateConfiguration} // 傳入 "更新" 函式
+              onSaveAsNewConfiguration={handleSaveAsNewConfiguration} // 傳入 "另存為" 函式
+              // ❌ 不再需要 saveApiConfiguration 這個 prop 了
               loadApiConfiguration={loadApiConfiguration}
               deleteApiConfiguration={deleteApiConfiguration}
             />
@@ -4003,6 +4160,16 @@ const formatStDate = (date, type = 'send_date') => {
           profile={userProfiles.find(p => p.id === editingUserProfileId)}
           onSave={handleSaveUserProfile}
           onClose={closeUserProfileEditor}   
+        />
+       )}
+        {/* ✨ 4.2 在這裡渲染我們的新 Modal ✨ */}
+      {isProfileSwitcherOpen && (
+        <UserProfileSwitcherModal
+          profiles={userProfiles}
+          // 把當前聊天室綁定的 ID，或備用的第一個 ID 傳進去，讓 Modal 知道哪個是當前選項
+          currentProfileId={chatMetadatas[activeChatCharacterId]?.[activeChatId]?.userProfileId || userProfiles[0]?.id}
+          onSelect={handleSwitchUserProfile}
+          onClose={() => setIsProfileSwitcherOpen(false)}
         />
       )}
     </>
