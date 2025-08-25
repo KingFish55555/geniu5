@@ -416,13 +416,9 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
 // =================================================================================
 // CharacterPreview - ✨ 全新升級版，支援身份選擇 ✨
 // =================================================================================
-const CharacterPreview = ({ character, onClose, onStartChat, userProfiles, activeUserProfileId }) => {
-  const [selectedProfileId, setSelectedProfileId] = useState(activeUserProfileId);
-
-  // 當預設使用者變更時，同步更新下拉選單的選項
-  useEffect(() => {
-    setSelectedProfileId(activeUserProfileId);
-  }, [activeUserProfileId]);
+const CharacterPreview = ({ character, onClose, onStartChat, userProfiles }) => {
+  // ✨ 直接預設選中列表中的第一個使用者
+  const [selectedProfileId, setSelectedProfileId] = useState(userProfiles[0]?.id);
 
   if (!character) return null;
   
@@ -1564,8 +1560,6 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
 const SettingsPage = ({
     // ✨ 新傳入的 props
     userProfiles,
-    activeUserProfileId,
-    onSetActiveUserProfile,
     onNewUserProfile,
     onEditUserProfile,
     onDeleteUserProfile,
@@ -1614,24 +1608,6 @@ const SettingsPage = ({
             
             {expandedSection === 'user' && (
               <div className="card-content">
-                <div className="setting-group">
-                  <label className="setting-label">預設使用者身份</label>
-                  <p className="setting-label" style={{fontWeight: 'normal', fontSize: '0.8em', marginTop: '-6px', marginBottom: '10px'}}>
-                    （當你建立新對話時，會預設使用這個身份）
-                  </p>
-                  <select
-                    value={activeUserProfileId || ''}
-                    onChange={(e) => onSetActiveUserProfile(e.target.value)}
-                    className="setting-select"
-                  >
-                    {userProfiles.map(profile => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <hr className="divider" />
                 <div className="setting-group">
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
                     <label className="setting-label" style={{marginBottom: 0}}>個人檔案列表</label>
@@ -1995,7 +1971,6 @@ const ChatApp = () => {
   
   // ✨✨✨ 全新！使用者個人檔案管理 State ✨✨✨
   const [userProfiles, setUserProfiles] = useState([]); // 儲存所有使用者個人檔案的列表
-  const [activeUserProfileId, setActiveUserProfileId] = useState(null); // 記住預設的使用者 ID
 
   // ==================== 當前活動狀態 ====================
   const [activeChatCharacterId, setActiveChatCharacterId] = useState(null);
@@ -2124,7 +2099,7 @@ useEffect(() => {
       const [
         savedCharacters, savedPrompts, savedApiConfigs,
         savedHistories, savedMetadatas, savedMemories,
-        savedUserProfiles, savedActiveProfileId // ✨ 新增讀取使用者個人檔案
+        savedUserProfiles // ✨ 新增讀取使用者個人檔案
       ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
         const chars = await db.characters.toArray();
         const proms = await db.prompts.toArray();
@@ -2141,8 +2116,6 @@ useEffect(() => {
       if (savedUserProfiles && savedUserProfiles.length > 0) {
         setUserProfiles(savedUserProfiles);
         // 確保儲存的 active ID 是有效的
-        const activeProfileExists = savedUserProfiles.some(p => p.id === savedActiveProfileId);
-        setActiveUserProfileId(activeProfileExists ? savedActiveProfileId : savedUserProfiles[0].id);
       } else {
         // 如果資料庫是空的，就建立一個預設的「你」
         const defaultProfile = { 
@@ -2153,10 +2126,8 @@ useEffect(() => {
           avatar: { type: 'icon', data: 'UserCircle' } 
         };
         setUserProfiles([defaultProfile]);
-        setActiveUserProfileId(defaultProfile.id);
         // 同時也寫回資料庫
         await db.kvStore.put({ key: 'userProfiles', value: [defaultProfile] });
-        await db.kvStore.put({ key: 'activeUserProfileId', value: defaultProfile.id });
       }
 
       // 3. 處理角色、提示詞等其他資料 (這部分邏輯不變，但我們移除舊的 localstorage 搬家邏輯，假設資料都在 IndexedDB)
@@ -2222,22 +2193,23 @@ useEffect(() => {
       }
   }, [longTermMemories]); // 這個管家只監控 longTermMemories
 
-    // ✨✨✨ 全新！動態計算當前使用者 ✨✨✨
-    // 這段程式碼會決定現在該用哪個 user profile
+// ✨✨✨ 全新！動態計算當前使用者 (最終版) ✨✨✨
     const currentUserProfile = useMemo(() => {
-      let profileIdToUse = activeUserProfileId; // 預設使用全域設定的 ID
-
-      // 如果我們正在一個聊天室裡，就以聊天室的設定為優先
+      // 規則 1: 優先從當前聊天室的 metadata 中尋找 userProfileId
       if (activeChatCharacterId && activeChatId) {
         const chatMeta = chatMetadatas[activeChatCharacterId]?.[activeChatId];
         if (chatMeta?.userProfileId) {
-          profileIdToUse = chatMeta.userProfileId;
+          // 如果找到了，就從總列表中找出對應的 profile
+          const profile = userProfiles.find(p => p.id === chatMeta.userProfileId);
+          if (profile) return profile; // 如果找到了就直接回傳
         }
       }
 
-      // 從總列表中找出對應的 profile，如果找不到，就用第一個作為備用
-      return userProfiles.find(p => p.id === profileIdToUse) || userProfiles[0];
-    }, [activeChatCharacterId, activeChatId, chatMetadatas, userProfiles, activeUserProfileId]);
+      // 規則 2: 如果以上情況都沒找到 (例如在聊天大廳、或舊的聊天室沒有綁定ID)，
+      // 就回傳使用者列表中的第一個 profile 作為最終備用。
+      return userProfiles[0];
+      
+    }, [activeChatCharacterId, activeChatId, chatMetadatas, userProfiles]);
 
     const navigateToPage = useCallback((page) => {
       if (page === 'chat' && currentPage === 'chat' && activeChatCharacterId !== null) {
@@ -2834,23 +2806,10 @@ useEffect(() => {
       const updatedProfiles = userProfiles.filter(p => p.id !== profileId);
       setUserProfiles(updatedProfiles);
       await db.kvStore.put({ key: 'userProfiles', value: updatedProfiles });
-      
-      // 如果刪掉的是當前預設的 profile，就自動把第一個設為新的預設
-      if (activeUserProfileId === profileId) {
-        const newActiveId = updatedProfiles[0]?.id || null;
-        setActiveUserProfileId(newActiveId);
-        await db.kvStore.put({ key: 'activeUserProfileId', value: newActiveId });
-      }
+    
       alert('🗑️ 個人檔案已刪除。');
     }
-  }, [userProfiles, activeUserProfileId]);
-
-  // 設定預設個人檔案
-  const handleSetActiveUserProfile = useCallback(async (profileId) => {
-    setActiveUserProfileId(profileId);
-    await db.kvStore.put({ key: 'activeUserProfileId', value: profileId });
-    alert('✅ 預設使用者已更新！');
-  }, []);
+  }, [userProfiles]);
 
   // ✨✨✨ 升級版！建立聊天室時綁定使用者 ID ✨✨✨
   const handleStartChat = useCallback((character, greeting, selectedProfileId) => {
@@ -3941,8 +3900,6 @@ const formatStDate = (date, type = 'send_date') => {
           {currentPage === 'settings' && (
             <SettingsPage
               userProfiles={userProfiles}
-              activeUserProfileId={activeUserProfileId}
-              onSetActiveUserProfile={handleSetActiveUserProfile}
               onNewUserProfile={openNewUserProfileEditor}
               onEditUserProfile={openEditUserProfileEditor}
               onDeleteUserProfile={handleDeleteUserProfile}
@@ -3989,7 +3946,6 @@ const formatStDate = (date, type = 'send_date') => {
           onClose={closePreview}
           onStartChat={handleStartChat}
           userProfiles={userProfiles}
-          activeUserProfileId={activeUserProfileId}
         />
       )}
       
