@@ -1663,7 +1663,10 @@ const SettingsPage = ({
                             {profile.avatar?.type === 'image' ? (<img src={profile.avatar.data} alt={profile.name} className="avatar-image" />) : (<UserCircle size={32} />)}
                           </div>
                           <div className="character-info">
-                            <h4>{profile.name}</h4>
+                            <h4>
+                              {profile.name}
+                              {profile.notes ? ` (${profile.notes})` : ''}
+                            </h4>
                             <p>{profile.description?.split('\n')[0]}</p>
                           </div>
                         </div>
@@ -2014,6 +2017,7 @@ const ChatApp = () => {
   };
   const [currentPage, setCurrentPage] = useState('characters');
   const [theme, setTheme] = useState(() => localStorage.getItem('app_theme') || 'dark');
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('app_font_size') || 'medium');
 
   const [characters, setCharacters] = useState([]);
   const [chatHistories, setChatHistories] = useState({});
