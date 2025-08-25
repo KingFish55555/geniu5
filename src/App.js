@@ -5,7 +5,7 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp
+  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -1849,6 +1849,13 @@ const SettingsPage = ({
                       <CaterpillarIcon size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
                       蟲餡包綠主題
                     </button>
+                    <button
+                      onClick={() => setTheme('cocoa')}
+                      className={`theme-btn ${theme === 'cocoa' ? 'active' : ''}`}
+                    >
+                      <Coffee size={20} /> {/* <--- 使用我們剛才匯入的咖啡圖示 */}
+                      牛奶可可主題
+                    </button>    
                   </div>
                 </div>
                   {/* 🔥🔥🔥 在這裡新增我們的字體大小選擇器 🔥🔥🔥 */}
@@ -1945,7 +1952,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.35</p>
+                  <p>版本：0.4.36</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">

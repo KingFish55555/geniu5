@@ -80,6 +80,35 @@
   --shadow-medium: rgba(88, 71, 12, 0.315);
 }
 
+/* ✨ 全新！牛奶可可主題 ✨ */
+:root[data-theme="cocoa"] {
+  /* --- 互動與主要顏色 (香醇巧克力) --- */
+  --primary-color: rgb(160, 115, 80);
+  --accent-color: rgb(138, 96, 66);
+  --topline-color: rgba(160, 115, 80, 0.7);
+
+  /* --- 背景顏色 (溫暖牛奶) --- */
+  --background-color: #fdfaf6; /* 溫暖的乳白色 */
+  --surface-color: #fbf3e9;    /* 拿鐵色，比背景稍深 */
+  
+  /* --- 使用者聊天泡泡 (牛奶巧克力) --- */
+  --user-color: rgba(160, 115, 80, 0.2);
+
+  /* --- 文字顏色 (濃郁可可) --- */
+  --text-primary: rgb(88, 60, 42);   /* 主要文字：深可可色 */
+  --text-secondary: rgb(139, 105, 85); /* 次要文字：淺可可色 */
+  --text-muted: rgba(139, 105, 85, 0.7); /* 提示文字 */
+  
+  /* --- 點綴色 (焦糖) --- */
+  --quote-text-color: rgb(204, 112, 60); /* 引號、重點文字 */
+
+  /* --- 其他顏色 --- */
+  --border-color: rgba(188, 165, 146, 0.5); /* 邊框 */
+  --middle-color: #e7e7e7;
+  --shadow-light: rgba(88, 60, 42, 0.1);
+  --shadow-medium: rgba(88, 60, 42, 0.2);
+}
+
 /* 引號內文字的專屬樣式 */
 .quoted-text {
   color: var(--quote-text-color);
