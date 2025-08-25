@@ -1888,7 +1888,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.33</p>
+                  <p>版本：0.4.34</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3197,7 +3197,11 @@ useEffect(() => {
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
 
-    const processedInput = applyPlaceholders(inputMessage, currentCharacter, currentUserProfile);
+    // ✨ 為了在出錯時能還原，我們先記住當前的狀態
+    const originalInput = inputMessage; 
+    const currentHistoryArray = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+
+    const processedInput = applyPlaceholders(originalInput, currentCharacter, currentUserProfile);
 
     const userMessage = {
       id: Date.now(),
@@ -3207,10 +3211,9 @@ useEffect(() => {
       timestamp: getFormattedTimestamp(),
     };
     
-    const currentHistoryArray = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
     const historyWithUserMessage = [...currentHistoryArray, userMessage];
 
-    // 步驟 1: 只更新畫面狀態，不用存檔！
+    // 步驟 1: 樂觀更新 UI - 先把使用者的訊息顯示出來
     setChatHistories(prev => ({
       ...prev,
       [activeChatCharacterId]: {
@@ -3223,6 +3226,7 @@ useEffect(() => {
     setIsLoading(true);
 
     try {
+      // 步驟 2: 嘗試發送給 AI
       const aiResponse = await sendToAI(userMessage.contents[0], historyWithUserMessage);
 
       const aiMessage = {
@@ -3235,7 +3239,7 @@ useEffect(() => {
 
       const finalHistoryArray = [...historyWithUserMessage, aiMessage];
       
-      // 步驟 2: 同樣地，只更新畫面狀態，不用存檔！
+      // 步驟 3: AI 回應成功，更新最終的聊天紀錄
       setChatHistories(prev => ({
         ...prev,
         [activeChatCharacterId]: {
@@ -3247,7 +3251,7 @@ useEffect(() => {
       // ===============================================================================
       // ✨✨✨ 在這裡安裝「智慧摘要觸發器」 ✨✨✨
       // ===============================================================================
-      // 檢查更新後的對話總長度，是否是我們設定的 MEMORY_UPDATE_INTERVAL (8) 的倍數
+      // 檢查更新後的對話總長度，是否是我們設定的 MEMORY_UPDATE_INTERVAL (3) 的倍數
       if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
         console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶...`);
         
@@ -3258,27 +3262,30 @@ useEffect(() => {
       }
       // ===============================================================================
     } catch (error) {
-      const errorMessage = {
-        id: Date.now() + 1,
-        sender: 'system',
-        contents: ['發生錯誤：' + error.message],
-        activeContentIndex: 0,
-        timestamp: getFormattedTimestamp(),
-      };
-      const historyWithError = [...historyWithUserMessage, errorMessage];
+      // =================================================================
+      // ✨✨✨ 核心修改：全新的錯誤處理流程 ✨✨✨
+      // =================================================================
+      console.error("訊息發送失敗:", error);
+      alert(`訊息發送失敗：\n\n${error.message}`); // 1. 彈出提示窗
 
-      // 步驟 3: 錯誤時也一樣，只更新畫面，讓管家去存檔
+      // 2. 將聊天紀錄還原到發送前的狀態
       setChatHistories(prev => ({
         ...prev,
         [activeChatCharacterId]: {
           ...prev[activeChatCharacterId],
-          [activeChatId]: historyWithError
+          [activeChatId]: currentHistoryArray // 使用我們一開始記住的 `currentHistoryArray`
         }
       }));
+
+      // 3. 將使用者輸入的文字還原到輸入框
+      setInputMessage(originalInput);
+      // =================================================================
+
     } finally {
       setIsLoading(false);
     }
-  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp]);
+    // ✨ 我們需要把 currentUserProfile 加入依賴項，因為 processedInput 用到了它
+  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp, currentCharacter, currentUserProfile]);
 
   const continueGeneration = useCallback(async () => {
     if (!activeChatCharacterId || !activeChatId) return;
