@@ -5,7 +5,7 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star
+  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -1167,14 +1167,12 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
 const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot }) => {
   
   const textareaRef = useRef(null);
+  // ✨ 1. 新增一個 state 來控制資訊面板的開關 ✨
+  const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
 
-  // ✨✨✨ 在這裡貼上新的 useEffect ✨✨✨
   useEffect(() => {
-    // 我們在 useEffect 內部直接存取從 props 傳進來的 messagesEndRef
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // ✨ 依賴項是 messages 陣列，代表只要訊息列表有變動就觸發 ✨
   }, [messages, messagesEndRef]);
-  // ✨✨✨ 新增結束 ✨✨✨
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -1203,22 +1201,38 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
 
   return (
     <div className="page-content">
-      <div className="chat-header">
-        <div className="chat-info">
-          {currentCharacter && ( <span className="current-character">與 {currentCharacter.name} 對話</span> )}
-          {currentPrompt && ( <span className="current-prompt">使用「{currentPrompt.name}」提示詞</span> )}
-        </div>
-        <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
-          {isApiConnected ? (
-            <span>
-              {loadedConfigName 
-                ? `${loadedConfigName} (${apiModel})` 
-                : apiProviders[apiProvider]?.name}
-            </span>
-          ) : (
-            <span>未連接</span>
-          )}
-        </div>
+      {/* ===================================================================== */}
+      {/* ✨✨✨ 2. 全新的頂部區域 JSX 結構 ✨✨✨ */}
+      {/* ===================================================================== */}
+      <div className="chat-header-container">
+        {/* 這個按鈕永遠顯示，用來控制面板的開關 */}
+        <button 
+          className="info-panel-toggle-btn" 
+          onClick={() => setIsInfoPanelOpen(!isInfoPanelOpen)}
+        >
+          {isInfoPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+
+        {/* 只有當 isInfoPanelOpen 為 true 時，這個面板才會顯示 */}
+        {isInfoPanelOpen && (
+          <div className="chat-header-panel">
+            <div className="chat-info">
+              {currentCharacter && ( <span className="current-character">與 {currentCharacter.name} 對話</span> )}
+              {currentPrompt && ( <span className="current-prompt">使用「{currentPrompt.name}」提示詞</span> )}
+            </div>
+            <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
+              {isApiConnected ? (
+                <span>
+                  {loadedConfigName 
+                    ? `${loadedConfigName} (${apiModel})` 
+                    : apiProviders[apiProvider]?.name}
+                </span>
+              ) : (
+                <span>未連接</span>
+              )}
+            </div>
+          </div>
+           )}
       </div>
   
       <div className="messages-area">

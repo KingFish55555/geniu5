@@ -319,15 +319,57 @@ body {
 }
 
 /* Chat Page */
-.chat-header {
+
+/* ✨ 1. 新的頂部容器，這是定位的基準 */
+.chat-header-container {
+  position: relative; /* 讓絕對定位的按鈕和面板可以相對於它 */
+  z-index: 5; /* 確保它在聊天內容之上 */
+}
+
+/* ✨ 2. 資訊面板本體樣式 (滑下來的那個區塊) */
+.chat-header-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 20px;
   background: var(--surface-color);
   border-bottom: 1px solid var(--border-color);
+  box-shadow: 0 2px 5px var(--shadow-light);
+
+  /* ✨ 動畫的核心 ✨ */
+  animation: slideDown 0.3s ease-out forwards;
 }
 
+/* ✨ 3. 開關按鈕的樣式 (右上角的那個小按鈕) */
+.info-panel-toggle-btn {
+  position: absolute;
+  top: 8px;
+  right: 15px;
+  z-index: 6; /* 確保按鈕在面板之上，永遠可以點擊 */
+  
+  background: rgba(128, 128, 128, 0.2);
+  color: var(--text-muted);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.info-panel-toggle-btn:hover {
+  background: rgba(128, 128, 128, 0.4);
+  color: var(--text-primary);
+}
+
+/* ✨ 4. 這些是原本就在的樣式，我們把它們保留下來 */
 .chat-info {
   display: flex;
   flex-direction: column;
