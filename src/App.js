@@ -1605,6 +1605,7 @@ const SettingsPage = ({
     apiProvider, apiKey, apiModel, setApiModel, apiProviders,
     handleProviderChange, handleApiKeyChange, testApiConnection, apiTestLoading,
     theme, setTheme,
+    fontSize, setFontSize,
     exportChatHistory, handleImportChat, clearAllData,
     apiConfigs, configName, setConfigName,
     loadedConfigId,
@@ -1847,6 +1848,30 @@ const SettingsPage = ({
                     >
                       <CaterpillarIcon size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
                       蟲餡包綠主題
+                    </button>
+                  </div>
+                </div>
+                  {/* 🔥🔥🔥 在這裡新增我們的字體大小選擇器 🔥🔥🔥 */}
+                <div className="setting-group">
+                  <label className="setting-label">字體大小</label>
+                  <div className="theme-options"> {/* 我們可以重用 theme-options 的樣式 */}
+                    <button
+                      onClick={() => setFontSize('small')}
+                      className={`theme-btn ${fontSize === 'small' ? 'active' : ''}`}
+                    >
+                      小
+                    </button>
+                    <button
+                      onClick={() => setFontSize('medium')}
+                      className={`theme-btn ${fontSize === 'medium' ? 'active' : ''}`}
+                    >
+                      中
+                    </button>
+                    <button
+                      onClick={() => setFontSize('large')}
+                      className={`theme-btn ${fontSize === 'large' ? 'active' : ''}`}
+                    >
+                      大
                     </button>
                   </div>
                 </div>
@@ -2153,6 +2178,14 @@ const ChatApp = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // ✨✨✨ 全新！字體大小的應用與儲存管家 ✨✨✨
+  useEffect(() => {
+    // 1. 應用設定到 HTML 根元素上
+    document.documentElement.setAttribute('data-font-size', fontSize);
+    // 2. 將新設定儲存到 localStorage
+    localStorage.setItem('app_font_size', fontSize);
+  }, [fontSize]); // 這個管家只監控 fontSize
 
   // ✨✨✨ 請用下面這整段程式碼，來取代您原本從 localStorage 讀取資料的 useEffect ✨✨✨
 useEffect(() => {
@@ -4085,6 +4118,8 @@ const formatStDate = (date, type = 'send_date') => {
               apiTestLoading={apiTestLoading}
               theme={theme}
               setTheme={setTheme}
+              fontSize={fontSize}
+              setFontSize={setFontSize}
               exportChatHistory={exportChatHistory}
               handleImportChat={handleImportChat}
               clearAllData={clearAllData}

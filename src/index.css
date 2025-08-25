@@ -1,4 +1,23 @@
 /* CSS Variables for Theme System */
+
+/* ✨✨✨ 在檔案最頂端，加入這一段 ✨✨✨ */
+:root {
+  --font-size-small: 14px;
+  --font-size-medium: 16px;
+  --font-size-large: 18px;
+}
+
+/* 根據 data-font-size 屬性，設定基礎字體大小變數 */
+:root[data-font-size="small"] {
+  font-size: var(--font-size-small);
+}
+:root[data-font-size="medium"] {
+  font-size: var(--font-size-medium);
+}
+:root[data-font-size="large"] {
+  font-size: var(--font-size-large);
+}
+
 :root[data-theme="dark"] {
   --primary-color: #313131;
   --accent-color: #272727;
@@ -549,7 +568,7 @@ body {
   padding: 8px 16px;
   border: 2px solid var(--border-color);
   border-radius: 25px;
-  font-size: 16px;
+  font-size: 1rem; /* 原本是 16px，改成 1rem */
   outline: none;
   transition: border-color 0.3s ease;
   background: var(--surface-color);
