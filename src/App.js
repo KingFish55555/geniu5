@@ -3257,7 +3257,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
       try {
         const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-        const summaryPrompt = `請將以下的對話創造一個簡潔的總結，應以第三人稱書寫。重點關注關鍵情節點、人物發展以及關鍵訊息交流。這份總結將作為其中一個角色的長期記憶，因此準確性和客觀性至關重要。\n\n對話內容：\n${conversationText}`;
+        const summaryPrompt = `請將以下的對話創造一個簡潔的總結，應以第三人稱書寫。重點關注關鍵情節點、人物發展以及關鍵訊息交流。這份總結將作為其中一個角色的長期記憶，因此準確性和客觀性至關重要。請不要使用任何粗體格式（**文字**）來回應，保持純文字格式即可。\n\n對話內容：\n${conversationText}`;
 
         const summary = await sendToAI(summaryPrompt, []);
 

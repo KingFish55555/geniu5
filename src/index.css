@@ -460,6 +460,17 @@ body {
   margin: 0;
 }
 
+/* ✨✨✨ 全新！解決長文字溢出問題的核心 ✨✨✨ */
+/* 讓 Markdown 渲染出來的內容，以及整個泡泡容器都支援強制換行 */
+.message-content, .bubble-wrapper {
+  overflow-wrap: break-word;
+  word-break: break-all;
+  /* ✨ 新增：hyphens 屬性可以在適合的地方為西歐語言加上連字號，讓斷行更自然 */
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  hyphens: auto;
+}
+
 .user-message .message-content {
   background: var(--user-color);
   color: var(--text-primary);
