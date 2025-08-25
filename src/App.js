@@ -5,7 +5,7 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee
+  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -1037,6 +1037,70 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
   );
 };
 
+// ==================== 全新！主題選擇彈出式 Modal 元件 ====================
+const ThemeSwitcherModal = ({ currentTheme, onSelect, onClose }) => {
+  // 我們在這裡定義所有可用的主題，和上次一樣
+  const themes = [
+    { id: 'light', name: '淺色主題', Icon: Sun },
+    { id: 'dark', name: '深色主題', Icon: Moon },
+    { id: '蟲餡包綠', name: '蟲餡包綠', Icon: CaterpillarIcon },
+    { id: '牛奶可可', name: '牛奶可可', Icon: Coffee },
+    { id: 'old-books', name: '懷舊書卷', Icon: BookOpen },
+    { id: 'old-blue', name: '古典藍調', Icon: Palette },
+    { id: 'hyacinth-mauve', name: '風信子紫', Icon: Grape },
+    { id: 'dark-hyacinth', name: '暗夜風信子', Icon: Sparkles },
+    { id: 'blue-moon', name: '藍月夜', Icon: CloudMoon }
+  ];
+
+  const handleSelect = (themeId) => {
+    onSelect(themeId); // 呼叫父層傳來的函式來設定主題
+    onClose();      // 選擇後自動關閉 Modal
+  };
+
+  return (
+    // 我們可以重用大部分 modal 的樣式
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>選擇您的主題</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          {/* 我們可以重用 character-list 的樣式來顯示列表 */}
+          <div className="character-list">
+            {themes.map((theme) => (
+              <div
+                key={theme.id}
+                // 如果是當前選中的主題，就加上 active 的 class 讓它高亮
+                className={`character-list-item ${currentTheme === theme.id ? 'active' : ''}`}
+                onClick={() => handleSelect(theme.id)}
+                style={{ cursor: 'pointer' }} // 確保顯示手指圖示
+              >
+                <div className="character-select-area">
+                  {/* 這裡我們用一個簡單的 div 來放圖示 */}
+                  <div className="character-avatar-large" style={{ backgroundColor: 'transparent', border: 'none' }}>
+                    <theme.Icon size={24} color={currentTheme === theme.id ? 'var(--primary-color)' : 'var(--text-secondary)'} />
+                  </div>
+                  <div className="character-info">
+                    {/* 我們把 h4 改成 span，讓語意更合適 */}
+                    <h4>{theme.name}</h4>
+                  </div>
+                </div>
+                {/* 如果是當前選中的主題，就顯示一個勾勾 */}
+                {currentTheme === theme.id && (
+                  <div className="active-check-icon">
+                    <Check size={20} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== 全新！使用者個人檔案編輯器 Modal ====================
 const UserProfileEditor = ({ profile, onSave, onClose }) => {
   const [name, setName] = useState('');
@@ -1591,7 +1655,81 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
     </div>
   );
 };
-  
+
+// ==================== 全新！主題選擇器下拉選單元件 ====================
+const ThemeSelector = ({ currentTheme, onSetTheme, onToggle }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // ✨ 2. 建立一個統一的開關函式 ✨
+  const toggleDropdown = () => {
+    const newIsOpen = !isOpen;
+    setIsOpen(newIsOpen);
+    if (onToggle) { // 如果父層傳來了 onToggle 函式
+      onToggle(newIsOpen); // 就把新的開關狀態告訴父層
+    }
+  };
+
+  // 定義所有可用的主題
+  const themes = [
+    { id: 'light', name: '淺色主題', Icon: Sun },
+    { id: 'dark', name: '深色主題', Icon: Moon },
+    { id: 'forest', name: '蟲餡包綠', Icon: CaterpillarIcon },
+    { id: 'cocoa', name: '牛奶可可', Icon: Coffee },
+    { id: 'old-books', name: '懷舊書卷', Icon: BookOpen },
+    { id: 'old-blue', name: '古典藍調', Icon: Palette },
+    { id: 'hyacinth-mauve', name: '風信子紫', Icon: Grape } // ✨ 在這裡加入新主題
+  ];
+
+  const selectedTheme = themes.find(t => t.id === currentTheme) || themes[0];
+
+  const handleSelect = (themeId) => {
+    onSetTheme(themeId);
+    toggleDropdown(); // 選擇後也呼叫開關函式来關閉選單
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [dropdownRef]);
+
+  return (
+    <div className="custom-select-container" ref={dropdownRef}>
+      <button className="custom-select-trigger" onClick={toggleDropdown}>
+        <div className="selected-option">
+          <div className="option-avatar" style={{ backgroundColor: 'transparent' }}>
+            <selectedTheme.Icon size={20} />
+          </div>
+          <span className="option-name">{selectedTheme.name}</span>
+        </div>
+        <span className="dropdown-arrow">{isOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {isOpen && (
+        <div className="custom-select-options" style={{ bottom: 'auto', top: '100%' }}>
+          {themes.map(theme => (
+            <div
+              key={theme.id}
+              className={`custom-select-option ${currentTheme === theme.id ? 'selected' : ''}`}
+              onClick={() => handleSelect(theme.id)} // ✨ 這裡也要用 handleSelect
+            >
+              <div className="option-avatar" style={{ backgroundColor: 'transparent' }}>
+                <theme.Icon size={20} />
+              </div>
+              <span className="option-name">{theme.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // =================================================================================
 // SettingsPage - ✨ 全新升級版 ✨
 // =================================================================================
@@ -1604,7 +1742,7 @@ const SettingsPage = ({
     // --- (舊 props 保持不變) ---
     apiProvider, apiKey, apiModel, setApiModel, apiProviders,
     handleProviderChange, handleApiKeyChange, testApiConnection, apiTestLoading,
-    theme, setTheme,
+    theme, onOpenThemeSwitcher,
     fontSize, setFontSize,
     exportChatHistory, handleImportChat, clearAllData,
     apiConfigs, configName, setConfigName,
@@ -1612,6 +1750,7 @@ const SettingsPage = ({
     onUpdateConfiguration,
     onSaveAsNewConfiguration, loadApiConfiguration, deleteApiConfiguration,
 }) => {
+    const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
     const [expandedSection, setExpandedSection] = useState('null'); // 預設展開使用者區塊
     const [selectedConfigId, setSelectedConfigId] = useState('');
   
@@ -1635,7 +1774,7 @@ const SettingsPage = ({
       <div className="page-content">
         <div className="settings-content">
           {/* ==================== ✨ 全新！使用者個人檔案管理區塊 ✨ ==================== */}
-          <div className="setting-card">
+          <div className={`setting-card ${isThemeSelectorOpen ? 'is-dropdown-open' : ''}`}>
             <button
               className={`card-header ${expandedSection === 'user' ? 'expanded' : ''}`}
               onClick={() => toggleSection('user')}
@@ -1818,47 +1957,15 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="setting-group">
                   <label className="setting-label">外觀主題</label>
-                  <div className="theme-options">
-                    <button
-                      onClick={() => {
-                        setTheme('light');
-                        localStorage.setItem('app_theme', 'light');
-                      }}
-                      className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                    >
-                      <Sun size={20} />
-                      淺色主題
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTheme('dark');
-                        localStorage.setItem('app_theme', 'dark');
-                      }}
-                      className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                    >
-                      <Moon size={20} />
-                      深色主題
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTheme('forest');
-                        localStorage.setItem('app_theme', 'forest');
-                      }}
-                      className={`theme-btn ${theme === 'forest' ? 'active' : ''}`}
-                    >
-                      <CaterpillarIcon size={20} /> {/* <--- 使用我們剛才匯入的蟲蟲圖示 */}
-                      蟲餡包綠主題
-                    </button>
-                    <button
-                      onClick={() => setTheme('cocoa')}
-                      className={`theme-btn ${theme === 'cocoa' ? 'active' : ''}`}
-                    >
-                      <Coffee size={20} /> {/* <--- 使用我們剛才匯入的咖啡圖示 */}
-                      牛奶可可主題
-                    </button>    
-                  </div>
+                  {/* 🔥🔥🔥 用下面這個【單一按鈕】，取代掉原本的 <ThemeSelector> 或按鈕群 🔥🔥🔥 */}
+              <button 
+                className="custom-select-trigger" // 重用我們漂亮的下拉選單按鈕樣式
+                onClick={onOpenThemeSwitcher}
+              >
+                <span>{theme.charAt(0).toUpperCase() + theme.slice(1)}</span> {/* 顯示當前主題名稱 */}
+                <span className="dropdown-arrow">▼</span>
+              </button>
                 </div>
-                  {/* 🔥🔥🔥 在這裡新增我們的字體大小選擇器 🔥🔥🔥 */}
                 <div className="setting-group">
                   <label className="setting-label">字體大小</label>
                   <div className="theme-options"> {/* 我們可以重用 theme-options 的樣式 */}
@@ -2096,6 +2203,7 @@ const ChatApp = () => {
   // ✨✨✨ 全新！使用者個人檔案編輯器 Modal 的 State ✨✨✨
   const [isUserProfileEditorOpen, setIsUserProfileEditorOpen] = useState(false);
   const [editingUserProfileId, setEditingUserProfileId] = useState(null);
+  const [isThemeSwitcherOpen, setIsThemeSwitcherOpen] = useState(false);
   // ✨ 1. 在這裡新增一行 state，用來控制身份切換器的開關 ✨
   const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false);
 
@@ -4124,7 +4232,7 @@ const formatStDate = (date, type = 'send_date') => {
               testApiConnection={testApiConnection}
               apiTestLoading={apiTestLoading}
               theme={theme}
-              setTheme={setTheme}
+              onOpenThemeSwitcher={() => setIsThemeSwitcherOpen(true)}
               fontSize={fontSize}
               setFontSize={setFontSize}
               exportChatHistory={exportChatHistory}
@@ -4218,6 +4326,13 @@ const formatStDate = (date, type = 'send_date') => {
           onClose={() => setIsProfileSwitcherOpen(false)}
         />
       )}
+        {isThemeSwitcherOpen && (
+      <ThemeSwitcherModal
+        currentTheme={theme}
+        onSelect={setTheme}
+        onClose={() => setIsThemeSwitcherOpen(false)}
+      />
+    )}
     </>
   );
 };

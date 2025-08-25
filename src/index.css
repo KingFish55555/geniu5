@@ -54,8 +54,8 @@
   --user-color: #cfd8e7;
 }
 
-/* ✨ 全新！森語綠主題 (路徑修正版) ✨ */
-:root[data-theme="forest"] {
+/* ✨ 全新！蟲餡包綠主題 (路徑修正版) ✨ */
+:root[data-theme="蟲餡包綠"] {
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(80, 133, 78);
   --accent-color: rgb(53, 112, 71);
@@ -81,7 +81,7 @@
 }
 
 /* ✨ 全新！牛奶可可主題 ✨ */
-:root[data-theme="cocoa"] {
+:root[data-theme="牛奶可可"] {
   /* --- 互動與主要顏色 (香醇巧克力) --- */
   --primary-color: rgb(160, 115, 80);
   --accent-color: rgb(138, 96, 66);
@@ -107,6 +107,152 @@
   --middle-color: #e7e7e7;
   --shadow-light: rgba(88, 60, 42, 0.1);
   --shadow-medium: rgba(88, 60, 42, 0.2);
+}
+
+/* ✨ 全新！懷舊書卷 (Old Books) 主題 ✨ */
+:root[data-theme="old-books"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #6f595d;
+  --accent-color: #735d60;
+  --topline-color: #dcc5b8;
+
+  /* --- 背景顏色 --- */
+  --background-color: #e1cabc;
+  --surface-color: #e5cfc0;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(212, 189, 178, 0.5); /* 使用 secondary 色的半透明版 */
+
+  /* --- 文字顏色 --- */
+  --text-primary: #56464a;
+  --text-secondary: #856b6e;
+  --text-muted: rgba(133, 107, 110, 0.7);
+  
+  /* --- 點綴色 --- */
+  --quote-text-color: #6f595d;
+
+  /* --- 其他顏色 --- */
+  --border-color: #b19595;
+  --middle-color: #d4bdb2;
+  --shadow-light: rgba(86, 70, 74, 0.1);
+  --shadow-medium: rgba(86, 70, 74, 0.2);
+}
+
+/* ✨ 全新！古典藍調 (Old Blue) 主題 ✨ */
+:root[data-theme="old-blue"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #535c95;
+  --accent-color: #586099;
+  --topline-color: #d1c7c8;
+
+  /* --- 背景顏色 --- */
+  --background-color: #dacbc8;
+  --surface-color: #e1d0c8;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(201, 189, 200, 0.5); /* 使用 secondary 色的半透明版 */
+
+  /* --- 文字顏色 --- */
+  --text-primary: #42497d;
+  --text-secondary: #666ea6;
+  --text-muted: rgba(102, 110, 166, 0.7);
+  
+  /* --- 點綴色 --- */
+  --quote-text-color: #535c95;
+
+  /* --- 其他顏色 --- */
+  --border-color: #9799c8;
+  --middle-color: #c9bdc8;
+  --shadow-light: rgba(66, 73, 125, 0.1);
+  --shadow-medium: rgba(66, 73, 125, 0.2);
+}
+
+/* ✨ 全新！風信子紫 (Hyacinth Mauve) 主題 ✨ */
+:root[data-theme="hyacinth-mauve"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #665877;
+  --accent-color: #6b5c7d;
+  /* ✨ 核心修改：使用強調色作為頂部導覽列背景，實現深色效果 ✨ */
+  --topline-color: #6b5c7d; 
+
+  /* --- 背景顏色 --- */
+  --background-color: #ddcac8;
+  --surface-color: #e3cfc8;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(206, 187, 200, 0.5); /* 使用 secondary 色的半透明版 */
+
+  /* --- 文字顏色 --- */
+  --text-primary: #514461;
+  --text-secondary: #7c698b;
+  --text-muted: rgba(124, 105, 139, 0.7);
+  
+  /* --- 點綴色 --- */
+  --quote-text-color: #665877;
+
+  /* --- 其他顏色 --- */
+  --border-color: #a993af;
+  --middle-color: #cebbc8;
+  --shadow-light: rgba(81, 68, 97, 0.1);
+  --shadow-medium: rgba(81, 68, 97, 0.2);
+}
+
+/* ✨ 全新！暗夜風信子 (Dark Hyacinth Mauve) 主題 ✨ */
+:root[data-theme="dark-hyacinth"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #847093;
+  --accent-color: #7e6c8e;
+  --topline-color: #352d3f;
+
+  /* --- 背景顏色 --- */
+  --background-color: #342c3d;
+  --surface-color: #342b3a;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(132, 112, 147, 0.15);
+
+  /* --- 文字顏色 --- */
+  --text-primary: #a289a8;
+  --text-secondary: #6d5e7f;
+  --text-muted: rgba(109, 94, 127, 0.7);
+  
+  /* --- 點綴色 --- */
+  --quote-text-color: #cebbc8;
+
+  /* --- 其他顏色 --- */
+  --border-color: #49405a;
+  --middle-color: #373043;
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
+}
+
+/* ✨ 全新！藍月夜 (Blue Moon) 主題 ✨ */
+:root[data-theme="blue-moon"] {
+  /* --- 互動與主要顏色 (焦糖棕) --- */
+  --primary-color: #775343;
+  --accent-color: #c89967;
+  --topline-color: #0c1e3c;
+
+  /* --- 背景顏色 (深藍夜空) --- */
+  --background-color: #071226;
+  --surface-color: #1e2533;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(122, 90, 74, 0.25);
+
+  /* --- 文字顏色 (月光白) --- */
+  --text-primary: #d2cec6;
+  --text-secondary: #7e93b0;
+  --text-muted: rgba(126, 147, 176, 0.7);
+  
+  /* --- 點綴色 (金色點綴) --- */
+  --quote-text-color: #c89967;
+
+  /* --- 其他顏色 --- */
+  --border-color: #5b4f48;
+  --middle-color: #1b2841;
+  --shadow-light: rgba(0, 0, 0, 0.2);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
 }
 
 /* 引號內文字的專屬樣式 */
@@ -641,6 +787,20 @@ body {
   padding: 20px;
   overflow-y: auto;
   background: var(--surface-color);
+}
+
+/* ✨✨✨ 全新！解決下拉選單被裁切的魔法 ✨✨✨ */
+.setting-card.is-dropdown-open {
+  /* 當這個 class 存在時，暫時解除 overflow 的限制 */
+  overflow: visible;
+  /* 順便提升一下它的層級，確保它在其他卡片之上 */
+  z-index: 3;
+}
+
+/* 為了讓這個 z-index 生效，我們需要告訴 setting-card 它是一個定位基準 */
+.setting-card {
+  position: relative; /* <--- 在原本的 .setting-card 樣式中加入這一行 */
+  /* ... 您原有的其他樣式 ... */
 }
 
 .setting-card {
