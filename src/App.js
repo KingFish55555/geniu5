@@ -1959,10 +1959,29 @@ const SettingsPage = ({
                   <label className="setting-label">外觀主題</label>
                   {/* 🔥🔥🔥 用下面這個【單一按鈕】，取代掉原本的 <ThemeSelector> 或按鈕群 🔥🔥🔥 */}
               <button 
-                className="custom-select-trigger" // 重用我們漂亮的下拉選單按鈕樣式
+                className="custom-select-trigger"
                 onClick={onOpenThemeSwitcher}
               >
-                <span>{theme.charAt(0).toUpperCase() + theme.slice(1)}</span> {/* 顯示當前主題名稱 */}
+                <span>
+                  {
+                    // 1. 先定義所有主題，確保和 Modal 裡的一致
+                    [
+                      { id: 'light', name: '淺色主題' },
+                      { id: 'dark', name: '深色主題' },
+                      { id: '蟲餡包綠', name: '蟲餡包綠' },
+                      { id: '牛奶可可', name: '牛奶可可' },
+                      { id: 'old-books', name: '懷舊書卷' },
+                      { id: 'old-blue', name: '古典藍調' },
+                      { id: 'hyacinth-mauve', name: '風信子紫' },
+                      { id: 'dark-hyacinth', name: '暗夜風信子' },
+                      { id: 'blue-moon', name: '藍月夜' }
+                    ]
+                    // 2. 根據當前的 theme ID 找到對應的主題物件
+                    .find(t => t.id === theme)
+                    // 3. 安全地取出 name 屬性，如果找不到，就顯示一個備用文字
+                    ?.name || '選擇主題' 
+                  }
+                </span>
                 <span className="dropdown-arrow">▼</span>
               </button>
                 </div>
@@ -2292,6 +2311,8 @@ const ChatApp = () => {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    // ✨✨✨ 核心修正：在這裡加上自動存檔 ✨✨✨
+    localStorage.setItem('app_theme', theme);
   }, [theme]);
 
   // ✨✨✨ 全新！字體大小的應用與儲存管家 ✨✨✨
