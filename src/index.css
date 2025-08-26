@@ -3007,3 +3007,76 @@ select:focus {
   color: var(--primary-color);
   margin-left: auto; /* 讓勾勾自動靠到最右邊 */
 }
+
+/* =================================== */
+/*  角色列表 - 排序控制項樣式           */
+/* =================================== */
+
+/* 整個控制項的容器，讓它和下面的列表之間有點距離 */
+.list-header-controls {
+  margin-bottom: 16px;
+  position: relative; /* 為了讓下拉選單可以相對於它定位 */
+  z-index: 5; /* 確保它在列表之上 */
+}
+
+.sort-control-container {
+  position: relative; /* 下拉選單的直接定位基準 */
+}
+
+/* 顯示當前排序方式的按鈕 */
+.sort-control-button {
+  width: 100%;
+  padding: 10px 14px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+
+.sort-control-button:hover {
+  border-color: var(--primary-color);
+  color: var(--text-primary);
+}
+
+/* 彈出的排序選項菜單 */
+.sort-options-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  background-color: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--shadow-light);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: slideDown 0.2s ease-out;
+}
+
+/* 單一排序選項按鈕 */
+.sort-option {
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sort-option:hover {
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+}

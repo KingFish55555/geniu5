@@ -479,30 +479,106 @@ const CharacterPreview = ({ character, onClose, onStartChat, userProfiles }) => 
   );
 };
 
+// =================================================================================
+// ✨✨✨ 全新升級！擁有強大排序功能的 CharactersPage ✨✨✨
+// =================================================================================
 const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onToggleFavorite }) => {
   const [showFloatMenu, setShowFloatMenu] = useState(false);
+  
+  // ✨ 1. 新增一個 state 來管理排序設定 ✨
+  // 預設是 { key: 'name', order: 'asc' }，代表「依名稱 A->Z」
+  const [sortConfig, setSortConfig] = useState({ key: 'name', order: 'asc' });
+  
+  // ✨ 2. 新增一個 state 來控制排序選單的開關 ✨
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
 
-  // =====================================================================
-  // ✨✨✨ 核心修改：在這裡進行排序 ✨✨✨
-  // =====================================================================
+  // ✨ 3. 大幅升級 useMemo 中的排序邏輯 (SillyTavern 專業版) ✨
   const sortedCharacters = useMemo(() => {
-    // 先複製一份陣列，避免直接修改原始 state
+    // 這個正規表示式用來判斷字串是否以英文字母、數字或常見符號開頭
+    const isAscii = /^[a-zA-Z0-9!"#$%&'()*+,-./:;<=>?@[\\\]^_`{|}~]/;
+
     return [...characters].sort((a, b) => {
-      // 規則 1: 比較 fav 狀態 (true 的排前面)
+      // --- 規則 1: 最愛永遠優先 ---
       if (a.fav !== b.fav) {
         return a.fav ? -1 : 1;
       }
-      // 規則 2: 如果 fav 狀態相同，則按名稱排序
-      // localeCompare 是處理各種語言 (包含中文筆劃) 排序的最佳方式
-      return a.name.localeCompare(b.name);
+
+      // --- 規則 2: 根據排序模式，執行完全不同的排序策略 ---
+      if (sortConfig.key === 'name') {
+        const aIsAscii = isAscii.test(a.name);
+        const bIsAscii = isAscii.test(b.name);
+
+        if (sortConfig.order === 'asc') {
+          // A -> Z 模式：英文優先
+          if (aIsAscii && !bIsAscii) return -1; // a 是英文，b 不是 -> a 在前
+          if (!aIsAscii && bIsAscii) return 1;  // b 是英文，a 不是 -> b 在前
+          
+          // 如果語言相同，則正常比較
+          return a.name.localeCompare(b.name, 'zh-Hant');
+
+        } else { // 'desc'
+          // Z -> A 模式：中文優先
+          if (aIsAscii && !bIsAscii) return 1;  // a 是英文，b 不是 -> a 在後
+          if (!aIsAscii && bIsAscii) return -1; // b 是英文，a 不是 -> b 在後
+
+          // 如果語言相同，則反向比較
+          return b.name.localeCompare(a.name, 'zh-Hant');
+        }
+      } else if (sortConfig.key === 'id') {
+        // 依加入時間排序 (這個比較簡單，直接反轉即可)
+        const comparison = a.id - b.id;
+        return sortConfig.order === 'asc' ? comparison : -comparison;
+      }
+      
+      return 0; // 預設情況
     });
-  }, [characters]); // 依賴項是 characters，代表只有角色列表變動時才重新排序
+  }, [characters, sortConfig]); // ✨ 依賴項新增了 sortConfig ✨
+
+  // ✨ 4. 建立一個排序選項的清單，方便我們渲染按鈕 ✨
+  const sortOptions = [
+    { key: 'name', order: 'asc', label: '名稱 A -> Z' },
+    { key: 'name', order: 'desc', label: '名稱 Z -> A' },
+    { key: 'id', order: 'desc', label: '加入時間 (新 -> 舊)' },
+    { key: 'id', order: 'asc', label: '加入時間 (舊 -> 新)' },
+  ];
+
+  const currentSortLabel = sortOptions.find(
+    opt => opt.key === sortConfig.key && opt.order === sortConfig.order
+  )?.label;
 
   return (
     <div className="page-content">
       <div className="content-area character-list-page">
+        {/* ✨ 5. 在這裡加入我們的排序 UI ✨ */}
+        {characters.length > 0 && (
+          <div className="list-header-controls">
+            <div className="sort-control-container">
+              <button className="sort-control-button" onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}>
+                <span>排序方式: {currentSortLabel}</span>
+                <ChevronDown size={16} style={{ transform: isSortMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+              </button>
+              {isSortMenuOpen && (
+                <div className="sort-options-menu">
+                  {sortOptions.map(option => (
+                    <button 
+                      key={`${option.key}-${option.order}`}
+                      className="sort-option"
+                      onClick={() => {
+                        setSortConfig({ key: option.key, order: option.order });
+                        setIsSortMenuOpen(false);
+                      }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {characters.length === 0 ? (
-        <div className="empty-state">
+          <div className="empty-state">
           <div className="empty-icon"><Users size={48} /></div>
           <h3>還沒有角色</h3>
           <p>創建或匯入你的第一個角色來開始對話吧！</p>
@@ -518,7 +594,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
         </div>
       ) : (
           <div className="character-list">
-            {/* ✨ 使用我們排序好的 sortedCharacters 陣列來渲染列表 ✨ */}
+            {/* ✨ 6. 這裡不需要改，它會自動使用我們上面排好的 sortedCharacters ✨ */}
             {sortedCharacters.map((character) => (
               <div key={character.id} className="character-list-item">
                 <div className="character-select-area" onClick={() => onPreview(character)}>
@@ -530,7 +606,6 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
                     <p>{character.creatorNotes || character.description?.split('\n')[0]}</p>
                   </div>
                 </div>
-                {/* ✨✨✨ 在這裡加入我們的收藏按鈕 ✨✨✨ */}
                 <button 
                   className={`fav-character-btn ${character.fav ? 'favorited' : ''}`}
                   onClick={() => onToggleFavorite(character.id)}
@@ -2078,7 +2153,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.36</p>
+                  <p>版本：0.4.37</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
