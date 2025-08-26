@@ -14,7 +14,7 @@ import html2canvas from 'html2canvas';
 
 // ==================== 長期記憶數量觸發數 ====================
 
-const MEMORY_UPDATE_INTERVAL = 3;
+const MEMORY_UPDATE_INTERVAL = 5;
 
 // 頂部導航組件
 const TopNavigation = ({ currentPage, navigateToPage }) => (
@@ -167,7 +167,24 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   };
 
   const handleDelete = () => {
-    if (character && window.confirm(`您確定要刪除角色「${character.name}」嗎？\n\n🥺確定嗎？\n\n(${character.name}正在看著你的手)`)) {
+    if (character &&
+      // 這是第一次的警告視窗
+      window.confirm(
+        `⚠️ 確定要刪除角色「${character.name}」嗎？\n\n` +
+        `🥺確定嗎？\n\n` +
+        `(${character.name}正在看著你的手)\n\n`
+      ) &&
+      // 只有當使用者按下第一次的「確定」後，才會跳出第二次的警告
+      window.confirm(
+        `🚨最後一次確認🚨\n\n` +
+        `按下「確定」後，角色「${character.name}」和所有對話將被永久銷毀。\n\n` +
+        `此操作將會連同【所有相關的聊天記錄】一併永久刪除！\n\n`+
+        `確定要這麼做嗎？\n\n` +
+        `真的不後悔嗎？\n\n` +
+        `(這是最後一次機會......)`
+      )
+    ) {
+      // 只有兩次都按下「確定」，才會執行真正的刪除動作
       onDelete(character.id);
     }
   };
@@ -2943,7 +2960,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       const updatedCharacters = characters.filter(c => c.id !== characterId);
       setCharacters(updatedCharacters);
       if (currentCharacter?.id === characterId) setCurrentCharacter(null);
-      alert('🗑️ 角色已刪除');
+      alert('🗑️......角色已離開');
       closeEditor();
       closePreview();
 
@@ -3072,33 +3089,38 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         }
 
         // =====================================================================
-        // ✨✨✨ 核心修改 (最終版)：組合一個更完整的角色描述 ✨✨✨
+        // ✨✨✨ 核心修正 (角色備註順序與標籤修正版) ✨✨✨
         // =====================================================================
         const descriptionParts = [];
-
-        // ✨ 1. 優先處理最高權重的 Depth Prompt (角色備註)
-        // 使用 ?. (optional chaining) 來安全地存取深層屬性，避免因缺少 extensions 而報錯
-        if (cardData.extensions?.depth_prompt?.prompt) {
-          descriptionParts.push(`[System Note]\n${cardData.extensions.depth_prompt.prompt}`);
-        }
-
-        // 2. 組合個性、場景和對話範例
-        if (cardData.personality) {
-          descriptionParts.push(`[Personality]\n${cardData.personality}`);
-        }
-        if (cardData.scenario) {
-          descriptionParts.push(`[Scenario]\n${cardData.scenario}`);
-        }
-        if (cardData.mes_example) {
-          descriptionParts.push(`[Dialogue Example]\n${cardData.mes_example}`);
-        }
-
-        // 3. 最後附上原始的角色描述 (如果有的話)
+        
+        // 1. 角色描述 (如果為空，就不會被加入，這是正確的)
         if (cardData.description) {
           descriptionParts.push(cardData.description);
         }
 
-        // 4. 用分隔線將它們組合起來，如果什麼都沒有，就留空
+        // 2. 個性
+        if (cardData.personality) {
+          descriptionParts.push(`[Personality]\n${cardData.personality}`);
+        }
+        
+        // 3. 場景
+        if (cardData.scenario) {
+          descriptionParts.push(`[Scenario]\n${cardData.scenario}`);
+        }
+
+        // 🔥🔥🔥 核心修正：在這裡插入角色備註 🔥🔥🔥
+        // 4. 角色備註 (Depth Prompt)
+        if (cardData.extensions?.depth_prompt?.prompt) {
+          // 並且使用一個更直觀的標籤
+          descriptionParts.push(`[角色備註]\n${cardData.extensions.depth_prompt.prompt}`);
+        }
+
+        // 5. 對話範例
+        if (cardData.mes_example) {
+          descriptionParts.push(`[Dialogue Example]\n${cardData.mes_example}`);
+        }
+
+        // 6. 用分隔線將它們組合起來
         const combinedDescription = descriptionParts.join('\n\n---\n\n');
         // =====================================================================
 
