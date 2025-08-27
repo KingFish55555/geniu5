@@ -136,26 +136,32 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
   };
   
   // 處理開關切換 (這個需要立即儲存)
-  const handleToggleModule = (moduleId) => {
+    const handleToggleModule = (moduleId) => {
     if (!currentPrompt) return;
 
     let isLocked = false;
     const newModules = currentPrompt.modules.map(m => {
-      if (m.id === moduleId) {
+        if (m.id === moduleId) {
         if (m.locked) {
-          isLocked = true;
-          return m;
+            isLocked = true;
+            return m;
         }
         return { ...m, enabled: !m.enabled };
-      }
-      return m;
+        }
+        return m;
     });
 
-    if (isLocked) return; // 如果是鎖定的，就不執行任何操作
+    if (isLocked) return;
 
     const updatedPreset = { ...currentPrompt, modules: newModules };
-    savePrompt(updatedPreset); // 直接儲存，讓開關操作立即生效
-  };
+    
+    // ✨✨✨ 核心修正：在這裡新增下面這兩行 ✨✨✨
+    // 1. 立刻更新畫面上的 state，讓開關立即反應
+    setCurrentPrompt(updatedPreset); 
+    
+    // 2. 然後再將更新後的資料儲存到資料庫
+    savePrompt(updatedPreset);
+};
 
 
   return (

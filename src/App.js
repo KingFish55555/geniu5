@@ -5,12 +5,14 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon
+  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon, Edit2
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
 import { db } from './db';
 import html2canvas from 'html2canvas';
+import PromptsPage from './PromptsPage';
+import ModuleEditorModal from './ModuleEditorModal';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -1320,6 +1322,54 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
   );
 };
 
+// =================================================================================
+// ✨✨✨ 全新！提示詞預設集選擇器 Modal ✨✨✨
+// =================================================================================
+const PromptSwitcherModal = ({ prompts, currentPromptId, onSelect, onClose, onAddNew }) => {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>選擇提示詞預設集</h3>
+          <button onClick={onClose} className="close-btn"><X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          {/* 我們可以重用 character-list 的樣式 */}
+          <div className="character-list">
+            {prompts.map((prompt) => (
+              <div
+                key={prompt.id}
+                className={`character-list-item ${currentPromptId === prompt.id ? 'active' : ''}`}
+                onClick={() => { onSelect(prompt); onClose(); }}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="character-select-area">
+                  <div className="character-avatar-large" style={{ backgroundColor: 'transparent', border: 'none' }}>
+                    <FileText size={24} color={currentPromptId === prompt.id ? 'var(--primary-color)' : 'var(--text-secondary)'} />
+                  </div>
+                  <div className="character-info">
+                    <h4>{prompt.name}</h4>
+                  </div>
+                </div>
+                {currentPromptId === prompt.id && (
+                  <div className="active-check-icon">
+                    <Check size={20} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onAddNew} className="footer-btn save-btn">
+            <Plus size={16} /> 建立新的預設集
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ==================== 全新！使用者個人檔案切換器 Modal ====================
 const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClose }) => {
   return (
@@ -1428,6 +1478,12 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
                   作為 {currentUserProfile.name || '(未命名身份)'}
                   {currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}
                 </span>
+                {/* ✨✨✨ 在這裡新增下面這段程式碼 ✨✨✨ */}
+                {currentPrompt && (
+                  <span className="current-prompt" style={{ opacity: 0.7 }}>
+                    使用: {currentPrompt.name}
+                  </span>
+                )}
               </div>
             </div>
             <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
@@ -1552,201 +1608,7 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
   );
 };
 
-// 提示詞頁面組件 (全新佈局版本)
-const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, deletePrompt, restoreDefaultPrompts }) => {
-  const [editingPrompt, setEditingPrompt] = useState(null);
-  const [promptName, setPromptName] = useState('');
-  const [promptContent, setPromptContent] = useState('');
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(800);
-  const [contextLength, setContextLength] = useState(24000);
-  
-  // ✨ 新增 state 來控制列表是否展開 ✨
-  const [isListExpanded, setIsListExpanded] = useState(true);
 
-  // 當選擇一個已儲存的提示詞時
-  const handleSelectPrompt = (prompt) => {
-    setCurrentPrompt(prompt);
-    setEditingPrompt(prompt);
-    setPromptName(prompt.name);
-    setPromptContent(prompt.content);
-    setTemperature(prompt.temperature || 0.7);
-    setMaxTokens(prompt.maxTokens || 800);
-    setContextLength(prompt.contextLength || 24000);
-    // ✨ 選好後自動收起列表，方便編輯 ✨
-    setIsListExpanded(false); 
-  };
-
-  const handleSave = () => {
-    if (!promptName.trim()) {
-      alert('請為您的提示詞命名！');
-      return;
-    }
-    const newPromptData = {
-      id: editingPrompt ? editingPrompt.id : Date.now(), 
-      name: promptName,
-      content: promptContent,
-      temperature: Number(temperature),
-      maxTokens: Number(maxTokens),
-      contextLength: Number(contextLength),
-    };
-    savePrompt(newPromptData);
-    handleClearEditor();
-  };
-  
-  const handleDelete = () => {
-    if (editingPrompt) {
-      if (window.confirm(`確定要刪除「${editingPrompt.name}」嗎？`)) {
-        deletePrompt(editingPrompt.id);
-        handleClearEditor();
-      }
-    } else {
-      alert('請先選擇一個要刪除的提示詞。');
-    }
-  };
-
-  const handleClearEditor = () => {
-    setEditingPrompt(null);
-    setPromptName('');
-    setPromptContent('');
-    setTemperature(0.7);
-    setMaxTokens(800);
-    setContextLength(4096);
-    // ✨ 清空編輯器時，自動展開列表方便選擇 ✨
-    setIsListExpanded(true);
-  };
-
-  const handleImportPrompt = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const importedData = JSON.parse(e.target.result);
-        let name, content, temp, max, context;
-        if (importedData.content !== undefined) {
-          name = importedData.name || '';
-          content = importedData.content || '';
-          temp = importedData.temperature || 0.7;
-          max = importedData.maxTokens || 800;
-          context = importedData.contextLength || 4096;
-        } else if (importedData.description !== undefined) {
-          name = importedData.char_name || '匯入的角色提示';
-          let fullDesc = importedData.description || '';
-          if(importedData.first_mes) {
-            fullDesc += `\n\n[角色的第一句話是：${importedData.first_mes}]`;
-          }
-          content = fullDesc;
-          temp = 0.7; max = 800; context = 4096;
-        } else {
-          alert('❌ 無法識別的檔案格式。');
-          return;
-        }
-        setPromptName(name); setPromptContent(content);
-        setTemperature(temp); setMaxTokens(max); setContextLength(context);
-        setEditingPrompt(null);
-        alert('✅ 提示詞已成功載入編輯器，請確認後儲存。');
-      } catch (error) {
-        alert('❌ 檔案格式錯誤，請確認是正確的 JSON 檔案。');
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
-  };
-
-  return (
-    <div className="page-content">
-      {/* ✨ 全新的 JSX 結構：上下佈局 ✨ */}
-      <div className="content-area">
-        
-        {/* 上半部：可收合的已儲存提示詞列表 */}
-        <div className="setting-card">
-          <button
-            className={`card-header ${isListExpanded ? 'expanded' : ''}`}
-            onClick={() => setIsListExpanded(!isListExpanded)}
-          >
-            <div className="card-title">
-              <FileText size={20} />
-              <span>已儲存的提示詞 ({prompts.length})</span>
-            </div>
-            <span className="expand-arrow">{isListExpanded ? '▲' : '▼'}</span>
-          </button>
-          
-          {isListExpanded && (
-            <div className="card-content">
-              {prompts.length === 0 ? (
-                <p className="empty-list-text">還沒有任何提示詞</p>
-              ) : (
-                <div className="prompts-list">
-                  {prompts.map((prompt) => (
-                    <div 
-                      key={prompt.id} 
-                      className={`prompt-card ${currentPrompt?.id === prompt.id ? 'active' : ''}`}
-                      onClick={() => handleSelectPrompt(prompt)}
-                    >
-                      <div className="prompt-info">
-                        <h4>{prompt.name}</h4>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <hr className="divider" />
-              <button onClick={restoreDefaultPrompts} className="restore-btn" style={{width: '100%'}}>還原所有的提示詞</button>
-            </div>
-          )}
-        </div>
-
-        {/* 下半部：提示詞編輯器 */}
-        <div className="setting-card">
-           <div className="card-header" style={{cursor: 'default'}}>
-             <div className="card-title">
-                <Plus size={20} />
-                <span>{editingPrompt ? '編輯提示詞' : '新增提示詞'}</span>
-              </div>
-           </div>
-           <div className="card-content">
-              <div className="editor-form">
-                <div className="form-group">
-                  <label>提示詞名稱</label>
-                  <input type="text" value={promptName} onChange={(e) => setPromptName(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>提示詞內容</label>
-                  <textarea value={promptContent} onChange={(e) => setPromptContent(e.target.value)} rows="8" />
-                </div>
-                <div className="sliders-group">
-                  <div className="slider-container">
-                    <label>溫度: {temperature}</label>
-                    <input type="range" min="0" max="2" step="0.1" value={temperature} onChange={(e) => setTemperature(e.target.value)} />
-                  </div>
-                  <div className="slider-container">
-                    <label>最大回應: {maxTokens} tokens</label>
-                    <input type="range" min="50" max="4096" step="10" value={maxTokens} onChange={(e) => setMaxTokens(e.target.value)} />
-                  </div>
-                  <div className="slider-container">
-                    <label>記憶容量 (上下文): {contextLength} Tokens</label>
-                    <input type="range" min="500" max="64000" step="100" value={contextLength} onChange={(e) => setContextLength(e.target.value)} />
-                  </div>
-                </div>
-                <div className="editor-buttons">
-                  <button onClick={handleSave} className="save-btn">{editingPrompt ? '儲存變更' : '儲存新提示詞'}</button>
-                  <button onClick={handleDelete} className="delete-btn" disabled={!editingPrompt}>刪除</button>
-                  <button onClick={handleClearEditor} className="clear-btn">清空編輯器</button>
-                </div>
-                <div className="import-section">
-                   <input type="file" id="import-prompt-json" accept=".json" onChange={handleImportPrompt} style={{ display: 'none' }} />
-                    <label htmlFor="import-prompt-json" className="import-btn">
-                      <Upload size={16} /> 匯入提示詞 (JSON)
-                    </label>
-                </div>
-              </div>
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ==================== 全新！主題選擇器下拉選單元件 ====================
 const ThemeSelector = ({ currentTheme, onSetTheme, onToggle }) => {
@@ -2170,7 +2032,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.4.37</p>
+                  <p>版本：0.5.0</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2317,6 +2179,7 @@ const ChatApp = () => {
   const [isThemeSwitcherOpen, setIsThemeSwitcherOpen] = useState(false);
   // ✨ 1. 在這裡新增一行 state，用來控制身份切換器的開關 ✨
   const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false);
+  const [isPromptSwitcherOpen, setIsPromptSwitcherOpen] = useState(false);
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
@@ -3348,171 +3211,161 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   setApiTestLoading(false);
 }, [apiKey, apiProvider, apiModel, apiProviders]);
 
+// =================================================================================
+  // ✨✨✨ 全新！支援模組化提示詞的 sendToAI 函式 v2 ✨✨✨
+  // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
-  // ===================================================================
-  // 步驟 A: 準備所有鑰匙 (Get the Keys)
-  // ===================================================================
-  // 將使用者在設定頁面輸入的多行文字，拆解成一個乾淨的金鑰陣列。
-  const allKeys = apiKey.split('\n').map(k => k.trim()).filter(k => k);
-  if (allKeys.length === 0) {
-    // 如果連一把鑰匙都沒有，就直接拋出錯誤，不浪費時間。
-    throw new Error('尚未設定 API 金鑰。');
-  }
+    const provider = apiProviders[apiProvider];
+    if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
 
-  // (您原有的準備工作，例如組合 system prompt、處理對話歷史等，全部保持不變)
-  const estimateTokens = (text) => {
-    if (!text) return 0;
-    let count = 0;
-    for (let i = 0; i < text.length; i++) {
-      count += /[\u4e00-\u9fa5]/.test(text[i]) ? 2 : 1;
+    const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
+    if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
+
+    const estimateTokens = (text = '') => text.length; // 簡化 token 估算
+
+    // 步驟 1：準備所有動態資料
+    const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+    const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
+    
+    const characterDescription = applyPlaceholders(currentCharacter?.description || '', currentCharacter, currentUserProfile);
+    const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
+      ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
+      : null;
+
+    // 步驟 2：處理對話歷史，同時為 Claude 格式做準備
+    const historyForClaude = [];
+    const historyForOthers = [];
+    let currentTokenCount = 0;
+    const maxContextTokens = currentPrompt?.contextLength || 24000;
+
+    for (let i = currentMessages.length - 1; i >= 0; i--) {
+      const message = currentMessages[i];
+      const messageText = message.contents[message.activeContentIndex];
+      const role = message.sender === 'user' ? 'user' : 'assistant';
+      const messageTokens = estimateTokens(messageText);
+
+      if (currentTokenCount + messageTokens <= maxContextTokens) {
+        historyForClaude.unshift({ role, content: messageText });
+        historyForOthers.unshift({ role, content: messageText });
+        currentTokenCount += messageTokens;
+      } else {
+        break;
+      }
     }
-    return count;
-  };
 
-  const textToScan = [...currentMessages.slice(-6).map(m => m.contents[m.activeContentIndex]), userInput].join('\n');
-  let injectedWorldInfo = '';
-  const characterBook = currentCharacter?.characterBook;
-  const triggeredEntries = new Set(); 
+    // 步驟 3：✨ 核心 - 組合模組化提示詞 ✨
+    const modules = currentPrompt?.modules || [];
+    let systemPromptParts = [];
+    
+    // 建立一個特殊模組內容的查找表
+    const specialContentMap = new Map([
+      ['{{memory}}', activeMemory],
+      ['{{authorsNote}}', activeAuthorsNote],
+      ['{{char}}', characterDescription],
+      ['{{user}}', userDescription]
+    ]);
+    
+    // 遍歷模組來建構 System Prompt
+    modules.forEach(module => {
+      if (module.enabled && module.role === 'system') {
+        const content = module.content.trim();
+        if (specialContentMap.has(content)) {
+          const dynamicContent = specialContentMap.get(content);
+          if (dynamicContent) systemPromptParts.push(dynamicContent);
+        } else {
+          systemPromptParts.push(applyPlaceholders(module.content, currentCharacter, currentUserProfile));
+        }
+      }
+    });
+    
+    const finalSystemPrompt = systemPromptParts.join('\n\n---\n\n');
 
-  if (characterBook && characterBook.entries) {
-    for (const entry of characterBook.entries) {
-      if (!entry.enabled) continue; 
-      for (const key of entry.keys) {
-        if (textToScan.includes(key)) {
-          triggeredEntries.add(entry.content);
-          break;
+    // 步驟 4：準備最終要發送的訊息
+    const continueText = '請直接延續上一句 assistant 回覆。';
+    const userMessageContent = (typeof userInput === 'string' && userInput.trim() !== '') ? userInput : continueText;
+    
+    historyForClaude.push({ role: 'user', content: userMessageContent });
+    historyForOthers.push({ role: 'user', content: userMessageContent });
+
+    // 步驟 5：開始輪詢金鑰並發送請求
+    for (let i = 0; i < allKeys.length; i++) {
+      const keyIndex = (currentApiKeyIndex + i) % allKeys.length;
+      const currentKey = allKeys[keyIndex];
+      console.log(`正在使用金鑰 #${keyIndex + 1} 進行請求...`);
+
+      try {
+        let endpoint = provider.endpoint;
+        const headers = provider.headers(currentKey);
+        const maxOutputTokens = currentPrompt?.maxTokens || 800;
+        const temperature = currentPrompt?.temperature || 1.0;
+        let requestBody;
+        
+        if (provider.isGemini) {
+          // Gemini 的處理邏輯
+          endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+          const geminiHistory = historyForOthers.slice(0, -1).map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }]
+          }));
+          const lastUserTurn = { role: 'user', parts: [{ text: userMessageContent }] };
+          requestBody = {
+            contents: [...geminiHistory, lastUserTurn],
+            systemInstruction: { parts: [{ text: finalSystemPrompt }] },
+            generationConfig: { temperature, maxOutputTokens }
+          };
+        } else if (apiProvider === 'claude') {
+          // Claude 的處理邏輯
+          requestBody = {
+            model: apiModel,
+            max_tokens: maxOutputTokens,
+            temperature,
+            messages: historyForClaude,
+            system: finalSystemPrompt
+          };
+        } else {
+          // OpenAI, Grok, Mistral, OpenRouter 等
+          requestBody = {
+            model: apiModel,
+            messages: [
+              { role: 'system', content: finalSystemPrompt },
+              ...historyForOthers
+            ],
+            max_tokens: maxOutputTokens,
+            temperature
+          };
+        }
+
+        const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
+        }
+        
+        const data = await response.json();
+        let aiText = null;
+        if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
+        else aiText = data.choices?.[0]?.message?.content;
+
+        if (aiText && aiText.trim() !== '') {
+          console.log(`金鑰 #${keyIndex + 1} 請求成功！`);
+          setCurrentApiKeyIndex(keyIndex);
+          return aiText;
+        } else {
+          throw new Error('AI 回應為空');
+        }
+      } catch (error) {
+        console.error(`金鑰 #${keyIndex + 1} 失敗:`, error.message);
+        if (i === allKeys.length - 1) {
+          throw new Error('所有 API 金鑰均無法使用。請檢查您的金鑰是否有效、額度是否足夠，或稍後再試。');
         }
       }
     }
-    injectedWorldInfo = [...triggeredEntries].join('\n\n');
-  }
-
-  const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
-  const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
-  const provider = apiProviders[apiProvider];
-  let systemPromptContent = applyPlaceholders(currentPrompt?.content || `...`, currentCharacter, currentUserProfile);
-  const existingSummary = currentCharacter?.summary || "None"; 
-  systemPromptContent = systemPromptContent.replace('{{summary}}', existingSummary);
-  const characterDescription = applyPlaceholders([currentCharacter?.description, currentCharacter?.personality].filter(Boolean).join('\n\n'), currentCharacter, currentUserProfile);
-  const finalSystemPrompt = [systemPromptContent, activeAuthorsNote ? `[Author's Note: ${activeAuthorsNote}]` : '', activeMemory ? `[Memory]\n${activeMemory}` : '', `[Character Persona]\n${characterDescription}`, (currentUserProfile?.name || currentUserProfile?.description) ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`: '', injectedWorldInfo ? `[World Info]\n${injectedWorldInfo}` : ''].filter(Boolean).join('\n\n---\n');
-  const maxOutputTokens = currentPrompt?.maxTokens || 800;
-  const temperature = currentPrompt?.temperature || 1.0;
-  const maxContextTokens = currentPrompt?.contextLength || 24000;
-  const contextHistory = [];
-  let currentTokenCount = 0;
-  for (let i = currentMessages.length - 1; i >= 0; i--) {
-    const message = currentMessages[i];
-    const messageText = message.contents[message.activeContentIndex];
-    const apiMessage = { role: message.sender === 'user' ? 'user' : 'assistant', content: messageText };
-    const messageTokens = estimateTokens(messageText);
-    if (currentTokenCount + messageTokens <= maxContextTokens) {
-      contextHistory.unshift(apiMessage);
-      currentTokenCount += messageTokens;
-    } else {
-      break;
-    }
-  }
-  const continueText = '請直接延續上一句 assistant 回覆。';
-  let tailForOpenAI;
-  let tailForGemini;
-  if (typeof userInput === 'string' && userInput.trim() !== '') {
-    tailForOpenAI = { role: 'user', content: userInput };
-    tailForGemini = { role: 'user', parts: [{ text: userInput }] };
-  } else {
-    tailForOpenAI = { role: 'user', content: continueText };
-    tailForGemini = { role: 'user', parts: [{ text: continueText }] };
-  }
-
-
-  // ===================================================================
-  // 步驟 B: 聰明的輪換迴圈 (The Smart Loop)
-  // ===================================================================
-  // 這個迴圈會執行 `allKeys.length` 次，確保我們把每把鑰匙都試過一遍。
-  for (let i = 0; i < allKeys.length; i++) {
-    // 這裡是最聰明的地方：
-    // 我們不直接用 `i`，而是用 `(currentApiKeyIndex + i) % allKeys.length`。
-    // 這能確保我們總是從「上次成功的那把鑰匙」開始嘗試，而不是每次都從第一把開始。
-    // `%` (取餘數) 運算子能確保索引值在繞了一圈後能從 0 重新開始。
-    const keyIndex = (currentApiKeyIndex + i) % allKeys.length;
-    const currentKey = allKeys[keyIndex];
-    
-    console.log(`正在使用金鑰 #${keyIndex + 1} 進行請求...`);
-
-    // ===================================================================
-    // 步驟 C: 樂觀嘗試 (The "try" Block)
-    // ===================================================================
-    try {
-      // 這裡面的程式碼和您舊版的 `sendToAI` 幾乎一樣，
-      // 唯一的差別是它現在用的是 `currentKey`，而不是整個 `apiKey` 字串。
-      let endpoint = provider.endpoint;
-      const headers = provider.headers(currentKey); // 使用當前嘗試的金鑰
-      
-      let requestBody;
-      if (provider.isGemini) {
-        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; // 使用當前嘗試的金鑰
-        const geminiHistory = contextHistory.map(msg => ({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] }));
-        requestBody = { contents: [ ...geminiHistory, tailForGemini ], systemInstruction: { parts: [{ text: finalSystemPrompt }] }, generationConfig: { temperature, maxOutputTokens }};
-      } else if (apiProvider === 'claude') {
-        requestBody = { model: apiModel, max_tokens: maxOutputTokens, temperature, messages: [...contextHistory, tailForOpenAI ], system: finalSystemPrompt };
-      } else {
-        requestBody = { model: apiModel, messages: [ { role: 'system', content: finalSystemPrompt }, ...contextHistory, tailForOpenAI ], max_tokens: maxOutputTokens, temperature };
-      }
-
-      const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
-
-      if (!response.ok) {
-        // 如果 API 回傳了錯誤 (例如 429 頻率限制)，我們把它當作一次失敗來處理。
-        const errorText = await response.text();
-        throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
-      }
-      
-      const data = await response.json();
-      let aiText = null;
-      if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
-      else aiText = data.choices?.[0]?.message?.content;
-      
-      if (aiText && aiText.trim() !== '') {
-        // 成功了！
-        console.log(`金鑰 #${keyIndex + 1} 請求成功！`);
-        setCurrentApiKeyIndex(keyIndex); // 立刻記住這把成功的鑰匙的索引。
-        return aiText; // 將 AI 的回覆傳回去，並立刻結束整個 `sendToAI` 函式。
-      } else {
-        throw new Error('AI 回應為空');
-      }
-
-    // ===================================================================
-    // 步驟 D: 處理失敗 (The "catch" Block)
-    // ===================================================================
-    } catch (error) {
-      console.error(`金鑰 #${keyIndex + 1} 失敗:`, error.message);
-      
-      // ===================================================================
-      // 步驟 E: 最終絕望 (The Final Failure)
-      // ===================================================================
-      // 檢查這是不是我們嘗試的最後一把鑰匙了 (`i` 是迴圈計數器)。
-      if (i === allKeys.length - 1) {
-        // 如果是，代表我們已經試完了所有鑰匙都沒用，
-        // 這時才真正地把錯誤拋出去，讓 `sendMessage` 函式知道大事不妙。
-        throw new Error('所有 API 金鑰均無法使用。請檢查您的金鑰是否有效、額度是否足夠，或稍後再試。');
-      }
-      // 如果還不是最後一把，這個 catch 區塊什麼都不做，
-      // `for` 迴圈會自動進入下一次迭代，用下一把鑰匙繼續嘗試。
-    }
-  }
-}, [
-  apiKey, 
-  apiProvider, 
-  apiModel, 
-  currentCharacter, 
-  currentPrompt, 
-  apiProviders, 
-  currentUserProfile, 
-  longTermMemories, 
-  activeChatCharacterId, 
-  activeChatId, 
-  currentApiKeyIndex // ✨ 把 `currentApiKeyIndex` 加入依賴項，這非常重要！
-]);
+  }, [
+    apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
+    currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
+    chatMetadatas, currentApiKeyIndex
+  ]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
@@ -4332,6 +4185,7 @@ const formatStDate = (date, type = 'send_date') => {
               savePrompt={savePrompt}
               deletePrompt={deletePrompt}
               restoreDefaultPrompts={restoreDefaultPrompts}
+              onOpenSwitcher={() => setIsPromptSwitcherOpen(true)}
             />
           )}
           {currentPage === 'settings' && (
@@ -4451,6 +4305,27 @@ const formatStDate = (date, type = 'send_date') => {
         onClose={() => setIsThemeSwitcherOpen(false)}
       />
     )}
+      {isPromptSwitcherOpen && (
+        <PromptSwitcherModal
+          prompts={prompts}
+          currentPromptId={currentPrompt?.id}
+          onSelect={setCurrentPrompt}
+          onClose={() => setIsPromptSwitcherOpen(false)}
+          onAddNew={() => {
+            const newPreset = {
+              id: `preset_${Date.now()}`,
+              name: '新的提示詞預設集',
+              modules: [],
+              temperature: 1.0,
+              maxTokens: 1024,
+              contextLength: 24000,
+            };
+            savePrompt(newPreset);
+            setCurrentPrompt(newPreset);
+            setIsPromptSwitcherOpen(false);
+          }}
+        />
+      )}
     </>
   );
 };
