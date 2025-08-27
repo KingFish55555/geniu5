@@ -1,199 +1,260 @@
-import React, { useState } from 'react'; // 引入 React 和 useState
-import { FileText, Plus, Upload } from 'lucide-react'; // 引入您有用到的圖示
+// src/PromptsPage.js
 
-// 提示詞頁面組件 (全新佈局版本)
-const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, deletePrompt, restoreDefaultPrompts }) => {
-  const [editingPrompt, setEditingPrompt] = useState(null);
-  const [promptName, setPromptName] = useState('');
-  const [promptContent, setPromptContent] = useState('');
-  const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(800);
-  const [contextLength, setContextLength] = useState(24000);
+import React, { useState } from 'react';
+import { FileText, Plus, Save, Trash2, Upload, ChevronDown, Download, Settings, Edit2 } from 'lucide-react';
+import ModuleEditorModal from './ModuleEditorModal'; // ✨ 引入我們的新元件！
+
+const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, deletePrompt, restoreDefaultPrompts, onOpenSwitcher }) => {
   
-  // ✨ 新增 state 來控制列表是否展開 ✨
-  const [isListExpanded, setIsListExpanded] = useState(true);
+  // ✨ 新的 State：用來追蹤哪個模組正在被編輯 (null 代表沒有)
+  const [editingModule, setEditingModule] = useState(null);
 
-  // 當選擇一個已儲存的提示詞時
-  const handleSelectPrompt = (prompt) => {
-    setCurrentPrompt(prompt);
-    setEditingPrompt(prompt);
-    setPromptName(prompt.name);
-    setPromptContent(prompt.content);
-    setTemperature(prompt.temperature || 0.7);
-    setMaxTokens(prompt.maxTokens || 800);
-    setContextLength(prompt.contextLength || 24000);
-    // ✨ 選好後自動收起列表，方便編輯 ✨
-    setIsListExpanded(false); 
+  // 處理更新單一模組的邏輯
+  const handleUpdateModule = (updatedModule) => {
+    if (!currentPrompt) return;
+
+    // ▼▼▼ 在這裡加上一個保護措施 ▼▼▼
+    const modules = currentPrompt.modules || [];
+
+    // 將下面的 currentPrompt.modules.map 改成 modules.map
+    const newModules = modules.map(m => 
+      m.id === updatedModule.id ? updatedModule : m
+    );
+    
+    // 建立一個更新後的預設集物件
+    const updatedPreset = { ...currentPrompt, modules: newModules };
+    
+    // 呼叫 App.js 中的 savePrompt 來儲存整個預設集
+    savePrompt(updatedPreset);
+    
+    // 關閉 Modal
+    setEditingModule(null);
   };
 
-  const handleSave = () => {
-    if (!promptName.trim()) {
-      alert('請為您的提示詞命名！');
+  // ✨ 匯出當前預設集 (最安全版本)
+  const handleExportPreset = () => {
+    if (!currentPrompt) {
+      alert("請先從列表中選擇一個已儲存的預設集來匯出。");
       return;
     }
-    const newPromptData = {
-      id: editingPrompt ? editingPrompt.id : Date.now(), 
-      name: promptName,
-      content: promptContent,
-      temperature: Number(temperature),
-      maxTokens: Number(maxTokens),
-      contextLength: Number(contextLength),
-    };
-    savePrompt(newPromptData);
-    handleClearEditor();
-  };
-  
-  const handleDelete = () => {
-    if (editingPrompt) {
-      if (window.confirm(`確定要刪除「${editingPrompt.name}」嗎？`)) {
-        deletePrompt(editingPrompt.id);
-        handleClearEditor();
-      }
-    } else {
-      alert('請先選擇一個要刪除的提示詞。');
+    try {
+      const jsonString = JSON.stringify(currentPrompt, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${currentPrompt.name || 'prompt_preset'}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("匯出失敗:", error);
+      alert("匯出失敗！詳情請見主控台。");
     }
   };
 
-  const handleClearEditor = () => {
-    setEditingPrompt(null);
-    setPromptName('');
-    setPromptContent('');
-    setTemperature(0.7);
-    setMaxTokens(800);
-    setContextLength(4096);
-    // ✨ 清空編輯器時，自動展開列表方便選擇 ✨
-    setIsListExpanded(true);
-  };
-
-  const handleImportPrompt = (event) => {
+  // ✨ 匯入預設集 (終極版，完美還原 ST 順序)
+  const handleImportPreset = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const importedData = JSON.parse(e.target.result);
-        let name, content, temp, max, context;
-        if (importedData.content !== undefined) {
-          name = importedData.name || '';
-          content = importedData.content || '';
-          temp = importedData.temperature || 0.7;
-          max = importedData.maxTokens || 800;
-          context = importedData.contextLength || 4096;
-        } else if (importedData.description !== undefined) {
-          name = importedData.char_name || '匯入的角色提示';
-          let fullDesc = importedData.description || '';
-          if(importedData.first_mes) {
-            fullDesc += `\n\n[角色的第一句話是：${importedData.first_mes}]`;
+        let presetToLoad;
+
+        // 格式 1：檢查是不是我們自己的「預設集」格式 (有 name 和 modules)
+        if (typeof importedData.name === 'string' && Array.isArray(importedData.modules)) {
+          console.log("偵測到本應用格式，直接載入...");
+          presetToLoad = importedData;
+
+        // 格式 2：檢查是不是 SillyTavern 格式 (有 prompts 和 prompt_order)
+        } else if (Array.isArray(importedData.prompts) && Array.isArray(importedData.prompt_order)) {
+          console.log("偵測到 SillyTavern 格式，正在進行精準排序轉換...");
+
+          const presetName = file.name.replace(/\.json$/i, '');
+          
+          // a. 建立一個方便查找的「模組字典」，用 identifier 作為 key
+          const moduleMap = new Map(importedData.prompts.map(p => [p.identifier, p]));
+
+          // b. 找到 ST 用的那個 order 列表 (通常是 character_id: 100001)
+          const orderGroup = importedData.prompt_order.find(group => group.character_id === 100001);
+          const orderArray = orderGroup ? orderGroup.order : [];
+
+          if (orderArray.length === 0) {
+            throw new Error("在 SillyTavern 檔案中找不到有效的 'prompt_order' 順序列表。");
           }
-          content = fullDesc;
-          temp = 0.7; max = 800; context = 4096;
+          
+          // c. ✨ 核心：遍歷「順序列表」，從「模組字典」中按順序取出模組
+          const convertedModules = orderArray.map((orderItem, index) => {
+            const moduleData = moduleMap.get(orderItem.identifier);
+            if (!moduleData) return null; // 如果找不到對應的模組，暫時返回 null
+
+            // 轉換成我們自己的格式
+            return {
+              id: moduleData.identifier || `module_imported_${Date.now()}_${index}`,
+              name: moduleData.name || `未命名模組 ${index + 1}`,
+              content: moduleData.content || '',
+              enabled: orderItem.enabled, // ✨ 直接使用 order 項目中的 enabled 狀態！
+              locked: moduleData.name?.includes('🔒') || false,
+              readOnly: ['chatHistory', 'worldInfoAfter', 'worldInfoBefore', 'dialogueExamples'].includes(moduleData.identifier), // 簡單的唯讀判斷
+              role: moduleData.role || 'system',
+              // 確保新屬性有預設值
+              triggers: moduleData.triggers || { enabled: false, text: '' },
+              position: moduleData.position || { type: 'relative', depth: 4 }
+            };
+          }).filter(Boolean); // 過濾掉所有為 null 的項目
+
+          // d. 組裝成我們的「預設集」物件
+          presetToLoad = {
+            id: 'imported_' + Date.now(),
+            name: presetName,
+            temperature: importedData.temperature || 1.0,
+            maxTokens: importedData.openai_max_tokens || 1024,
+            contextLength: importedData.openai_max_context || 24000,
+            modules: convertedModules,
+          };
+
         } else {
-          alert('❌ 無法識別的檔案格式。');
-          return;
+          throw new Error("無法識別的檔案格式。請確認檔案是本應用的預設集，或是一個包含 'prompts' 和 'prompt_order' 的 SillyTavern 格式檔案。");
         }
-        setPromptName(name); setPromptContent(content);
-        setTemperature(temp); setMaxTokens(max); setContextLength(context);
-        setEditingPrompt(null);
-        alert('✅ 提示詞已成功載入編輯器，請確認後儲存。');
+        
+        savePrompt(presetToLoad);
+        alert(`✅ 預設集「${presetToLoad.name}」已成功匯入並儲存！`);
+
       } catch (error) {
-        alert('❌ 檔案格式錯誤，請確認是正確的 JSON 檔案。');
+        alert(`❌ 匯入失敗：${error.message}`);
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
+  };
+  
+  // 處理開關切換 (這個需要立即儲存)
+  const handleToggleModule = (moduleId) => {
+    if (!currentPrompt) return;
+
+    let isLocked = false;
+    const newModules = currentPrompt.modules.map(m => {
+      if (m.id === moduleId) {
+        if (m.locked) {
+          isLocked = true;
+          return m;
+        }
+        return { ...m, enabled: !m.enabled };
+      }
+      return m;
+    });
+
+    if (isLocked) return; // 如果是鎖定的，就不執行任何操作
+
+    const updatedPreset = { ...currentPrompt, modules: newModules };
+    savePrompt(updatedPreset); // 直接儲存，讓開關操作立即生效
   };
 
+
   return (
-    <div className="page-content">
-      {/* ✨ 全新的 JSX 結構：上下佈局 ✨ */}
-      <div className="content-area">
-        
-        {/* 上半部：可收合的已儲存提示詞列表 */}
-        <div className="setting-card">
-          <button
-            className={`card-header ${isListExpanded ? 'expanded' : ''}`}
-            onClick={() => setIsListExpanded(!isListExpanded)}
-          >
-            <div className="card-title">
-              <FileText size={20} />
-              <span>已儲存的提示詞 ({prompts.length})</span>
-            </div>
-            <span className="expand-arrow">{isListExpanded ? '▲' : '▼'}</span>
-          </button>
+    <> {/* 使用 Fragment 包裹，因為我們要渲染 Modal */}
+      <div className="page-content prompts-page-container">
+        <div className="content-area prompts-page-area">
           
-          {isListExpanded && (
+          {/* 頂部控制列 */}
+          <div className="setting-card">
+            <div className="card-header">
+              <div className="card-title">
+                <FileText size={20} />
+                <span>提示詞設定</span>
+              </div>
+            </div>
             <div className="card-content">
-              {prompts.length === 0 ? (
-                <p className="empty-list-text">還沒有任何提示詞</p>
-              ) : (
-                <div className="prompts-list">
-                  {prompts.map((prompt) => (
-                    <div 
-                      key={prompt.id} 
-                      className={`prompt-card ${currentPrompt?.id === prompt.id ? 'active' : ''}`}
-                      onClick={() => handleSelectPrompt(prompt)}
-                    >
-                      <div className="prompt-info">
-                        <h4>{prompt.name}</h4>
-                      </div>
-                    </div>
-                  ))}
+              <button className="custom-select-trigger" onClick={onOpenSwitcher}>
+                <span>{currentPrompt?.name || '選擇或新增提示詞...'}</span>
+                <ChevronDown size={20} />
+              </button>
+                {/* ✨ 功能按鈕 (完整版) ✨ */}
+                <div className="prompt-actions-grid">
+                {/* 第一行 */}
+                <button onClick={() => deletePrompt(currentPrompt?.id)} disabled={!currentPrompt}>
+                    <Trash2 size={16} /> 刪除
+                </button>
+                <button onClick={restoreDefaultPrompts}>
+                    <Settings size={16} /> 還原預設
+                </button>
+
+                {/* ✨ 第二行：把匯入和匯出加回來！ ✨ */}
+                <label htmlFor="import-prompt-json" className="action-button-base">
+                    <Upload size={16} /> 匯入
+                </label>
+                <button onClick={handleExportPreset} disabled={!currentPrompt}>
+                    <Download size={16} /> 匯出
+                </button>
                 </div>
-              )}
-              <hr className="divider" />
-              <button onClick={restoreDefaultPrompts} className="restore-btn" style={{width: '100%'}}>還原所有的提示詞</button>
+
+                {/* ✨ 隱藏的檔案選擇器，它會被上面的 label 觸發 ✨ */}
+                <input 
+                type="file" 
+                id="import-prompt-json" 
+                accept=".json" 
+                onChange={handleImportPreset} 
+                style={{ display: 'none' }} 
+                />
+            </div>
+          </div>
+          
+          {/* 模組列表 (新版 UI) */}
+          {currentPrompt ? (
+            <div className="setting-card">
+              <div className="card-header">
+                <div className="card-title">{currentPrompt.name}</div>
+              </div>
+              <div className="card-content module-list-simple">
+                {currentPrompt.modules.map(module => (
+                  <div key={module.id} className="module-list-item">
+                    <label className="switch">
+                      <input 
+                        type="checkbox" 
+                        checked={!!module.enabled}
+                        onChange={() => handleToggleModule(module.id)}
+                        disabled={module.locked}
+                      />
+                      <span className="slider round"></span>
+                    </label>
+                    <span className="module-name">{module.name}</span>
+                    <button 
+                      className="edit-module-btn"
+                      onClick={() => setEditingModule(module)} // 點擊時，設定要編輯的模組
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-icon"><FileText size={48} /></div>
+              <h3>沒有選擇任何提示詞</h3>
+              <p>請點擊上方的按鈕來選擇一個已有的預設集，或新增一個。</p>
             </div>
           )}
-        </div>
 
-        {/* 下半部：提示詞編輯器 */}
-        <div className="setting-card">
-           <div className="card-header" style={{cursor: 'default'}}>
-             <div className="card-title">
-                <Plus size={20} />
-                <span>{editingPrompt ? '編輯提示詞' : '新增提示詞'}</span>
-              </div>
-           </div>
-           <div className="card-content">
-              <div className="editor-form">
-                <div className="form-group">
-                  <label>提示詞名稱</label>
-                  <input type="text" value={promptName} onChange={(e) => setPromptName(e.target.value)} />
-                </div>
-                <div className="form-group">
-                  <label>提示詞內容</label>
-                  <textarea value={promptContent} onChange={(e) => setPromptContent(e.target.value)} rows="8" />
-                </div>
-                <div className="sliders-group">
-                  <div className="slider-container">
-                    <label>溫度: {temperature}</label>
-                    <input type="range" min="0" max="2" step="0.1" value={temperature} onChange={(e) => setTemperature(e.target.value)} />
-                  </div>
-                  <div className="slider-container">
-                    <label>最大回應: {maxTokens} tokens</label>
-                    <input type="range" min="50" max="4096" step="10" value={maxTokens} onChange={(e) => setMaxTokens(e.target.value)} />
-                  </div>
-                  <div className="slider-container">
-                    <label>記憶容量 (上下文): {contextLength} Tokens</label>
-                    <input type="range" min="500" max="64000" step="100" value={contextLength} onChange={(e) => setContextLength(e.target.value)} />
-                  </div>
-                </div>
-                <div className="editor-buttons">
-                  <button onClick={handleSave} className="save-btn">{editingPrompt ? '儲存變更' : '儲存新提示詞'}</button>
-                  <button onClick={handleDelete} className="delete-btn" disabled={!editingPrompt}>刪除</button>
-                  <button onClick={handleClearEditor} className="clear-btn">清空編輯器</button>
-                </div>
-                <div className="import-section">
-                   <input type="file" id="import-prompt-json" accept=".json" onChange={handleImportPrompt} style={{ display: 'none' }} />
-                    <label htmlFor="import-prompt-json" className="import-btn">
-                      <Upload size={16} /> 匯入提示詞 (JSON)
-                    </label>
-                </div>
-              </div>
-           </div>
         </div>
       </div>
-    </div>
+      
+      {/* ✨ 核心：只有當 editingModule 不是 null 時，才渲染 Modal ✨ */}
+      {editingModule && (
+        <ModuleEditorModal
+          module={editingModule}
+          onSave={handleUpdateModule}
+          onClose={() => setEditingModule(null)}
+        />
+      )}
+    </>
   );
 };
 
