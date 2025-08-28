@@ -1388,21 +1388,6 @@ body {
   resize: vertical;
 }
 
-.sliders-group {
-  margin-top: 20px;
-  border-top: 1px solid var(--border-color);
-  padding-top: 20px;
-}
-
-.slider-container {
-  margin-bottom: 16px;
-}
-
-.slider-container input[type="range"] {
-  width: 100%;
-  cursor: pointer;
-}
-
 .editor-buttons {
   margin-top: 20px;
   display: flex;
@@ -3241,4 +3226,94 @@ input:checked + .slider:before {
 }
 .trigger-group input[type="text"] {
   width: 100%;
+}
+
+/* =================================== */
+/*  提示詞頁面 - 參數滑桿樣式 (V2)      */
+/* =================================== */
+
+.sliders-group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px; 
+  padding: 16px 20px !important;
+}
+
+.slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slider-container label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* ✨ 全新！數字輸入框樣式 ✨ */
+.slider-value-input {
+  font-weight: 600;
+  color: var(--text-primary);
+  background-color: var(--surface-color);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  width: 70px; /* 給一個固定寬度 */
+  text-align: right;
+  font-size: 1em;
+  -moz-appearance: textfield; /* 隱藏 Firefox 的上下箭頭 */
+}
+.slider-value-input::-webkit-outer-spin-button,
+.slider-value-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* 隱藏 Chrome/Safari 的上下箭頭 */
+  margin: 0;
+}
+
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px; /* 加厚一點軌道 */
+  background: transparent; /* 軌道背景先設為透明 */
+  border-radius: 4px;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ✨ 核心！滑桿軌道顏色（新版） ✨ */
+input[type="range"] {
+  background: var(--user-color); /* 直接將軌道背景設為 --user-color */
+}
+
+/* 拖曳鈕樣式 (Chrome/Safari) */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  border: 3px solid var(--background-color);
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+  margin-top: -7px; /* 垂直置中拖曳鈕 */
+  transition: transform 0.2s ease;
+}
+
+/* 拖曳鈕樣式 (Firefox) */
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: var(--primary-color);
+  border-radius: 50%;
+  border: 3px solid var(--background-color);
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
 }

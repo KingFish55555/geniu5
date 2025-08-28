@@ -2042,7 +2042,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.0</p>
+                  <p>版本：0.5.1</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3275,34 +3275,42 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
     const provider = apiProviders[apiProvider];
-    if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
-
+    if (!provider) {
+      throw new Error(`API provider "${apiProvider}" not found.`);
+    }
+  
     const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
-    if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
-
-    const estimateTokens = (text = '') => text.length; // 簡化 token 估算
-
-    // 步驟 1：準備所有動態資料
+    if (allKeys.length === 0) {
+      throw new Error('尚未設定 API 金鑰。');
+    }
+  
+    const currentKey = allKeys[currentApiKeyIndex];
+    if (!currentKey) {
+      throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
+    }
+  
+    console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
+  
+    const estimateTokens = (text = '') => text.length;
+  
     const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
     const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
-    
     const characterDescription = applyPlaceholders(currentCharacter?.description || '', currentCharacter, currentUserProfile);
     const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
       ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
       : null;
-
-    // 步驟 2：處理對話歷史，同時為 Claude 格式做準備
+  
     const historyForClaude = [];
     const historyForOthers = [];
     let currentTokenCount = 0;
     const maxContextTokens = currentPrompt?.contextLength || 24000;
-
+  
     for (let i = currentMessages.length - 1; i >= 0; i--) {
       const message = currentMessages[i];
       const messageText = message.contents[message.activeContentIndex];
       const role = message.sender === 'user' ? 'user' : 'assistant';
       const messageTokens = estimateTokens(messageText);
-
+  
       if (currentTokenCount + messageTokens <= maxContextTokens) {
         historyForClaude.unshift({ role, content: messageText });
         historyForOthers.unshift({ role, content: messageText });
@@ -3311,20 +3319,16 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         break;
       }
     }
-
-    // 步驟 3：✨ 核心 - 組合模組化提示詞 ✨
+  
     const modules = currentPrompt?.modules || [];
     let systemPromptParts = [];
-    
-    // 建立一個特殊模組內容的查找表
     const specialContentMap = new Map([
       ['{{memory}}', activeMemory],
       ['{{authorsNote}}', activeAuthorsNote],
       ['{{char}}', characterDescription],
       ['{{user}}', userDescription]
     ]);
-    
-    // 遍歷模組來建構 System Prompt
+  
     modules.forEach(module => {
       if (module.enabled && module.role === 'system') {
         const content = module.content.trim();
@@ -3336,89 +3340,76 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         }
       }
     });
-    
+  
     const finalSystemPrompt = systemPromptParts.join('\n\n---\n\n');
-
-    // 步驟 4：準備最終要發送的訊息
+  
     const continueText = '請直接延續上一句 assistant 回覆。';
     const userMessageContent = (typeof userInput === 'string' && userInput.trim() !== '') ? userInput : continueText;
-    
+  
     historyForClaude.push({ role: 'user', content: userMessageContent });
     historyForOthers.push({ role: 'user', content: userMessageContent });
-
-    // 步驟 5：開始輪詢金鑰並發送請求
-    for (let i = 0; i < allKeys.length; i++) {
-      const keyIndex = (currentApiKeyIndex + i) % allKeys.length;
-      const currentKey = allKeys[keyIndex];
-      console.log(`正在使用金鑰 #${keyIndex + 1} 進行請求...`);
-
-      try {
-        let endpoint = provider.endpoint;
-        const headers = provider.headers(currentKey);
-        const maxOutputTokens = currentPrompt?.maxTokens || 800;
-        const temperature = currentPrompt?.temperature || 1.0;
-        let requestBody;
-        
-        if (provider.isGemini) {
-          // Gemini 的處理邏輯
-          endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
-          const geminiHistory = historyForOthers.slice(0, -1).map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }]
-          }));
-          const lastUserTurn = { role: 'user', parts: [{ text: userMessageContent }] };
-          requestBody = {
-            contents: [...geminiHistory, lastUserTurn],
-            systemInstruction: { parts: [{ text: finalSystemPrompt }] },
-            generationConfig: { temperature, maxOutputTokens }
-          };
-        } else if (apiProvider === 'claude') {
-          // Claude 的處理邏輯
-          requestBody = {
-            model: apiModel,
-            max_tokens: maxOutputTokens,
-            temperature,
-            messages: historyForClaude,
-            system: finalSystemPrompt
-          };
-        } else {
-          // OpenAI, Grok, Mistral, OpenRouter 等
-          requestBody = {
-            model: apiModel,
-            messages: [
-              { role: 'system', content: finalSystemPrompt },
-              ...historyForOthers
-            ],
-            max_tokens: maxOutputTokens,
-            temperature
-          };
-        }
-
-        const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
-        }
-        
-        const data = await response.json();
-        let aiText = null;
-        if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
-        else aiText = data.choices?.[0]?.message?.content;
-
-        if (aiText && aiText.trim() !== '') {
-          console.log(`金鑰 #${keyIndex + 1} 請求成功！`);
-          setCurrentApiKeyIndex(keyIndex);
-          return aiText;
-        } else {
-          throw new Error('AI 回應為空');
-        }
-      } catch (error) {
-        console.error(`金鑰 #${keyIndex + 1} 失敗:`, error.message);
-        if (i === allKeys.length - 1) {
-          throw new Error('所有 API 金鑰均無法使用。請檢查您的金鑰是否有效、額度是否足夠，或稍後再試。');
-        }
+  
+    try {
+      let endpoint = provider.endpoint;
+      const headers = provider.headers(currentKey);
+      const maxOutputTokens = currentPrompt?.maxTokens || 800;
+      const temperature = currentPrompt?.temperature || 1.0;
+      let requestBody;
+  
+      if (provider.isGemini) {
+        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+        const geminiHistory = historyForOthers.slice(0, -1).map(msg => ({
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: msg.content }]
+        }));
+        const lastUserTurn = { role: 'user', parts: [{ text: userMessageContent }] };
+        requestBody = {
+          contents: [...geminiHistory, lastUserTurn],
+          systemInstruction: { parts: [{ text: finalSystemPrompt }] },
+          generationConfig: { temperature, maxOutputTokens }
+        };
+      } else if (apiProvider === 'claude') {
+        requestBody = {
+          model: apiModel,
+          max_tokens: maxOutputTokens,
+          temperature,
+          messages: historyForClaude,
+          system: finalSystemPrompt
+        };
+      } else {
+        requestBody = {
+          model: apiModel,
+          messages: [
+            { role: 'system', content: finalSystemPrompt },
+            ...historyForOthers
+          ],
+          max_tokens: maxOutputTokens,
+          temperature
+        };
       }
+  
+      const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
+  
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
+      }
+  
+      const data = await response.json();
+      let aiText = null;
+      if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
+      else aiText = data.choices?.[0]?.message?.content;
+  
+      if (aiText && aiText.trim() !== '') {
+        console.log(`金鑰 #${currentApiKeyIndex + 1} 請求成功！`);
+        return aiText;
+      } else {
+        throw new Error('AI 回應為空');
+      }
+    } catch (error) {
+      console.error(`金鑰 #${currentApiKeyIndex + 1} 失敗:`, error.message);
+      throw error;
     }
   }, [
     apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
@@ -3482,7 +3473,6 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   const sendMessage = useCallback(async () => {
     if (!inputMessage.trim() || !activeChatCharacterId || !activeChatId) return;
 
-    // ✨ 為了在出錯時能還原，我們先記住當前的狀態
     const originalInput = inputMessage; 
     const currentHistoryArray = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
 
@@ -3498,7 +3488,6 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     
     const historyWithUserMessage = [...currentHistoryArray, userMessage];
 
-    // 步驟 1: 樂觀更新 UI - 先把使用者的訊息顯示出來
     setChatHistories(prev => ({
       ...prev,
       [activeChatCharacterId]: {
@@ -3511,7 +3500,6 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     setIsLoading(true);
 
     try {
-      // 步驟 2: 嘗試發送給 AI
       const aiResponse = await sendToAI(userMessage.contents[0], historyWithUserMessage);
 
       const aiMessage = {
@@ -3524,7 +3512,6 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
       const finalHistoryArray = [...historyWithUserMessage, aiMessage];
       
-      // 步驟 3: AI 回應成功，更新最終的聊天紀錄
       setChatHistories(prev => ({
         ...prev,
         [activeChatCharacterId]: {
@@ -3533,44 +3520,37 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         }
       }));
       
-      // ===============================================================================
-      // ✨✨✨ 在這裡安裝「智慧摘要觸發器」 ✨✨✨
-      // ===============================================================================
-      // 檢查更新後的對話總長度，是否是我們設定的 MEMORY_UPDATE_INTERVAL (3) 的倍數
       if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
         console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶...`);
-        
-        // 呼叫我們的核心函式，並傳入 true，代表「安靜模式」，這樣就不會跳出提示視窗
         await triggerMemoryUpdate(true); 
-        
         console.log("背景記憶更新完成！");
       }
-      // ===============================================================================
     } catch (error) {
-      // =================================================================
-      // ✨✨✨ 核心修改：全新的錯誤處理流程 ✨✨✨
-      // =================================================================
       console.error("訊息發送失敗:", error);
-      alert(`訊息發送失敗：\n\n${error.message}`); // 1. 彈出提示窗
+      alert(`訊息發送失敗：\n\n${error.message}`);
 
-      // 2. 將聊天紀錄還原到發送前的狀態
       setChatHistories(prev => ({
         ...prev,
         [activeChatCharacterId]: {
           ...prev[activeChatCharacterId],
-          [activeChatId]: currentHistoryArray // 使用我們一開始記住的 `currentHistoryArray`
+          [activeChatId]: currentHistoryArray
         }
       }));
 
-      // 3. 將使用者輸入的文字還原到輸入框
       setInputMessage(originalInput);
-      // =================================================================
 
+      const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
+      if (allKeys.length > 1) {
+        setCurrentApiKeyIndex(prevIndex => {
+          const newIndex = (prevIndex + 1) % allKeys.length;
+          console.log(`API 金鑰失敗，已準備切換至下一把金鑰 (索引 ${newIndex})`);
+          return newIndex;
+        });
+      }
     } finally {
       setIsLoading(false);
     }
-    // ✨ 我們需要把 currentUserProfile 加入依賴項，因為 processedInput 用到了它
-  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp, currentCharacter, currentUserProfile]);
+  }, [inputMessage, activeChatCharacterId, activeChatId, chatHistories, sendToAI, triggerMemoryUpdate, getFormattedTimestamp, currentCharacter, currentUserProfile, apiKey]);
 
   const continueGeneration = useCallback(async () => {
     if (!activeChatCharacterId || !activeChatId) return;
