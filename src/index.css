@@ -3267,6 +3267,7 @@ input:checked + .slider:before {
   font-size: 1em;
   -moz-appearance: textfield; /* 隱藏 Firefox 的上下箭頭 */
 }
+
 .slider-value-input::-webkit-outer-spin-button,
 .slider-value-input::-webkit-inner-spin-button {
   -webkit-appearance: none; /* 隱藏 Chrome/Safari 的上下箭頭 */
@@ -3316,4 +3317,28 @@ input[type="range"]::-moz-range-thumb {
 
 input[type="range"]:hover::-webkit-slider-thumb {
   transform: scale(1.1);
+}
+
+/* =================================== */
+/*  OOC 指令列表樣式微調               */
+/* =================================== */
+
+/* 讓 OOC 指令的備註和內容，與使用者個人檔案的名稱和描述樣式一致 */
+.character-list-item .character-info h4 {
+  margin: 0 0 4px 0;
+  color: var(--text-primary);
+  font-size: 1em; /* 確保字體大小一致 */
+  font-weight: 600; /* 確保字重一致 */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.character-list-item .character-info p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }

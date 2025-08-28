@@ -5,7 +5,7 @@ import {
   User, Palette, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon, Edit2
+  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon, Edit2, MessageSquarePlus
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -13,6 +13,8 @@ import { db } from './db';
 import html2canvas from 'html2canvas';
 import PromptsPage from './PromptsPage';
 import ModuleEditorModal from './ModuleEditorModal';
+import OocCommandEditorModal from './OocCommandEditorModal.js';
+import OocCommandSelectorModal from './OocCommandSelectorModal.js';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -1431,7 +1433,7 @@ const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClos
   );
 };
 
-const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
+const ChatPage = ({ oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
   
   const textareaRef = useRef(null);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
@@ -1555,6 +1557,10 @@ const ChatPage = ({ messages, inputMessage, setInputMessage, isLoading, sendMess
                 <button className="input-menu-item" onClick={() => { onSwitchProfile(); setIsInputMenuOpen(false); }}>
                   <Users size={20} />
                   <span>切換身份</span>
+                </button>
+                <button className="input-menu-item" onClick={() => { onOpenOocSelector(); setIsInputMenuOpen(false); }}>
+                  <MessageSquarePlus size={20} />
+                  <span>OOC 指令</span>
                 </button>
                 <button className="input-menu-item" onClick={() => { setIsMemoryModalOpen(true); setIsInputMenuOpen(false); }}>
                   <BookOpen size={20} />
@@ -1698,6 +1704,11 @@ const ThemeSelector = ({ currentTheme, onSetTheme, onToggle }) => {
 // SettingsPage - ✨ 全新升級版 ✨
 // =================================================================================
 const SettingsPage = ({
+    // ✨ OOC 指令相關 props
+    oocCommands,
+    onNewOocCommand,
+    onEditOocCommand,
+    onDeleteOocCommand,
     // ✨ 新傳入的 props
     userProfiles,
     onNewUserProfile,
@@ -1905,6 +1916,54 @@ const SettingsPage = ({
               </div>
             )}
           </div>
+
+          {/* ==================== ✨ 全新！OOC 指令集管理區塊 ✨ ==================== */}
+          <div className="setting-card">
+            <button
+              className={`card-header ${expandedSection === 'ooc' ? 'expanded' : ''}`}
+              onClick={() => toggleSection('ooc')}
+            >
+              <div className="card-title">
+                <MessageSquarePlus size={20} />
+                <span>OOC 指令集</span>
+              </div>
+              <span className="expand-arrow">{expandedSection === 'ooc' ? '▲' : '▼'}</span>
+            </button>
+            
+            {expandedSection === 'ooc' && (
+              <div className="card-content">
+                <div className="setting-group">
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                    <label className="setting-label" style={{marginBottom: 0}}>常用指令列表 (所有角色共用)</label>
+                    <button onClick={onNewOocCommand} className="add-greeting-btn">
+                      <Plus size={14} /> 新增
+                    </button>
+                  </div>
+                  <div className="character-list">
+                    {oocCommands.length > 0 ? oocCommands.map((command) => (
+                      <div key={command.id} className="character-list-item">
+                         <div className="character-select-area">
+                          <div className="character-info">
+                            <h4>{command.notes}</h4>
+                            <p>{command.content}</p>
+                          </div>
+                        </div>
+                        <button className="edit-character-btn" onClick={() => onEditOocCommand(command)}><Edit2 size={16} /></button>
+                        <button
+                          onClick={() => onDeleteOocCommand(command.id)}
+                          className="edit-character-btn delete-icon-btn"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )) : (
+                      <p style={{color: 'var(--text-muted)', textAlign: 'center', padding: '10px 0'}}>尚未新增任何指令。</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="setting-card">
             <button
               className={`card-header ${expandedSection === 'theme' ? 'expanded' : ''}`}
@@ -2042,7 +2101,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.1</p>
+                  <p>版本：0.5.2</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2196,7 +2255,11 @@ const ChatApp = () => {
   const [longTermMemories, setLongTermMemories] = useState({});
   const [prompts, setPrompts] = useState([]);
   const [apiConfigs, setApiConfigs] = useState([]);
-  
+  const [oocCommands, setOocCommands] = useState([]); // ✨ 1. OOC 指令庫
+  const [isOocCommandEditorOpen, setIsOocCommandEditorOpen] = useState(false); // ✨ 2. 設定頁的編輯器開關
+  const [editingOocCommand, setEditingOocCommand] = useState(null); // ✨ 3. 正在編輯的指令
+  const [isOocCommandSelectorOpen, setIsOocCommandSelectorOpen] = useState(false); // ✨ 4. 聊天室的選擇器開關
+
   // ✨✨✨ 全新！使用者個人檔案管理 State ✨✨✨
   const [userProfiles, setUserProfiles] = useState([]); // 儲存所有使用者個人檔案的列表
 
@@ -2239,6 +2302,7 @@ const ChatApp = () => {
   // ✨ 1. 在這裡新增一行 state，用來控制身份切換器的開關 ✨
   const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false);
   const [isPromptSwitcherOpen, setIsPromptSwitcherOpen] = useState(false);
+  const [isDataLoaded, setIsDataLoaded] = useState(false); // ✨ 標記資料是否已從 DB 載入
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
@@ -2347,7 +2411,8 @@ useEffect(() => {
       const [
         savedCharacters, savedPrompts, savedApiConfigs,
         savedHistories, savedMetadatas, savedMemories,
-        savedUserProfiles // ✨ 新增讀取使用者個人檔案
+        savedUserProfiles, // ✨ 新增讀取使用者個人檔案
+        savedOocCommands
       ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
         const chars = await db.characters.toArray();
         const proms = await db.prompts.toArray();
@@ -2356,8 +2421,9 @@ useEffect(() => {
         const meta = (await db.kvStore.get('chatMetadatas'))?.value; 
         const mem = (await db.kvStore.get('longTermMemories'))?.value;
         const profiles = (await db.kvStore.get('userProfiles'))?.value; 
+        const ooc = (await db.kvStore.get('oocCommands'))?.value; // ✨ 加入這行
         const activeId = (await db.kvStore.get('activeUserProfileId'))?.value; // ✨ 讀取預設 ID
-        return [chars, proms, configs, hist, meta, mem, profiles, activeId];
+        return [chars, proms, configs, hist, meta, mem, profiles, activeId, ooc];
       });
       
       // 2. 處理使用者個人檔案 (如果不存在，就建立一個預設的)
@@ -2386,6 +2452,8 @@ useEffect(() => {
       setChatHistories(savedHistories || {});
       setChatMetadatas(savedMetadatas || {});
       setLongTermMemories(savedMemories || {});
+      setOocCommands(savedOocCommands || []);
+      setOocCommands(Array.isArray(savedOocCommands) ? savedOocCommands : []);
 
       // 4. 載入上次的聊天狀態和 API 設定 (這部分邏輯不變)
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
@@ -2411,7 +2479,7 @@ useEffect(() => {
         setApiModel(lastUsedApi.model || (apiProviders[lastUsedApi.provider]?.models[0] || 'gpt-3.5-turbo'));
         if (lastUsedApi.apiKey) setIsApiConnected(true); // 這裡的 apiKey 只是為了判斷上次是否連接過
       }
-
+      setIsDataLoaded(true);
     } catch (error) {
       console.error('從 IndexedDB 載入資料失敗:', error);
     }
@@ -2444,6 +2512,15 @@ useEffect(() => {
           db.kvStore.put({ key: 'longTermMemories', value: longTermMemories });
       }
   }, [longTermMemories]); // 這個管家只監控 longTermMemories
+
+  // ✨ 全新！OOC 指令的存檔管家 (修正版) ✨
+  useEffect(() => {
+    // 避免在程式剛啟動、資料還沒載入完成時，就用一個空陣列覆蓋掉資料庫
+    if (!isDataLoaded) return; 
+
+    console.log("偵測到 OOC 指令變更，正在存入 IndexedDB...");
+    db.kvStore.put({ key: 'oocCommands', value: oocCommands });
+  }, [oocCommands, isDataLoaded]);
 
   // ✨✨✨ 全新！API 金鑰 "通訊錄" 的專屬存檔管家 ✨✨✨
   useEffect(() => {
@@ -3154,6 +3231,58 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       alert('🗑️ 個人檔案已刪除。');
     }
   }, [userProfiles]);
+
+  // =================================================================================
+  // ✨✨✨ 全新！OOC 指令管理函式 ✨✨✨
+  // =================================================================================
+
+  // 開啟編輯器 (新增模式)
+  const handleOpenOocCommandEditorForNew = () => {
+    setEditingOocCommand({ isNew: true }); // 用一個特殊標記來表示是新增
+    setIsOocCommandEditorOpen(true);
+  };
+
+  // 開啟編輯器 (編輯模式)
+  const handleOpenOocCommandEditorForEdit = (command) => {
+    setEditingOocCommand(command);
+    setIsOocCommandEditorOpen(true);
+  };
+
+  // 儲存或更新指令
+  const handleSaveOocCommand = useCallback(async (commandData) => {
+    if (editingOocCommand?.isNew) {
+      // 新增
+      const newCommand = { id: `ooc_${Date.now()}`, ...commandData };
+      const updatedCommands = [...oocCommands, newCommand];
+      setOocCommands(updatedCommands);
+      await db.kvStore.put({ key: 'oocCommands', value: updatedCommands });
+      alert('✅ 新 OOC 指令已儲存！');
+    } else {
+      // 更新
+      const updatedCommands = oocCommands.map(cmd =>
+        cmd.id === editingOocCommand.id ? { ...cmd, ...commandData } : cmd
+      );
+      setOocCommands(updatedCommands);
+      await db.kvStore.put({ key: 'oocCommands', value: updatedCommands });
+      alert('✅ OOC 指令已更新！');
+    }
+    setIsOocCommandEditorOpen(false);
+    setEditingOocCommand(null);
+  }, [oocCommands, editingOocCommand]);
+
+  // 刪除指令
+  const handleDeleteOocCommand = useCallback(async (commandId) => {
+    if (window.confirm('確定要刪除這個 OOC 指令嗎？')) {
+      const updatedCommands = oocCommands.filter(cmd => cmd.id !== commandId);
+      setOocCommands(updatedCommands);
+      await db.kvStore.put({ key: 'oocCommands', value: updatedCommands });
+      alert('🗑️ OOC 指令已刪除。');
+    }
+  }, [oocCommands]);
+  const handleSelectOocCommand = useCallback((commandContent) => {
+    // 將收到的指令內容，附加到目前輸入框文字的後面
+    setInputMessage(prev => prev + commandContent);
+  }, []);
 
   // ✨✨✨ 升級版！建立聊天室時綁定使用者 ID ✨✨✨
   const handleStartChat = useCallback((character, greeting, selectedProfileId) => {
@@ -4176,6 +4305,9 @@ const formatStDate = (date, type = 'send_date') => {
               />
             ) : (
               <ChatPage
+                oocCommands={oocCommands}
+                onOpenOocSelector={() => setIsOocCommandSelectorOpen(true)}
+                onSelectOocCommand={handleSelectOocCommand}
                 messages={chatHistories[activeChatCharacterId]?.[activeChatId] || []}
                 inputMessage={inputMessage}
                 setInputMessage={setInputMessage}
@@ -4229,6 +4361,10 @@ const formatStDate = (date, type = 'send_date') => {
           )}
           {currentPage === 'settings' && (
             <SettingsPage
+              oocCommands={oocCommands}
+              onNewOocCommand={handleOpenOocCommandEditorForNew}
+              onEditOocCommand={handleOpenOocCommandEditorForEdit}
+              onDeleteOocCommand={handleDeleteOocCommand}
               userProfiles={userProfiles}
               onNewUserProfile={openNewUserProfileEditor}
               onEditUserProfile={openEditUserProfileEditor}
@@ -4364,6 +4500,22 @@ const formatStDate = (date, type = 'send_date') => {
             setIsPromptSwitcherOpen(false);
           }}
           onDelete={deletePrompt}
+        />
+      )}
+      {/* ✨ 全新！OOC 指令編輯器 Modal ✨ */}
+      {isOocCommandEditorOpen && (
+        <OocCommandEditorModal
+          command={editingOocCommand?.isNew ? null : editingOocCommand}
+          onSave={handleSaveOocCommand}
+          onClose={() => setIsOocCommandEditorOpen(false)}
+        />
+      )}
+      {/* ✨ 全新！OOC 指令選擇器 Modal ✨ */}
+      {isOocCommandSelectorOpen && (
+        <OocCommandSelectorModal
+          commands={oocCommands}
+          onSelect={handleSelectOocCommand}
+          onClose={() => setIsOocCommandSelectorOpen(false)}
         />
       )}
     </>
