@@ -2101,7 +2101,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.2</p>
+                  <p>版本：0.5.3</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2597,86 +2597,146 @@ useEffect(() => {
     });
   }, [isScreenshotMode]);
 
-// =================================================================================
-// ✨✨✨ 核心！負責生成圖片的函式 (最終整合修正版) ✨✨✨
-// =================================================================================
-  const handleGenerateScreenshot = useCallback(async () => {
-    // 步驟 1: 基本檢查
-    if (selectedMessageIds.length === 0) {
-      alert('請先選擇至少一則訊息！');
-      return;
-    }
-    alert(`正在生成 ${selectedMessageIds.length} 則訊息的截圖，按下確定後請稍候...`);
-
-    // 步驟 2: 建立一個隱形的「截圖專用容器」
-    const screenshotContainer = document.createElement('div');
-    screenshotContainer.style.backgroundColor = theme === 'dark' ? '#222222' : '#f9fafb';
-    screenshotContainer.style.padding = '25px';
-    screenshotContainer.style.width = '600px';
-    screenshotContainer.style.display = 'flex';
-    screenshotContainer.style.flexDirection = 'column';
-    screenshotContainer.style.gap = '15px';
-    screenshotContainer.style.position = 'absolute';
-    screenshotContainer.style.left = '-9999px';
-    screenshotContainer.style.top = '0px';
-
-    // 步驟 3: 排序並複製訊息到新容器中
-    const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
-    const sortedSelectedIds = currentHistory
-      .map(msg => msg.id)
-      .filter(id => selectedMessageIds.includes(id));
-
-    const allMessagesInDom = Array.from(document.querySelectorAll('.messages-area .message'));
-    
-    sortedSelectedIds.forEach(msgId => {
-      const originalMessageNode = allMessagesInDom.find(node => node.dataset.messageId == msgId);
-      if (originalMessageNode) {
-        const clonedMessageNode = originalMessageNode.cloneNode(true);
-        
-        clonedMessageNode.classList.remove('screenshot-mode', 'selected');
-        const bubbleWrapper = clonedMessageNode.querySelector('.bubble-wrapper');
-        if (bubbleWrapper) {
-          bubbleWrapper.onclick = null;
-        }
-        
-        // ✨ 這裡使用我們在步驟 2 中建立的 screenshotContainer
-        screenshotContainer.appendChild(clonedMessageNode);
+  // =================================================================================
+  // ✨✨✨ 核心！負責生成圖片的函式 (v6 - Promise.all 終極版) ✨✨✨
+  // =================================================================================
+    const handleGenerateScreenshot = useCallback(async () => {
+      if (selectedMessageIds.length === 0) {
+        alert('請先選擇至少一則訊息！');
+        return;
       }
-    });
+      alert(`正在生成 ${selectedMessageIds.length} 則訊息的截圖，按下確定後請稍候...`);
 
-    // 步驟 4: 將準備好的容器暫時加入到網頁中
-    document.body.appendChild(screenshotContainer);
+      const screenshotContainer = document.createElement('div');
+      // ... (樣式設定保持不變) ...
+      screenshotContainer.style.backgroundColor = theme === 'dark' ? '#222222' : '#f9fafb';
+      screenshotContainer.style.padding = '25px';
+      screenshotContainer.style.width = '600px';
+      screenshotContainer.style.display = 'flex';
+      screenshotContainer.style.flexDirection = 'column';
+      screenshotContainer.style.gap = '15px';
+      screenshotContainer.style.position = 'absolute';
+      screenshotContainer.style.left = '-9999px';
+      screenshotContainer.style.top = '0px';
 
-    try {
-      // 步驟 5: 呼叫 html2canvas 進行「拍攝」
-      const canvas = await html2canvas(screenshotContainer, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-      });
-
-      // 步驟 6: 將畫布轉換成圖片並觸發下載
-      const image = canvas.toDataURL('image/png', 1.0);
-      const link = document.createElement('a');
-      const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
-      link.download = `chat-screenshot-${timestamp}.png`;
-      link.href = image;
-      link.click();
-
-    } catch (error) {
-      console.error('截圖生成失敗:', error);
-      alert('抱歉，生成截圖時發生錯誤，請查看主控台以獲取詳細資訊。');
-    } finally {
-      // 步驟 7: 清理戰場！
-      document.body.removeChild(screenshotContainer);
+      const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+      const sortedSelectedIds = currentHistory
+        .map(msg => msg.id)
+        .filter(id => selectedMessageIds.includes(id));
+      const allMessagesInDom = Array.from(document.querySelectorAll('.messages-area .message'));
       
-      // 步驟 8: 退出截圖模式
-      handleToggleScreenshotMode();
-    }
-    
-  }, [selectedMessageIds, theme, handleToggleScreenshotMode, chatHistories, activeChatCharacterId, activeChatId]); // 確保依賴項包含所有用到的 state
+      // ▼▼▼ 【✨ 全新的、最穩定的處理流程！ ✨】 ▼▼▼
+      
+      // 步驟 1: 先複製所有需要的節點
+      const clonedNodes = sortedSelectedIds.map(msgId => {
+        const originalNode = allMessagesInDom.find(node => node.dataset.messageId == msgId);
+        if (!originalNode) return null;
+        
+        const clonedNode = originalNode.cloneNode(true);
+        clonedNode.classList.remove('screenshot-mode', 'selected');
+        const bubbleWrapper = clonedNode.querySelector('.bubble-wrapper');
+        if (bubbleWrapper) bubbleWrapper.onclick = null;
+        
+        return clonedNode;
+      }).filter(Boolean); // 過濾掉可能為 null 的結果
 
-  const handleProviderChange = useCallback((provider) => {
+      // 步驟 2: 建立一個陣列，用來存放所有「畫家」的工作承諾 (Promises)
+      const avatarDrawingPromises = clonedNodes.map(clonedNode => {
+        // 為每一個節點的頭像繪製工作，建立一個新的承諾
+        return new Promise(resolve => {
+          const clonedAvatarContainer = clonedNode.querySelector('.message-avatar');
+          const clonedAvatarImg = clonedNode.querySelector('.avatar-image');
+
+          // 如果沒有頭像，直接回報「我這邊沒事了」
+          if (!clonedAvatarContainer || !clonedAvatarImg) {
+            resolve();
+            return;
+          }
+
+          const tempImg = new Image();
+          tempImg.crossOrigin = "Anonymous";
+          
+          // 當這位畫家【完成】他的畫作時...
+          tempImg.onload = () => {
+            const canvas = document.createElement('canvas');
+            const containerSize = clonedAvatarContainer.offsetWidth || 42; // Fallback size
+            const scale = 3; 
+            canvas.width = containerSize * scale;
+            canvas.height = containerSize * scale;
+            canvas.style.width = `${containerSize}px`;
+            canvas.style.height = `${containerSize}px`;
+            // ▼▼▼ 【✨ 核心修正就在這裡！ ✨】 ▼▼▼
+            // 告訴 Canvas，它的 display 類型是 block，這會讓它更穩定地參與 Flexbox 佈局
+            canvas.style.display = 'block';
+            // ▲▲▲ 【✨ 修正結束 ✨】 ▲▲▲
+            const ctx = canvas.getContext('2d');
+            
+            const imgRatio = tempImg.naturalWidth / tempImg.naturalHeight;
+            const canvasRatio = canvas.width / canvas.height;
+            let sx, sy, sWidth, sHeight;
+
+            if (imgRatio > canvasRatio) {
+              sHeight = tempImg.naturalHeight;
+              sWidth = sHeight * canvasRatio;
+              sx = (tempImg.naturalWidth - sWidth) / 2;
+              sy = 0;
+            } else {
+              sWidth = tempImg.naturalWidth;
+              sHeight = sWidth / canvasRatio;
+              sy = (tempImg.naturalHeight - sHeight) / 2;
+              sx = 0;
+            }
+
+            ctx.drawImage(tempImg, sx, sy, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
+
+            clonedAvatarContainer.innerHTML = ''; // 清空容器
+            clonedAvatarContainer.appendChild(canvas);
+            
+            // ...他就會舉手回報：「我畫完了！」(resolve a promise)
+            resolve();
+          };
+
+          // 如果畫家找不到顏料（圖片載入失敗），他也必須回報，不能讓大家空等
+          tempImg.onerror = () => resolve();
+          tempImg.src = clonedAvatarImg.src;
+        });
+      });
+      
+      // 步驟 3: 【最關鍵的一步】等待【所有】的畫家都回報他們完成了工作
+      await Promise.all(avatarDrawingPromises);
+
+      // 步驟 4: 在確認所有畫作都完成後，才把這些成品掛到牆上（放進 container）
+      clonedNodes.forEach(node => screenshotContainer.appendChild(node));
+
+      // ▲▲▲ 【✨ 修正結束 ✨】 ▲▲▲
+
+      document.body.appendChild(screenshotContainer);
+
+      try {
+        // 步驟 5: 現在，攝影師可以安心拍照了，因為他知道所有畫都已經在牆上了
+        const canvas = await html2canvas(screenshotContainer, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: null,
+        });
+
+        const image = canvas.toDataURL('image/png', 1.0);
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.-]/g, '');
+        link.download = `chat-screenshot-${timestamp}.png`;
+        link.href = image;
+        link.click();
+
+      } catch (error) {
+        console.error('截圖生成失敗:', error);
+        alert('抱歉，生成截圖時發生錯誤，請查看主控台以獲取詳細資訊。');
+      } finally {
+        document.body.removeChild(screenshotContainer);
+        handleToggleScreenshotMode();
+      }
+    }, [selectedMessageIds, theme, handleToggleScreenshotMode, chatHistories, activeChatCharacterId, activeChatId]);
+  
+    const handleProviderChange = useCallback((provider) => {
     setApiProvider(provider);
     setApiModel(apiProviders[provider].models[0]);
     // ✨✨✨ 核心邏輯：從 "通訊錄" 中讀取新供應商的金鑰，並更新到 "顯示器" ✨✨✨
