@@ -3363,202 +3363,212 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 }, [apiKey, apiProvider, apiModel, apiProviders]);
 
   // =================================================================================
-  // ✨✨✨ 最終完美版！sendToAI (v5) - 加入 Gemini 安全設定 ✨✨✨
+  // ✨✨✨ 最終版！sendToAI (v7) - 100% 模擬 ST 封裝邏輯 ✨✨✨
   // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
-    // --- 1. API 檢查 (保持不變) ---
-    const provider = apiProviders[apiProvider];
-    if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
-    const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
-    if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
-    const currentKey = allKeys[currentApiKeyIndex];
-    if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
-    console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
+      // --- 步驟 1: API 與金鑰檢查 (這部分保持不變) ---
+      const provider = apiProviders[apiProvider];
+      if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
+      
+      const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
+      if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
+      
+      const currentKey = allKeys[currentApiKeyIndex];
+      if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
+      
+      console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
 
-    // --- 2. 準備所有「食材」(保持不變) ---
-    const estimateTokens = (text = '') => text ? text.length : 0;
-    const maxContextTokens = currentPrompt?.contextLength || 30000;
-    const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
-    const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
-    const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
-      ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
-      : null;
+      // --- 步驟 2: 準備所有會用到的「文字原料」(這部分也幾乎不變) ---
+      const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+      const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
+      const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
+        ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
+        : null;
+      
+      // 將【真實的】對話歷史，先準備成純文字格式，這是為了給 {{chat_history}} 佔位符使用
+      const chatHistoryString = currentMessages
+          .map(msg => {
+              const senderName = msg.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name;
+              const content = msg.contents[msg.activeContentIndex];
+              // 為了和 ST 的格式更像，我們把使用者輸入的 OOC 指令也加進來
+              if (msg.sender === 'user' && userInput && currentMessages[currentMessages.length - 1].id === msg.id) {
+                  return `${senderName}: ${content}\n${userInput}`;
+              }
+              return `${senderName}: ${content}`;
+          })
+          .join('\n');
 
-    // --- 3. 準備【格式化】的聊天紀錄 (關鍵修正！) ---
-    // 我們先只準備純文字格式的，方便注入到模組裡
-    let chatHistoryString = currentMessages
-        .map(msg => {
-            const senderName = msg.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name;
-            return `${senderName}: ${msg.contents[msg.activeContentIndex]}`;
-        })
-        .join('\n');
-        
-    // --- 4. 準備【全功能】佔位符字典 (關鍵修正！) ---
-    const placeholderMap = {
-      '{{char}}': currentCharacter.description || '',
-      '{{user}}': userDescription || '',
-      // ✨ 核心改變：我們現在注入純文字的聊天歷史
-      '{{chat_history}}': chatHistoryString,
-      '{{description}}': currentCharacter.description || '',
-      '{{persona}}': userDescription || '',
-      '{{personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
-      '{{Personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
-      '{{scenario}}': currentCharacter.scenario ? `[Scenario]\n${currentCharacter.scenario}` : '',
-      '{{mes_example}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
-      '{{example_dialogue}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
-      '{{memory}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
-      '{{summary}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '', // 兼容
-      '{{authors_note}}': activeAuthorsNote ? `[Author's Note]\n${activeAuthorsNote}` : '',
-      '{{system_prompt}}': currentCharacter.system_prompt || '',
-      '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
-      '{{depth_prompt}}': currentCharacter.depth_prompt ? `[角色備註]\n${currentCharacter.depth_prompt}`: '',
-      // ✨ 新增！處理 Mure 提示詞中的 {{group}} 佔位符
-      '{{group}}': currentCharacter.name,
-    };
-    
-    // --- 5. 【全新邏輯】組合系統指令和對話內容 ---
-    let systemInstructionParts = [];
-    let historyForAPI = [];
-    
-    // 遍歷所有啟用的模組
-    const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
-    for (const module of enabledModules) {
-        let moduleContent = module.content || '';
+      // --- 步驟 3: 建立【全功能】的佔位符字典 ---
+      const placeholderMap = {
+        '{{char}}': currentCharacter.description || '',
+        '{{user}}': userDescription || '',
+        '{{chat_history}}': chatHistoryString,
+        '{{description}}': currentCharacter.description || '',
+        '{{persona}}': userDescription || '',
+        '{{personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
+        '{{Personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
+        '{{scenario}}': currentCharacter.scenario ? `[Scenario]\n${currentCharacter.scenario}` : '',
+        '{{mes_example}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
+        '{{example_dialogue}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
+        '{{memory}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
+        '{{summary}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
+        '{{authors_note}}': activeAuthorsNote ? `[Author's Note]\n${activeAuthorsNote}` : '',
+        '{{system_prompt}}': currentCharacter.system_prompt || '',
+        '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
+        '{{depth_prompt}}': currentCharacter.depth_prompt ? `[角色備註]\n${currentCharacter.depth_prompt}`: '',
+        '{{group}}': currentCharacter.name,
+        // 加上一個空的 input 佔位符，以防萬一
+        '{{input}}': userInput || '',
+      };
 
-        // 進行佔位符替換 (trim 和其他特殊指令可以在此處理)
-        if (moduleContent.includes('{{trim}}')) {
-            moduleContent = moduleContent.replace(/\{\{\/\/\s*(.*?)\s*\}\}\{\{trim\}\}/g, '').trim();
-        }
+      if (currentCharacter.description) {
+          currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile);
+      }
+      if (currentCharacter.personality) {
+          currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile);
+      }
 
-        for (const [placeholder, value] of Object.entries(placeholderMap)) {
-            const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-            moduleContent = moduleContent.replace(regex, value || '');
-        }
+      // --- 步驟 4: 【核心邏輯】依照 ST 模式，組合最終的請求體 ---
+      let requestBody;
 
-        if (moduleContent.trim() === '') continue;
+      try {
+          // 取得所有啟用的模組，並確保它們有順序 (雖然在您的 App 中順序是固定的)
+          const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
 
-        // 【核心判斷】根據模組的角色 (role) 分配到不同的地方
-        if (module.role === 'system') {
-            systemInstructionParts.push(moduleContent);
-        } else if (module.role === 'user' || module.role === 'assistant') {
-            historyForAPI.push({
-                // 將 assistant 轉換為 Gemini 認識的 model
-                role: module.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: moduleContent }]
-            });
-        }
-    }
-    
-    // 將過去的真實對話歷史，按照 user/model 的格式加入
-    currentMessages.forEach(msg => {
-        historyForAPI.push({
-            role: msg.sender === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.contents[msg.activeContentIndex] }]
-        });
-    });
-
-    // 加入本次使用者輸入的訊息
-    if (typeof userInput === 'string' && userInput.trim() !== '') {
-        historyForAPI.push({
-            role: 'user',
-            parts: [{ text: userInput }]
-        });
-    }
-
-    // --- 6. 發送最終請求 (保持不變的部分) ---
-    try {
-        let endpoint = provider.endpoint;
-        const currentKey = apiKey.split('\n').map(k => k.trim()).filter(Boolean)[currentApiKeyIndex];
-        const headers = provider.headers(currentKey);
-        const maxOutputTokens = currentPrompt?.maxTokens || 6000;
-        const temperature = currentPrompt?.temperature || 1.2;
-        let requestBody;
-
-        if (provider.isGemini) {
-            endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
-            
-            // 【關鍵修正！】組合最終的請求體
-            requestBody = {
-              contents: historyForAPI, // 這裡只放真正的對話
-              systemInstruction: {
-                parts: [{ text: systemInstructionParts.join('\n\n') }] // 這裡放所有的規則
-              },
-              generationConfig: { temperature, maxOutputTokens },
-              safetySettings: [
-                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-              ]
-            };
-        } else {
-          // 【✨ 修正 ✨】
-          // 為了兼容 OpenAI/Claude 等格式，我們需要重新組合一個類似 finalMessages 的陣列
+          // 建立一個「巨型前導文 (Mega Preamble)」字串，用來拼接所有非對話的指令
+          let preambleString = '';
           
-          const finalMessagesForOtherAPIs = [];
+          // 遍歷所有啟用的模組
+          for (const module of enabledModules) {
+              let moduleContent = module.content || '';
 
-          // 1. 先將所有系統指令合併成一個大的 system message
-          const systemContent = systemInstructionParts.join('\n\n');
-          if (systemContent) {
-              finalMessagesForOtherAPIs.push({ role: 'system', content: systemContent });
+              // 如果模組內容是 {{chat_history}}，代表這裡是對話歷史的插入點
+              // 我們就在這裡插入【真實的】對話歷史，然後跳過這個模組，避免重複處理
+              if (moduleContent.includes('{{chat_history}}')) {
+                  // 先把 {{chat_history}} 之前的部分加進前導文
+                  preambleString += moduleContent.split('{{chat_history}}')[0];
+                  // 然後把聊天歷史本身加進去
+                  preambleString += chatHistoryString;
+                  // 最後加上 {{chat_history}} 之後的部分
+                  preambleString += moduleContent.split('{{chat_history}}')[1];
+                  continue; // 處理完畢，跳到下一個模組
+              }
+
+              // 對於其他普通模組，進行佔位符替換
+              for (const [placeholder, value] of Object.entries(placeholderMap)) {
+                  const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+                  if (regex.test(moduleContent)) {
+                      moduleContent = moduleContent.replace(regex, value || '');
+                  }
+              }
+              
+              // 處理特殊指令，例如 {{trim}}
+              if (moduleContent.includes('{{trim}}')) {
+                  moduleContent = moduleContent.replace(/\{\{\/\/\s*(.*?)\s*\}\}\{\{trim\}\}/g, '').trim();
+              }
+
+              // 將處理完的模組內容，拼接到我們的「巨型前導文」後面
+              if (moduleContent.trim()) {
+                  preambleString += moduleContent + '\n\n'; // 用兩個換行符來分隔模組，更清晰
+              }
+          }
+          
+          // 檢查前導文中是否已經包含了對話歷史。如果沒有（代表提示詞模組裡沒有 {{chat_history}}），
+          // 我們就在最後面補上，確保對話歷史不會遺失。
+          if (!preambleString.includes(chatHistoryString)) {
+              preambleString += chatHistoryString;
           }
 
-          // 2. 接著，將 user/model (assistant) 的對話歷史加進來
-          historyForAPI.forEach(msg => {
-              finalMessagesForOtherAPIs.push({
-                  // 將 Gemini 的 'model' 轉回通用的 'assistant'
-                  role: msg.role === 'model' ? 'assistant' : 'user',
-                  content: msg.parts[0].text 
-              });
-          });
+          // --- 步驟 5: 針對不同的 API供應商，封裝最終的 requestBody ---
 
-          // 現在，我們可以使用這個 finalMessagesForOtherAPIs 來建立請求
-          // (下面的邏輯是 Claude 的特殊處理，如果您的 App 不需要，可以直接使用 finalMessagesForOtherAPIs)
+          let endpoint = provider.endpoint;
+          const headers = provider.headers(currentKey);
+          const maxOutputTokens = currentPrompt?.maxTokens || 4000;
+          const temperature = currentPrompt?.temperature || 1.2;
 
-          if (apiProvider === 'claude') {
-              // Claude 需要特別處理：將 system message 分離出來
-              const claudeSystemPrompt = finalMessagesForOtherAPIs.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
-              const claudeUserAssistantHistory = finalMessagesForOtherAPIs.filter(m => m.role !== 'system');
-              requestBody = { model: apiModel, max_tokens: maxOutputTokens, temperature, messages: claudeUserAssistantHistory, system: claudeSystemPrompt };
+          if (provider.isGemini) {
+              endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+              
+              // 【關鍵！】我們不再使用 systemInstruction，而是模仿 ST，
+              // 把所有東西都打包成一個巨大的 user message。
+              requestBody = {
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: preambleString }]
+                    }
+                ],
+                generationConfig: { 
+                    temperature, 
+                    maxOutputTokens,
+                    // 加上其他 Mure 提示詞裡有的參數
+                    topP: currentPrompt?.top_p ?? 0.9,
+                    topK: currentPrompt?.top_k ?? 150,
+                },
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                ]
+              };
           } else {
-              // 對於標準 OpenAI 格式的 API
-              requestBody = { model: apiModel, messages: finalMessagesForOtherAPIs, max_tokens: maxOutputTokens, temperature };
+            // 對於 OpenAI 或 Claude 等其他 API 的處理邏輯
+            // 我們也採用類似的「打包」策略，但格式是 {role, content}
+            const messagesForOtherAPI = [
+                {
+                    role: 'system', // 可以把一部分核心指令放在 system
+                    content: "You are a helpful assistant." // 這裡可以放一個通用的基礎指令
+                },
+                {
+                    role: 'user',
+                    content: preambleString // 把我們組合好的所有東西放進 user message
+                }
+            ];
+            
+            requestBody = {
+                model: apiModel,
+                messages: messagesForOtherAPI,
+                max_tokens: maxOutputTokens,
+                temperature
+            };
           }
-      }
 
-      // --- 7. 後續處理 (保持不變) ---
-      console.log("最終發送給 API 的請求:", JSON.stringify(requestBody, null, 2));
-      const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
+          console.log("【最終版】發送給 API 的請求:", JSON.stringify(requestBody, null, 2));
+          
+          // --- 步驟 6: 發送請求與處理回應 (這部分保持不變) ---
+          const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
+          if (!response.ok) {
+              const errorText = await response.text();
+              throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
+          }
+          const data = await response.json();
+          let aiText = null;
+          if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
+          else aiText = data.choices?.[0]?.message?.content;
+          
+          if (data.promptFeedback && data.promptFeedback.blockReason) {
+              throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`);
+          }
+          
+          if (aiText && aiText.trim() !== '') {
+              console.log(`金鑰 #${currentApiKeyIndex + 1} 請求成功！`);
+              return aiText;
+          } else {
+              throw new Error('AI 回應為空或格式不正確');
+          }
+
+      } catch (error) {
+          console.error(`處理或發送請求時發生錯誤:`, error);
+          // 如果錯誤發生，讓上層的 sendMessage 函式去處理 UI 的回饋
+          throw error; 
       }
-      const data = await response.json();
-      let aiText = null;
-      if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
-      else aiText = data.choices?.[0]?.message?.content;
-      
-      // ✨ Gemini 被攔截時，aiText 會是 null，但 data 裡面會有 blockReason
-      if (data.promptFeedback && data.promptFeedback.blockReason) {
-          throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`);
-      }
-      
-      if (aiText && aiText.trim() !== '') {
-        console.log(`金鑰 #${currentApiKeyIndex + 1} 請求成功！`);
-        return aiText;
-      } else {
-        // 如果 aiText 是空的，但又沒有 blockReason，就回傳一個更通用的錯誤
-        throw new Error('AI 回應為空或格式不正確');
-      }
-    } catch (error) {
-      console.error(`金鑰 #${currentApiKeyIndex + 1} 失敗:`, error.message);
-      throw error;
-    }
   }, [
-    apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
-    currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
-    chatMetadatas, currentApiKeyIndex
+      // 依賴項列表，請確保這裡包含了所有函式中用到的 state 和 props
+      apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
+      currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
+      chatMetadatas, currentApiKeyIndex
   ]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
