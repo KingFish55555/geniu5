@@ -103,8 +103,11 @@ const ModuleEditorModal = ({ module, onSave, onClose }) => {
           
         </div>
         <div className="modal-footer">
-          <button onClick={onClose} className="secondary-btn">取消</button>
-          <button onClick={handleSave} className="primary-btn">
+          {/* 將 className 從 "secondary-btn" 改為 "edit-btn cancel" */}
+          <button onClick={onClose} className="edit-btn cancel">取消</button>
+          
+          {/* 將 className 從 "primary-btn" 改為 "edit-btn save" */}
+          <button onClick={handleSave} className="edit-btn save">
             <Save size={16} /> 儲存
           </button>
         </div>

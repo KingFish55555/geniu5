@@ -2420,6 +2420,7 @@ useEffect(() => {
         savedCharacters, savedPrompts, savedApiConfigs,
         savedHistories, savedMetadatas, savedMemories,
         savedUserProfiles, // ✨ 新增讀取使用者個人檔案
+        activeProfileId,
         savedOocCommands
       ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
         const chars = await db.characters.toArray();
@@ -4093,83 +4094,72 @@ const formatStDate = (date, type = 'send_date') => {
   }, [chatHistories, activeChatCharacterId, activeChatId, currentUserProfile, currentCharacter]);
 
   // ==================== 全新！從 SillyTavern 格式匯入聊天紀錄的函式 ====================
-  const handleImportFromSillyTavern = useCallback((event) => {
-    // 步驟 1: 取得使用者選擇的檔案
-    const file = event.target.files[0];
-    if (!file) {
-      return; // 如果使用者取消選擇，就什麼都不做
-    }
-    if (!activeChatCharacterId || !activeChatId) {
-      alert('請先選擇一個聊天室，才能匯入紀錄！');
-      event.target.value = ''; // 清空選擇，以便下次還能選同個檔案
-      return;
-    }
-
-    const reader = new FileReader();
-
-    // 步驟 2: 當檔案讀取完成時，開始進行翻譯
-    reader.onload = (e) => {
-      try {
-        const content = e.target.result;
-        const lines = content.split('\n').filter(line => line.trim() !== ''); // 切割成一行一行，並過濾掉空行
-
-        const importedMessages = [];
-        // 我們從第二行開始讀取，因為第一行是標頭資訊
-        for (let i = 1; i < lines.length; i++) {
-          const lineData = JSON.parse(lines[i]);
-
-          // 安全檢查，確保這是一個對話訊息
-          if (typeof lineData.is_user === 'undefined' || !lineData.mes) {
-            continue;
-          }
-
-          // 逆向翻譯回我們 App 的格式
-          const ourMessage = {
-            id: Date.now() + i, // 產生一個獨一無二的 ID
-            sender: lineData.is_user ? 'user' : 'ai',
-            contents: lineData.swipes || [lineData.mes],
-            activeContentIndex: (lineData.swipes || [lineData.mes]).indexOf(lineData.mes),
-            timestamp: getFormattedTimestamp(), // 我們自己產生一個新的時間戳
-          };
-          
-          // 如果找不到 activeContentIndex，預設為 0
-          if (ourMessage.activeContentIndex === -1) {
-            ourMessage.activeContentIndex = 0;
-          }
-
-          importedMessages.push(ourMessage);
+    const handleImportFromSillyTavern = useCallback((event) => {
+      const file = event.target.files[0];
+      if (!file || !activeChatCharacterId || !activeChatId) {
+        if (!activeChatCharacterId || !activeChatId) {
+          alert('請先選擇一個聊天室，才能匯入紀錄！');
         }
-
-        // 步驟 3: 詢問使用者要如何處理這些匯入的訊息
-        if (importedMessages.length > 0) {
-          const shouldAppend = window.confirm(`✅ 成功解析到 ${importedMessages.length} 則對話。\n\n請問您要如何處理？\n\n- 按下「確定」= 將這些訊息【附加】到目前對話的後面。\n- 按下「取消」= 用這些訊息【覆蓋】掉目前的對話。`);
-          
-          setChatHistories(prev => {
-            const newHistories = {...prev};
-            const currentChat = newHistories[activeChatCharacterId]?.[activeChatId] || [];
-            newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
-              ? [...currentChat, ...importedMessages] 
-              : importedMessages;
-            return newHistories;
-          });
-
-          alert(`✅ 操作完成！已成功${shouldAppend ? '附加' : '覆蓋'} ${importedMessages.length} 則對話！`);
-        } else {
-          alert('❌ 檔案中沒有找到可以匯入的對話內容。');
-        }
-
-      } catch (error) {
-        alert('❌ 匯入失敗，檔案格式可能不正確。\n錯誤訊息：' + error.message);
-      } finally {
-        // 清空檔案選擇器的值，這樣使用者下次才能再次選擇同一個檔案
-        event.target.value = '';
+        if (event.target) event.target.value = '';
+        return;
       }
-    };
 
-    // 步驟 4: 開始讀取檔案
-    reader.readAsText(file);
-    
-  }, [activeChatCharacterId, activeChatId, getFormattedTimestamp]);
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const content = e.target.result;
+          const lines = content.split('\n').filter(line => line.trim() !== '');
+
+          // ✨ 步驟 1: 建立一個【暫時】的陣列，用來存放所有新訊息
+          const importedMessages = [];
+
+          for (let i = 1; i < lines.length; i++) {
+            const lineData = JSON.parse(lines[i]);
+            if (typeof lineData.is_user === 'undefined' || !lineData.mes) continue;
+
+            const ourMessage = {
+              id: generateUniqueId(), // ✨ 為每一條訊息產生一個保證唯一的 ID
+              sender: lineData.is_user ? 'user' : 'ai',
+              contents: lineData.swipes || [lineData.mes],
+              activeContentIndex: (lineData.swipes || [lineData.mes]).indexOf(lineData.mes),
+              timestamp: getFormattedTimestamp(),
+            };
+            if (ourMessage.activeContentIndex === -1) ourMessage.activeContentIndex = 0;
+            
+            // ✨ 步驟 2: 將處理好的新訊息，放進我們的暫存陣列
+            importedMessages.push(ourMessage);
+          }
+
+          if (importedMessages.length > 0) {
+            const shouldAppend = window.confirm(`✅ 成功解析到 ${importedMessages.length} 則對話。\n\n請問您要如何處理？\n\n- 按下「確定」= 將這些訊息【附加】到目前對話的後面。\n- 按下「取消」= 用這些訊息【覆蓋】掉目前的對話。`);
+            
+            // ✨ 步驟 3: 在所有資料都處理完畢後，只執行【一次】狀態更新
+            setChatHistories(prev => {
+              const newHistories = JSON.parse(JSON.stringify(prev)); // 深度複製以避免副作用
+              const currentChat = newHistories[activeChatCharacterId]?.[activeChatId] || [];
+              
+              newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
+                ? [...currentChat, ...importedMessages] 
+                : importedMessages; // 使用我們一次性處理好的 importedMessages 陣列
+                
+              return newHistories;
+            });
+
+            alert(`✅ 操作完成！已成功${shouldAppend ? '附加' : '覆蓋'} ${importedMessages.length} 則對話！`);
+          } else {
+            alert('❌ 檔案中沒有找到可以匯入的對話內容。');
+          }
+
+        } catch (error) {
+          alert('❌ 匯入失敗，檔案格式可能不正確。\n錯誤訊息：' + error.message);
+        } finally {
+          if (event.target) event.target.value = '';
+        }
+      };
+
+      reader.readAsText(file);
+    }, [activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
   // 🔥🔥🔥 核心修正點 #1 🔥🔥🔥
   const exportChatHistory = useCallback(() => {
@@ -4219,9 +4209,10 @@ const formatStDate = (date, type = 'send_date') => {
   // 🔥🔥🔥 核心修正點 #2 🔥🔥🔥
   const handleImportChat = useCallback((event) => {
     const file = event.target.files[0];
-    if (!file) return;
-    if (!activeChatCharacterId || !activeChatId) {
-      alert('請先選擇一個聊天室，才能匯入紀錄！');
+    if (!file || !activeChatCharacterId || !activeChatId) {
+      if (!activeChatCharacterId || !activeChatId) {
+        alert('請先選擇一個聊天室，才能匯入紀錄！');
+      }
       return;
     }
 
@@ -4235,14 +4226,16 @@ const formatStDate = (date, type = 'send_date') => {
         }
         
         const lines = content.split('\n');
+        // ✨ 步驟 1: 建立一個【暫時】的陣列
         const importedMessages = [];
         
         lines.forEach(line => {
           const messageMatch = line.match(/\[(.*?)\] (.*?): (.*)/);
           if (messageMatch) {
             const [, timestamp, sender, text] = messageMatch;
+            // ✨ 步驟 2: 將處理好的訊息放進暫存陣列
             importedMessages.push({
-              id: Date.now() + Math.random(),
+              id: generateUniqueId(), // ✨ 使用唯一的 ID 生成器
               timestamp: timestamp || getFormattedTimestamp(),
               sender: sender === (currentUserProfile?.name || '用戶') ? 'user' : 'ai',
               contents: [text],
@@ -4254,10 +4247,15 @@ const formatStDate = (date, type = 'send_date') => {
         if (importedMessages.length > 0) {
           const shouldAppend = window.confirm(`找到 ${importedMessages.length} 則對話記錄。\n\n點擊「確定」= 添加到現有對話\n點擊「取消」= 替換所有對話`);
           
+          // ✨ 步驟 3: 只執行【一次】狀態更新
           setChatHistories(prev => {
-            const newHistories = {...prev};
+            const newHistories = JSON.parse(JSON.stringify(prev));
             const currentChat = newHistories[activeChatCharacterId]?.[activeChatId] || [];
-            newHistories[activeChatCharacterId][activeChatId] = shouldAppend ? [...currentChat, ...importedMessages] : importedMessages;
+            
+            newHistories[activeChatCharacterId][activeChatId] = shouldAppend 
+              ? [...currentChat, ...importedMessages] 
+              : importedMessages;
+              
             return newHistories;
           });
           alert(`✅ 成功${shouldAppend ? '添加' : '匯入'} ${importedMessages.length} 則對話！`);
@@ -4269,7 +4267,7 @@ const formatStDate = (date, type = 'send_date') => {
       }
     };
     reader.readAsText(file);
-    event.target.value = '';
+    if (event.target) event.target.value = '';
   }, [currentUserProfile, activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
   const clearAllData = useCallback(() => {
@@ -4761,5 +4759,10 @@ async function createPngWithCharaChunk(imageDataSource, characterData) {
   // 返回 Blob 物件，以便下載
   return new Blob([newPngBytes], { type: 'image/png' });
 }
+
+// ==================== 全新！唯一 ID 生成器 ====================
+const generateUniqueId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2);
+};
 
 export default ChatApp;

@@ -600,7 +600,7 @@ body {
 .messages-area {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: 20px 13px; /*第一個是上下，第二個是左右*/
   background: var(--surface-color);
 }
 
@@ -2132,8 +2132,8 @@ input:checked + .slider:before {
 }
 
 .message-avatar {
-  width: 36px;
-  height: 36px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   overflow: hidden;
   flex-shrink: 0;
@@ -3341,4 +3341,18 @@ input[type="range"]:hover::-webkit-slider-thumb {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- 全新！修正使用者聊天泡泡的按鈕位置 --- */
+
+/* 我們告訴瀏覽器：當「編輯按鈕」是在「使用者訊息」裡面時... */
+.user-message .edit-message-btn {
+  /* ...把它往下移動到最低的位置，跟 AI 泡泡的「重新生成」按鈕差不多高 */
+  bottom: 10px; /* 從原本的 40px 大幅下修 */
+}
+
+/* 同樣地，當「刪除按鈕」是在「使用者訊息」裡面時... */
+.user-message .delete-message-btn {
+  /* ...也把它往下移動，放到原本 AI 泡泡「編輯按鈕」的位置 */
+  bottom: 46px; /* 從原本的 76px 下修 (10px 的基礎高度 + 36px 的間距) */
 }
