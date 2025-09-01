@@ -2101,7 +2101,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.3</p>
+                  <p>版本：0.5.31</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -4668,14 +4668,61 @@ const applyPlaceholders = (text, character, user) => {
 // ==================== ✨ 全新升級版！引號高亮函式 ✨ ====================
 const highlightQuotedText = (text) => {
   if (!text) return '';
-
-  // ✨ 核心修改：使用捕獲組 (括號) 將引號和內容分開
-  const regex = /(「|“|"|『|【)(.*?)(」|”|"|』|】)/g;
   
-  return text.replace(regex, (match, openQuote, content, closeQuote) => {
-    // ✨ 我們將引號和內容分別用 span 包起來，並加上專屬的 class
-    return `<span class="quoted-text"><span class="quote-char open-quote">${openQuote}</span>${content}<span class="quote-char close-quote">${closeQuote}</span></span>`;
-  });
+  // 定義引號配對
+  const quotePairs = {
+    '「': '」',
+    '『': '』',
+    '"': '"',
+    '"': '"',
+    '【': '】'
+  };
+  
+  const processText = (str) => {
+    let result = '';
+    let i = 0;
+    
+    while (i < str.length) {
+      const char = str[i];
+      
+      // 檢查是否為開始引號
+      if (quotePairs[char]) {
+        const closeQuote = quotePairs[char];
+        let j = i + 1;
+        let depth = 1;
+        
+        // 找到對應的結束引號
+        while (j < str.length && depth > 0) {
+          if (str[j] === char) {
+            depth++;
+          } else if (str[j] === closeQuote) {
+            depth--;
+          }
+          j++;
+        }
+        
+        if (depth === 0) {
+          // 找到完整的引號對
+          const content = str.substring(i + 1, j - 1);
+          const processedContent = processText(content); // 遞歸處理內容
+          
+          result += `<span class="quoted-text"><span class="quote-char open-quote">${char}</span>${processedContent}<span class="quote-char close-quote">${closeQuote}</span></span>`;
+          i = j;
+        } else {
+          // 沒有找到配對，當作普通字符
+          result += char;
+          i++;
+        }
+      } else {
+        result += char;
+        i++;
+      }
+    }
+    
+    return result;
+  };
+  
+  return processText(text);
 };
 
 // ==================== 全新！可靠的 UTF-8 <=> Base64 轉換輔助函式 ====================
