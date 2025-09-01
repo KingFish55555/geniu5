@@ -120,11 +120,12 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
         const importedData = JSON.parse(e.target.result);
         let presetToLoad;
 
-        if (typeof importedData.name === 'string' && Array.isArray(importedData.modules)) {
-          presetToLoad = importedData;
-        } else if (Array.isArray(importedData.prompts) && Array.isArray(importedData.prompt_order)) {
+        // 檢查是否是 SillyTavern 的提示詞檔案格式
+        if (Array.isArray(importedData.prompts) && Array.isArray(importedData.prompt_order)) {
           const presetName = file.name.replace(/\.json$/i, '');
           const moduleMap = new Map(importedData.prompts.map(p => [p.identifier, p]));
+          
+          // ✨ 核心：找到針對一般角色的排序規則 (ID 100001)
           const orderGroup = importedData.prompt_order.find(group => group.character_id === 100001);
           const orderArray = orderGroup ? orderGroup.order : [];
 
@@ -132,6 +133,7 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
             throw new Error("在 SillyTavern 檔案中找不到有效的 'prompt_order' 順序列表。");
           }
           
+          // 根據 order 重新組合模組列表
           const convertedModules = orderArray.map((orderItem, index) => {
             const moduleData = moduleMap.get(orderItem.identifier);
             if (!moduleData) return null;
@@ -140,14 +142,12 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
               id: moduleData.identifier || `module_imported_${Date.now()}_${index}`,
               name: moduleData.name || `未命名模組 ${index + 1}`,
               content: moduleData.content || '',
-              enabled: orderItem.enabled,
-              locked: moduleData.name?.includes('🔒') || false,
+              enabled: orderItem.enabled, // ✨ 使用 order 中的啟用狀態
+              locked: moduleData.forbid_overrides || false,
               readOnly: ['chatHistory', 'worldInfoAfter', 'worldInfoBefore', 'dialogueExamples'].includes(moduleData.identifier),
-              role: moduleData.role || 'system',
-              triggers: moduleData.triggers || { enabled: false, text: '' },
-              position: moduleData.position || { type: 'relative', depth: 4 }
+              role: moduleData.role || 'system'
             };
-          }).filter(Boolean);
+          }).filter(Boolean); // 過濾掉找不到的模組
 
           presetToLoad = {
             id: 'imported_' + Date.now(),
@@ -157,12 +157,16 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
             contextLength: importedData.openai_max_context || 24000,
             modules: convertedModules,
           };
+
+        } else if (typeof importedData.name === 'string' && Array.isArray(importedData.modules)) {
+          // 這是為了相容您應用程式自己匯出的格式
+          presetToLoad = importedData;
         } else {
-          throw new Error("無法識別的檔案格式。");
+          throw new Error("無法識別的檔案格式。請確認是 SillyTavern 或本應用匯出的提示詞 JSON 檔案。");
         }
         
         savePrompt(presetToLoad);
-        alert(`✅ 預設集「${presetToLoad.name}」已成功匯入並儲存！`);
+        alert(`✅ 提示詞「${presetToLoad.name}」已成功匯入並儲存！`);
 
       } catch (error) {
         alert(`❌ 匯入失敗：${error.message}`);

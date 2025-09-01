@@ -2124,20 +2124,21 @@ const SettingsPage = ({
 };
   
 // =================================================================================
-// ✨✨✨ 全新！基於 Default.json 的唯一內建提示詞 ✨✨✨
+// ✨✨✨ 全新！基於 SillyTavern 佔位符的內建提示詞 ✨✨✨
 // =================================================================================
 const BUILT_IN_PROMPTS = [
   {
     id: 'st-default-preset-v1',
-    name: '預設提示詞',
+    name: '預設提示詞 (SillyTavern 風格)',
     temperature: 1,
-    maxTokens: 300,
-    contextLength: 4095,
+    maxTokens: 800,
+    contextLength: 32000,
     modules: [
       {
         id: 'main',
         name: 'Main Prompt',
-        content: "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.",
+        // ✨ 修改：移除 {{char}} 和 {{user}}，它們會由下面的專門模組處理
+        content: "Write the next reply in a fictional chat.",
         enabled: true,
         locked: false, readOnly: false, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2153,7 +2154,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'personaDescription',
         name: 'Persona Description',
-        content: '{{user}}',
+        // ✨ 修改：使用 {{user}} 佔位符
+        content: '{{user}}', 
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2161,6 +2163,7 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'charDescription',
         name: 'Char Description',
+        // ✨ 修改：使用 {{char}} 佔位符來載入角色描述
         content: '{{char}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2169,7 +2172,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'charPersonality',
         name: 'Char Personality',
-        content: '',
+        // ✨ 修改：使用 {{personality}} 佔位符來載入個性
+        content: '{{personality}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2177,7 +2181,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'scenario',
         name: 'Scenario',
-        content: '',
+        // ✨ 修改：使用 {{scenario}} 佔位符來載入場景
+        content: '{{scenario}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2209,7 +2214,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'dialogueExamples',
         name: 'Chat Examples',
-        content: '',
+        // ✨ 修改：使用 {{example_dialogue}} 佔位符來載入對話範例
+        content: '{{example_dialogue}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2217,6 +2223,7 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'chatHistory',
         name: 'Chat History',
+        // ✨ 修改：使用 {{chat_history}} 佔位符
         content: '{{chat_history}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2225,7 +2232,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'jailbreak',
         name: 'Post-History Instructions',
-        content: '',
+        // ✨ 修改：使用對應的佔位符
+        content: '{{post_history_instructions}}',
         enabled: true,
         locked: false, readOnly: false, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2992,30 +3000,22 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     }
   }, [characters]);  
   
-// ==================== ✨ 全新！支援多檔案批次匯入的版本 (V3 卡片最終相容版) ✨ ====================
+// ==================== ✨ 全新！SillyTavern 風格的 V3 角色卡匯入函式 ✨ ====================
   const handleImportCharacter = useCallback(async (event) => {
-    // 步驟 1: 取得使用者選擇的所有檔案 (這會是一個清單)
     const files = event.target.files;
-    if (!files || files.length === 0) {
-      // 如果使用者點了取消，就什麼都不做
-      return;
-    }
+    if (!files || files.length === 0) return;
 
     console.log(`準備匯入 ${files.length} 個檔案...`);
-
-    // 準備一些計數器和暫存區
     let successCount = 0;
     let failureCount = 0;
-    const newlyImported = []; // 暫時存放成功匯入的新角色
+    const newlyImported = [];
 
-    // 步驟 2: 使用 for 迴圈，一個一個處理清單中的檔案
     for (const file of files) {
       try {
-        // --- 以下是您原本處理單一檔案的邏輯，我們把它整個搬進迴圈裡 ---
         let characterJsonData;
         let characterAvatar = { type: 'icon', data: 'UserCircle' };
 
-        // 輔助函式 getCharacterDataFromPng 保持不變，我們直接複製過來用
+        // (getCharacterDataFromPng 輔助函式保持不變，這裡省略)
         const getCharacterDataFromPng = (file) => {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -3061,6 +3061,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           });
         };
 
+
         if (file.type === 'application/json' || file.name.endsWith('.json')) {
           characterJsonData = JSON.parse(await file.text());
         } else if (file.type === 'image/png') {
@@ -3073,13 +3074,12 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           const compressedBase64 = await compressImage(originalBase64);
           characterAvatar = { type: 'image', data: compressedBase64 };
         } else {
-          // 如果檔案類型不支援，就跳過這個檔案
           console.warn(`不支援的檔案格式，已略過: ${file.name}`);
           failureCount++;
-          continue; // 繼續處理下一個檔案
+          continue;
         }
         
-        const isV2OrV3Card = characterJsonData.spec === 'chara_card_v2' || characterJsonData.spec?.startsWith('chara_card_v');
+        const isV2OrV3Card = characterJsonData.spec?.startsWith('chara_card_v');
         const cardData = isV2OrV3Card ? characterJsonData.data : characterJsonData;
         if (!cardData.name && !cardData.char_name) {
           console.warn(`檔案格式錯誤，找不到角色名稱，已略過: ${file.name}`);
@@ -3087,90 +3087,53 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           continue;
         }
 
-        // =====================================================================
-        // ✨✨✨ 核心修正 (角色備註順序與標籤修正版) ✨✨✨
-        // =====================================================================
-        const descriptionParts = [];
-        
-        // 1. 角色描述 (如果為空，就不會被加入，這是正確的)
-        if (cardData.description) {
-          descriptionParts.push(cardData.description);
-        }
-
-        // 2. 個性
-        if (cardData.personality) {
-          descriptionParts.push(`[Personality]\n${cardData.personality}`);
-        }
-        
-        // 3. 場景
-        if (cardData.scenario) {
-          descriptionParts.push(`[Scenario]\n${cardData.scenario}`);
-        }
-
-        // 🔥🔥🔥 核心修正：在這裡插入角色備註 🔥🔥🔥
-        // 4. 角色備註 (Depth Prompt)
-        if (cardData.extensions?.depth_prompt?.prompt) {
-          // 並且使用一個更直觀的標籤
-          descriptionParts.push(`[角色備註]\n${cardData.extensions.depth_prompt.prompt}`);
-        }
-
-        // 5. 對話範例
-        if (cardData.mes_example) {
-          descriptionParts.push(`[Dialogue Example]\n${cardData.mes_example}`);
-        }
-
-        // 6. 用分隔線將它們組合起來
-        const combinedDescription = descriptionParts.join('\n\n---\n\n');
-        // =====================================================================
-
+        // ✨ 核心修改：不再合併，而是分開儲存 ✨
         const newCharacter = {
-          id: Date.now() + successCount, // 加上 successCount 確保 ID 不會重複
+          id: Date.now() + successCount,
           name: cardData.name || cardData.char_name,
-          description: combinedDescription, // ✨ 使用我們剛剛組合好的完整描述
+          
+          // --- 直接對應欄位 ---
+          description: cardData.description || '',
+          personality: cardData.personality || '',
+          scenario: cardData.scenario || '',
+          mes_example: cardData.mes_example || '',
+          
           firstMessage: cardData.first_mes || '',
           alternateGreetings: cardData.alternate_greetings || [],
-          creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '', 
-          personality: cardData.personality || '',
+          creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '',
           avatar: characterAvatar,
           characterBook: cardData.character_book || null,
-          fav: cardData.fav || false, // ✨ 讀取卡片中的 fav 狀態，如果沒有就預設為 false
+          fav: cardData.fav || false,
+          
+          // --- 將額外資訊也存進來，以便未來使用 ---
+          system_prompt: cardData.system_prompt || '',
+          post_history_instructions: cardData.post_history_instructions || '',
+          depth_prompt: cardData.extensions?.depth_prompt?.prompt || '',
         };
         
-        // --- 核心修改：不是立刻更新畫面，而是先把新角色存到暫存區 ---
         newlyImported.push(newCharacter);
         successCount++;
-        // --- 處理單一檔案的邏輯結束 ---
 
       } catch (error) {
-        // 如果在處理某個檔案時發生錯誤，紀錄下來並繼續處理下一個
         console.error(`匯入檔案 ${file.name} 失敗:`, error);
         failureCount++;
       }
     }
 
-    // 步驟 3: 迴圈結束後，一次性更新所有資料和畫面
     if (newlyImported.length > 0) {
-      // 將所有成功匯入的角色一次性存入資料庫
       await db.characters.bulkPut(newlyImported);
-      // 然後一次性更新 React 的 state，這樣畫面只會重新整理一次，效能更好
       setCharacters(prev => [...prev, ...newlyImported]);
     }
 
-    // 步驟 4: 顯示最終的匯入結果報告
     let summaryMessage = `✅ 批次匯入完成！\n\n`;
-    if (successCount > 0) {
-      summaryMessage += `成功匯入 ${successCount} 個角色。\n`;
-    }
-    if (failureCount > 0) {
-      summaryMessage += `有 ${failureCount} 個檔案匯入失敗，詳情請查看開發者主控台。`;
-    }
+    if (successCount > 0) summaryMessage += `成功匯入 ${successCount} 個角色。\n`;
+    if (failureCount > 0) summaryMessage += `有 ${failureCount} 個檔案匯入失敗，詳情請查看主控台。`;
     alert(summaryMessage);
 
-    // 最後，清空檔案選擇器的值，這樣使用者下次才能再次選擇同一個檔案
     if (event && event.target) {
       event.target.value = '';
     }
-  }, [characters]);
+  }, [characters]); // 依賴項不變
 
   // =================================================================================
   // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
@@ -3399,142 +3362,194 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   setApiTestLoading(false);
 }, [apiKey, apiProvider, apiModel, apiProviders]);
 
-// =================================================================================
-  // ✨✨✨ 全新！支援模組化提示詞的 sendToAI 函式 v2 ✨✨✨
+  // =================================================================================
+  // ✨✨✨ 最終完美版！sendToAI (v5) - 加入 Gemini 安全設定 ✨✨✨
   // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
+    // --- 1. API 檢查 (保持不變) ---
     const provider = apiProviders[apiProvider];
-    if (!provider) {
-      throw new Error(`API provider "${apiProvider}" not found.`);
-    }
-  
+    if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
     const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
-    if (allKeys.length === 0) {
-      throw new Error('尚未設定 API 金鑰。');
-    }
-  
+    if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
     const currentKey = allKeys[currentApiKeyIndex];
-    if (!currentKey) {
-      throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
-    }
-  
+    if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
     console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
-  
-    const estimateTokens = (text = '') => text.length;
-  
+
+    // --- 2. 準備所有「食材」(保持不變) ---
+    const estimateTokens = (text = '') => text ? text.length : 0;
+    const maxContextTokens = currentPrompt?.contextLength || 30000;
     const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
     const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
-    const characterDescription = applyPlaceholders(currentCharacter?.description || '', currentCharacter, currentUserProfile);
     const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
       ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
       : null;
-  
-    const historyForClaude = [];
-    const historyForOthers = [];
-    let currentTokenCount = 0;
-    const maxContextTokens = currentPrompt?.contextLength || 24000;
-  
-    for (let i = currentMessages.length - 1; i >= 0; i--) {
-      const message = currentMessages[i];
-      const messageText = message.contents[message.activeContentIndex];
-      const role = message.sender === 'user' ? 'user' : 'assistant';
-      const messageTokens = estimateTokens(messageText);
-  
-      if (currentTokenCount + messageTokens <= maxContextTokens) {
-        historyForClaude.unshift({ role, content: messageText });
-        historyForOthers.unshift({ role, content: messageText });
-        currentTokenCount += messageTokens;
-      } else {
-        break;
-      }
-    }
-  
-    const modules = currentPrompt?.modules || [];
-    let systemPromptParts = [];
-    const specialContentMap = new Map([
-      ['{{memory}}', activeMemory],
-      ['{{authorsNote}}', activeAuthorsNote],
-      ['{{char}}', characterDescription],
-      ['{{user}}', userDescription]
-    ]);
-  
-    modules.forEach(module => {
-      if (module.enabled && module.role === 'system') {
-        const content = module.content.trim();
-        if (specialContentMap.has(content)) {
-          const dynamicContent = specialContentMap.get(content);
-          if (dynamicContent) systemPromptParts.push(dynamicContent);
-        } else {
-          systemPromptParts.push(applyPlaceholders(module.content, currentCharacter, currentUserProfile));
+
+    // --- 3. 準備【格式化】的聊天紀錄 (關鍵修正！) ---
+    // 我們先只準備純文字格式的，方便注入到模組裡
+    let chatHistoryString = currentMessages
+        .map(msg => {
+            const senderName = msg.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name;
+            return `${senderName}: ${msg.contents[msg.activeContentIndex]}`;
+        })
+        .join('\n');
+        
+    // --- 4. 準備【全功能】佔位符字典 (關鍵修正！) ---
+    const placeholderMap = {
+      '{{char}}': currentCharacter.description || '',
+      '{{user}}': userDescription || '',
+      // ✨ 核心改變：我們現在注入純文字的聊天歷史
+      '{{chat_history}}': chatHistoryString,
+      '{{description}}': currentCharacter.description || '',
+      '{{persona}}': userDescription || '',
+      '{{personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
+      '{{Personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
+      '{{scenario}}': currentCharacter.scenario ? `[Scenario]\n${currentCharacter.scenario}` : '',
+      '{{mes_example}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
+      '{{example_dialogue}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
+      '{{memory}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
+      '{{summary}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '', // 兼容
+      '{{authors_note}}': activeAuthorsNote ? `[Author's Note]\n${activeAuthorsNote}` : '',
+      '{{system_prompt}}': currentCharacter.system_prompt || '',
+      '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
+      '{{depth_prompt}}': currentCharacter.depth_prompt ? `[角色備註]\n${currentCharacter.depth_prompt}`: '',
+      // ✨ 新增！處理 Mure 提示詞中的 {{group}} 佔位符
+      '{{group}}': currentCharacter.name,
+    };
+    
+    // --- 5. 【全新邏輯】組合系統指令和對話內容 ---
+    let systemInstructionParts = [];
+    let historyForAPI = [];
+    
+    // 遍歷所有啟用的模組
+    const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
+    for (const module of enabledModules) {
+        let moduleContent = module.content || '';
+
+        // 進行佔位符替換 (trim 和其他特殊指令可以在此處理)
+        if (moduleContent.includes('{{trim}}')) {
+            moduleContent = moduleContent.replace(/\{\{\/\/\s*(.*?)\s*\}\}\{\{trim\}\}/g, '').trim();
         }
-      }
+
+        for (const [placeholder, value] of Object.entries(placeholderMap)) {
+            const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+            moduleContent = moduleContent.replace(regex, value || '');
+        }
+
+        if (moduleContent.trim() === '') continue;
+
+        // 【核心判斷】根據模組的角色 (role) 分配到不同的地方
+        if (module.role === 'system') {
+            systemInstructionParts.push(moduleContent);
+        } else if (module.role === 'user' || module.role === 'assistant') {
+            historyForAPI.push({
+                // 將 assistant 轉換為 Gemini 認識的 model
+                role: module.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: moduleContent }]
+            });
+        }
+    }
+    
+    // 將過去的真實對話歷史，按照 user/model 的格式加入
+    currentMessages.forEach(msg => {
+        historyForAPI.push({
+            role: msg.sender === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.contents[msg.activeContentIndex] }]
+        });
     });
-  
-    const finalSystemPrompt = systemPromptParts.join('\n\n---\n\n');
-  
-    const continueText = '請直接延續上一句 assistant 回覆。';
-    const userMessageContent = (typeof userInput === 'string' && userInput.trim() !== '') ? userInput : continueText;
-  
-    historyForClaude.push({ role: 'user', content: userMessageContent });
-    historyForOthers.push({ role: 'user', content: userMessageContent });
-  
+
+    // 加入本次使用者輸入的訊息
+    if (typeof userInput === 'string' && userInput.trim() !== '') {
+        historyForAPI.push({
+            role: 'user',
+            parts: [{ text: userInput }]
+        });
+    }
+
+    // --- 6. 發送最終請求 (保持不變的部分) ---
     try {
-      let endpoint = provider.endpoint;
-      const headers = provider.headers(currentKey);
-      const maxOutputTokens = currentPrompt?.maxTokens || 800;
-      const temperature = currentPrompt?.temperature || 1.0;
-      let requestBody;
-  
-      if (provider.isGemini) {
-        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
-        const geminiHistory = historyForOthers.slice(0, -1).map(msg => ({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }]
-        }));
-        const lastUserTurn = { role: 'user', parts: [{ text: userMessageContent }] };
-        requestBody = {
-          contents: [...geminiHistory, lastUserTurn],
-          systemInstruction: { parts: [{ text: finalSystemPrompt }] },
-          generationConfig: { temperature, maxOutputTokens }
-        };
-      } else if (apiProvider === 'claude') {
-        requestBody = {
-          model: apiModel,
-          max_tokens: maxOutputTokens,
-          temperature,
-          messages: historyForClaude,
-          system: finalSystemPrompt
-        };
-      } else {
-        requestBody = {
-          model: apiModel,
-          messages: [
-            { role: 'system', content: finalSystemPrompt },
-            ...historyForOthers
-          ],
-          max_tokens: maxOutputTokens,
-          temperature
-        };
+        let endpoint = provider.endpoint;
+        const currentKey = apiKey.split('\n').map(k => k.trim()).filter(Boolean)[currentApiKeyIndex];
+        const headers = provider.headers(currentKey);
+        const maxOutputTokens = currentPrompt?.maxTokens || 6000;
+        const temperature = currentPrompt?.temperature || 1.2;
+        let requestBody;
+
+        if (provider.isGemini) {
+            endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+            
+            // 【關鍵修正！】組合最終的請求體
+            requestBody = {
+              contents: historyForAPI, // 這裡只放真正的對話
+              systemInstruction: {
+                parts: [{ text: systemInstructionParts.join('\n\n') }] // 這裡放所有的規則
+              },
+              generationConfig: { temperature, maxOutputTokens },
+              safetySettings: [
+                  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+              ]
+            };
+        } else {
+          // 【✨ 修正 ✨】
+          // 為了兼容 OpenAI/Claude 等格式，我們需要重新組合一個類似 finalMessages 的陣列
+          
+          const finalMessagesForOtherAPIs = [];
+
+          // 1. 先將所有系統指令合併成一個大的 system message
+          const systemContent = systemInstructionParts.join('\n\n');
+          if (systemContent) {
+              finalMessagesForOtherAPIs.push({ role: 'system', content: systemContent });
+          }
+
+          // 2. 接著，將 user/model (assistant) 的對話歷史加進來
+          historyForAPI.forEach(msg => {
+              finalMessagesForOtherAPIs.push({
+                  // 將 Gemini 的 'model' 轉回通用的 'assistant'
+                  role: msg.role === 'model' ? 'assistant' : 'user',
+                  content: msg.parts[0].text 
+              });
+          });
+
+          // 現在，我們可以使用這個 finalMessagesForOtherAPIs 來建立請求
+          // (下面的邏輯是 Claude 的特殊處理，如果您的 App 不需要，可以直接使用 finalMessagesForOtherAPIs)
+
+          if (apiProvider === 'claude') {
+              // Claude 需要特別處理：將 system message 分離出來
+              const claudeSystemPrompt = finalMessagesForOtherAPIs.filter(m => m.role === 'system').map(m => m.content).join('\n\n');
+              const claudeUserAssistantHistory = finalMessagesForOtherAPIs.filter(m => m.role !== 'system');
+              requestBody = { model: apiModel, max_tokens: maxOutputTokens, temperature, messages: claudeUserAssistantHistory, system: claudeSystemPrompt };
+          } else {
+              // 對於標準 OpenAI 格式的 API
+              requestBody = { model: apiModel, messages: finalMessagesForOtherAPIs, max_tokens: maxOutputTokens, temperature };
+          }
       }
-  
+
+      // --- 7. 後續處理 (保持不變) ---
+      console.log("最終發送給 API 的請求:", JSON.stringify(requestBody, null, 2));
       const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
-  
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
       }
-  
       const data = await response.json();
       let aiText = null;
       if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
       else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
       else aiText = data.choices?.[0]?.message?.content;
-  
+      
+      // ✨ Gemini 被攔截時，aiText 會是 null，但 data 裡面會有 blockReason
+      if (data.promptFeedback && data.promptFeedback.blockReason) {
+          throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`);
+      }
+      
       if (aiText && aiText.trim() !== '') {
         console.log(`金鑰 #${currentApiKeyIndex + 1} 請求成功！`);
         return aiText;
       } else {
-        throw new Error('AI 回應為空');
+        // 如果 aiText 是空的，但又沒有 blockReason，就回傳一個更通用的錯誤
+        throw new Error('AI 回應為空或格式不正確');
       }
     } catch (error) {
       console.error(`金鑰 #${currentApiKeyIndex + 1} 失敗:`, error.message);
@@ -3719,24 +3734,10 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         await triggerMemoryUpdate(true); 
       }
     } catch (error) {
-        const errorMessage = {
-          id: Date.now() + 1,
-          sender: 'system',
-          contents: ['發生錯誤：' + error.message],
-          activeContentIndex: 0,
-          timestamp: getFormattedTimestamp(),
-        };
-        const historyWithError = [...currentHistory, errorMessage];
+    console.error("續寫失敗:", error);
+    // 直接彈出警告視窗，不新增系統訊息
+    alert(`續寫失敗：\n\n${error.message}`);
 
-        const historiesWithError = {
-            ...chatHistories,
-            [activeChatCharacterId]: {
-                ...(chatHistories[activeChatCharacterId] || {}),
-                [activeChatId]: historyWithError
-            }
-        };
-        setChatHistories(historiesWithError);
-        await db.kvStore.put({ key: 'chatHistories', value: historiesWithError });
     } finally {
       setIsLoading(false);
     }
