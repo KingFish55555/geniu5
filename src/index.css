@@ -3356,3 +3356,18 @@ input[type="range"]:hover::-webkit-slider-thumb {
   /* ...也把它往下移動，放到原本 AI 泡泡「編輯按鈕」的位置 */
   bottom: 46px; /* 從原本的 76px 下修 (10px 的基礎高度 + 36px 的間距) */
 }
+
+/* =================================== */
+/*  資料管理 - 說明文字樣式              */
+/* =================================== */
+
+.data-management-note {
+  font-size: 0.85em; /* 讓字稍微小一點 */
+  color: var(--text-secondary); /* 使用次要文字顏色 */
+  background-color: var(--surface-color); /* 給跟背景不同的底色 */
+  border-left: 3px solid var(--primary-color); /* 在左邊加上一條強調線 */
+  padding: 10px 12px; /* 增加一些內邊距離 */
+  margin: -5px 0 20px 0; /* 調整外邊距離 */
+  border-radius: 4px; /* 加上圓角 */
+  line-height: 1.5; /* 調整行高，讓文字容易閱讀 */
+}

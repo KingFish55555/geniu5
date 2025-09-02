@@ -2060,6 +2060,12 @@ const SettingsPage = ({
             
             {expandedSection === 'data' && (
               <div className="card-content">
+                {/* ▼▼▼ 【✨ 在這裡插入您的說明文字 ✨】 ▼▼▼ */}
+                <p className="data-management-note">
+                  提示：除了 API 金鑰以外，應用程式中的所有資料（包含角色、對話紀錄、提示詞等）都會被匯出成單一的 .json 檔案。
+                </p>
+                {/* ▲▲▲ 【✨ 新增結束 ✨】 ▲▲▲ */}
+
                 <div className="setting-group">
                   <label className="setting-label">匯出資料</label>
                   <div className="data-buttons">
@@ -2115,7 +2121,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.31</p>
+                  <p>版本：0.5.32</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3460,18 +3466,23 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
         : null;
       
-      // 將【真實的】對話歷史，先準備成純文字格式，這是為了給 {{chat_history}} 佔位符使用
-      const chatHistoryString = currentMessages
-          .map(msg => {
-              const senderName = msg.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name;
-              const content = msg.contents[msg.activeContentIndex];
-              // 為了和 ST 的格式更像，我們把使用者輸入的 OOC 指令也加進來
-              if (msg.sender === 'user' && userInput && currentMessages[currentMessages.length - 1].id === msg.id) {
-                  return `${senderName}: ${content}\n${userInput}`;
-              }
-              return `${senderName}: ${content}`;
-          })
+      // ✨ 核心修正 v2：我們不僅要移除舊歷史的 senderName，
+      // ✨ 也要確保新訊息 userInput 被正確地、不帶前綴地加進去。
+      
+      // 1. 先從【舊的】對話歷史中，只取出純文字內容
+      let chatHistoryString = currentMessages
+          .map(msg => msg.contents[msg.activeContentIndex])
           .join('\n');
+
+      // 2. 然後，將【本次新的】使用者輸入，也【不帶前綴地】加到最後面
+      //    userInput 就是從 sendMessage 傳進來的原始訊息
+      if (userInput && userInput.trim() !== '') {
+        // 如果前面已經有歷史了，就先加一個換行符
+        if (chatHistoryString) {
+          chatHistoryString += '\n';
+        }
+        chatHistoryString += userInput;
+      }
 
       // --- 步驟 3: 建立【全功能】的佔位符字典 ---
       const placeholderMap = {
