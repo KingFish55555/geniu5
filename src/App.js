@@ -3444,69 +3444,46 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 }, [apiKey, apiProvider, apiModel, apiProviders]);
 
   // =================================================================================
-  // ✨✨✨ 最終版！sendToAI (v7) - 100% 模擬 ST 封裝邏輯 ✨✨✨
+  // ✨✨✨ 終極版！sendToAI (v8) - 完美兼容 Gemini 與 Mistral/OpenAI ✨✨✨
   // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
-      // --- 步驟 1: API 與金鑰檢查 (這部分保持不變) ---
+      // --- 步驟 1 & 2: 準備 API 和文字原料 (保持不變) ---
       const provider = apiProviders[apiProvider];
       if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
-      
       const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
       if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
-      
       const currentKey = allKeys[currentApiKeyIndex];
       if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
       
-      console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
-
-      // --- 步驟 2: 準備所有會用到的「文字原料」(這部分也幾乎不變) ---
       const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
       const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
       const userDescription = (currentUserProfile?.name || currentUserProfile?.description)
         ? `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`
         : null;
-      
-      // ✨ 核心修正 v2：我們不僅要移除舊歷史的 senderName，
-      // ✨ 也要確保新訊息 userInput 被正確地、不帶前綴地加進去。
-      
-      // 1. 先從【舊的】對話歷史中，只取出純文字內容
-      let chatHistoryString = currentMessages
-          .map(msg => msg.contents[msg.activeContentIndex])
-          .join('\n');
 
-      // 2. 然後，將【本次新的】使用者輸入，也【不帶前綴地】加到最後面
-      //    userInput 就是從 sendMessage 傳進來的原始訊息
-      if (userInput && userInput.trim() !== '') {
-        // 如果前面已經有歷史了，就先加一個換行符
-        if (chatHistoryString) {
-          chatHistoryString += '\n';
-        }
-        chatHistoryString += userInput;
-      }
-
-      // --- 步驟 3: 建立【全功能】的佔位符字典 ---
+      // --- 步驟 3: 準備佔位符字典 (保持不變，但移除 chat_history) ---
+      // ✨ 核心修正：我們不再預先組合 chatHistoryString，因為不同 API 的處理方式不同
       const placeholderMap = {
         '{{char}}': currentCharacter.description || '',
         '{{user}}': userDescription || '',
-        '{{chat_history}}': chatHistoryString,
         '{{description}}': currentCharacter.description || '',
         '{{persona}}': userDescription || '',
-        '{{personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
-        '{{Personality}}': currentCharacter.personality ? `[Personality]\n${currentCharacter.personality}` : '',
-        '{{scenario}}': currentCharacter.scenario ? `[Scenario]\n${currentCharacter.scenario}` : '',
-        '{{mes_example}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
-        '{{example_dialogue}}': currentCharacter.mes_example ? `[Dialogue Example]\n${currentCharacter.mes_example}` : '',
-        '{{memory}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
-        '{{summary}}': activeMemory ? `[Long-Term Memory]\n${activeMemory}` : '',
-        '{{authors_note}}': activeAuthorsNote ? `[Author's Note]\n${activeAuthorsNote}` : '',
+        '{{personality}}': currentCharacter.personality || '',
+        '{{Personality}}': currentCharacter.personality || '', // 兼容大小寫
+        '{{scenario}}': currentCharacter.scenario || '',
+        '{{mes_example}}': currentCharacter.mes_example || '',
+        '{{example_dialogue}}': currentCharacter.mes_example || '',
+        '{{memory}}': activeMemory || '',
+        '{{summary}}': activeMemory || '',
+        '{{authors_note}}': activeAuthorsNote || '',
         '{{system_prompt}}': currentCharacter.system_prompt || '',
         '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
-        '{{depth_prompt}}': currentCharacter.depth_prompt ? `[角色備註]\n${currentCharacter.depth_prompt}`: '',
+        '{{depth_prompt}}': currentCharacter.depth_prompt || '',
         '{{group}}': currentCharacter.name,
-        // 加上一個空的 input 佔位符，以防萬一
         '{{input}}': userInput || '',
       };
-
+      
+      // ✨ 預處理角色描述中的 {{user}} 佔位符
       if (currentCharacter.description) {
           currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile);
       }
@@ -3514,83 +3491,59 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile);
       }
 
-      // --- 步驟 4: 【核心邏輯】依照 ST 模式，組合最終的請求體 ---
+      // --- 步驟 4: 【全新邏輯】組合請求 ---
       let requestBody;
-
       try {
-          // 取得所有啟用的模組，並確保它們有順序 (雖然在您的 App 中順序是固定的)
           const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
+          let preambleString = ''; // 用來拼接所有前導指令
+          let chatHistoryModuleFound = false;
 
-          // 建立一個「巨型前導文 (Mega Preamble)」字串，用來拼接所有非對話的指令
-          let preambleString = '';
-          
-          // 遍歷所有啟用的模組
+          // 遍歷所有模組，拼接成一個巨大的前導指令字串
           for (const module of enabledModules) {
               let moduleContent = module.content || '';
 
-              // 如果模組內容是 {{chat_history}}，代表這裡是對話歷史的插入點
-              // 我們就在這裡插入【真實的】對話歷史，然後跳過這個模組，避免重複處理
               if (moduleContent.includes('{{chat_history}}')) {
-                  // 先把 {{chat_history}} 之前的部分加進前導文
+                  chatHistoryModuleFound = true;
+                  // 我們只取聊天歷史【之前】的部分
                   preambleString += moduleContent.split('{{chat_history}}')[0];
-                  // 然後把聊天歷史本身加進去
-                  preambleString += chatHistoryString;
-                  // 最後加上 {{chat_history}} 之後的部分
-                  preambleString += moduleContent.split('{{chat_history}}')[1];
-                  continue; // 處理完畢，跳到下一個模組
+                  // 遇到聊天歷史就停止，後面的部分由 API 格式決定如何處理
+                  break; 
               }
 
-              // 對於其他普通模組，進行佔位符替換
               for (const [placeholder, value] of Object.entries(placeholderMap)) {
+                  if (placeholder === '{{chat_history}}') continue; // 忽略 chat_history
                   const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                  if (regex.test(moduleContent)) {
-                      moduleContent = moduleContent.replace(regex, value || '');
-                  }
+                  moduleContent = moduleContent.replace(regex, value || '');
               }
               
-              // 處理特殊指令，例如 {{trim}}
-              if (moduleContent.includes('{{trim}}')) {
-                  moduleContent = moduleContent.replace(/\{\{\/\/\s*(.*?)\s*\}\}\{\{trim\}\}/g, '').trim();
-              }
-
-              // 將處理完的模組內容，拼接到我們的「巨型前導文」後面
               if (moduleContent.trim()) {
-                  preambleString += moduleContent + '\n\n'; // 用兩個換行符來分隔模組，更清晰
+                  preambleString += moduleContent + '\n\n';
               }
           }
           
-          // 檢查前導文中是否已經包含了對話歷史。如果沒有（代表提示詞模組裡沒有 {{chat_history}}），
-          // 我們就在最後面補上，確保對話歷史不會遺失。
-          if (!preambleString.includes(chatHistoryString)) {
-              preambleString += chatHistoryString;
-          }
-
-          // --- 步驟 5: 針對不同的 API供應商，封裝最終的 requestBody ---
-
           let endpoint = provider.endpoint;
           const headers = provider.headers(currentKey);
           const maxOutputTokens = currentPrompt?.maxTokens || 4000;
           const temperature = currentPrompt?.temperature || 1.2;
 
           if (provider.isGemini) {
+              // --- Gemini 的處理邏輯 (模仿 ST 的單一 User Message) ---
               endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
               
-              // 【關鍵！】我們不再使用 systemInstruction，而是模仿 ST，
-              // 把所有東西都打包成一個巨大的 user message。
+              // 重新組合對話歷史字串，包含 userInput
+              let fullChatHistoryString = currentMessages
+                  .map(msg => msg.contents[msg.activeContentIndex])
+                  .join('\n');
+              if (userInput && userInput.trim()) {
+                  if (fullChatHistoryString) fullChatHistoryString += '\n';
+                  fullChatHistoryString += userInput;
+              }
+
+              const finalPreamble = preambleString + fullChatHistoryString;
+
               requestBody = {
-                contents: [
-                    {
-                        role: 'user',
-                        parts: [{ text: preambleString }]
-                    }
-                ],
-                generationConfig: { 
-                    temperature, 
-                    maxOutputTokens,
-                    // 加上其他 Mure 提示詞裡有的參數
-                    topP: currentPrompt?.top_p ?? 0.9,
-                    topK: currentPrompt?.top_k ?? 150,
-                },
+                contents: [{ role: 'user', parts: [{ text: finalPreamble }] }],
+                generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, },
                 safetySettings: [
                     { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
                     { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -3598,31 +3551,35 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
                     { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
                 ]
               };
+
           } else {
-            // 對於 OpenAI 或 Claude 等其他 API 的處理邏輯
-            // 我們也採用類似的「打包」策略，但格式是 {role, content}
-            const messagesForOtherAPI = [
-                {
-                    role: 'system', // 可以把一部分核心指令放在 system
-                    content: "You are a helpful assistant." // 這裡可以放一個通用的基礎指令
-                },
-                {
-                    role: 'user',
-                    content: preambleString // 把我們組合好的所有東西放進 user message
-                }
-            ];
-            
-            requestBody = {
-                model: apiModel,
-                messages: messagesForOtherAPI,
-                max_tokens: maxOutputTokens,
-                temperature
-            };
+              // --- Mistral / OpenAI 的處理邏輯 (標準 System + User/Assistant 格式) ---
+              const messages = [];
+
+              // 1. 將前導指令作為 System Message
+              if (preambleString.trim()) {
+                  messages.push({ role: 'system', content: preambleString.trim() });
+              }
+
+              // 2. 建立一來一回的對話歷史
+              currentMessages.forEach(msg => {
+                  messages.push({
+                      role: msg.sender === 'user' ? 'user' : 'assistant',
+                      content: msg.contents[msg.activeContentIndex]
+                  });
+              });
+
+              // 3. 加入本次的使用者輸入
+              if (userInput && userInput.trim()) {
+                  messages.push({ role: 'user', content: userInput });
+              }
+
+              requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature };
           }
 
-          console.log("【最終版】發送給 API 的請求:", JSON.stringify(requestBody, null, 2));
+          console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2));
           
-          // --- 步驟 6: 發送請求與處理回應 (這部分保持不變) ---
+          // --- 步驟 5: 發送請求與處理回應 (保持不變) ---
           const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
           if (!response.ok) {
               const errorText = await response.text();
@@ -3639,7 +3596,6 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           }
           
           if (aiText && aiText.trim() !== '') {
-              console.log(`金鑰 #${currentApiKeyIndex + 1} 請求成功！`);
               return aiText;
           } else {
               throw new Error('AI 回應為空或格式不正確');
@@ -3647,11 +3603,9 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
       } catch (error) {
           console.error(`處理或發送請求時發生錯誤:`, error);
-          // 如果錯誤發生，讓上層的 sendMessage 函式去處理 UI 的回饋
           throw error; 
       }
   }, [
-      // 依賴項列表，請確保這裡包含了所有函式中用到的 state 和 props
       apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
       currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
       chatMetadatas, currentApiKeyIndex
