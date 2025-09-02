@@ -881,7 +881,19 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
         */}
         <div className="bubble-wrapper" onClick={isScreenshotMode ? (e) => e.stopPropagation() : handleBubbleClick}>
 
-          <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+          <ReactMarkdown
+            rehypePlugins={[rehypeRaw]}
+            // ▼▼▼ 【✨ 核心修正就在這裡！ ✨】 ▼▼▼
+            components={{
+              // 我們告訴 ReactMarkdown：
+              // 當你遇到一個叫做 'filtered' 的標籤時...
+              filtered: ({node, ...props}) => 
+                // ...請你把它渲染成一個 <span> 標籤
+                // 並且把它的內容（props.children）原封不動地放進去
+                <span {...props} /> 
+            }}
+            // ▲▲▲ 【✨ 修正結束 ✨】 ▲▲▲
+          >
             {processedText}
           </ReactMarkdown>
 
@@ -1485,11 +1497,11 @@ const ChatPage = ({ oocCommands, onOpenOocSelector, onSelectOocCommand, messages
                 <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyY2xlIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg=='} alt="User Avatar" className="avatar-image" />
               </div>
               <div className="chat-info-details">
-                <span className="current-character">與 {currentCharacter.name} 對話</span>
                 <span className="current-prompt">
-                  作為 {currentUserProfile.name || '(未命名身份)'}
+                  {currentUserProfile.name || '(未命名身份)'}
                   {currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}
                 </span>
+                <span className="current-character">正在與 {currentCharacter.name} 對話</span>
                 {/* ✨✨✨ 在這裡新增下面這段程式碼 ✨✨✨ */}
                 {currentPrompt && (
                   <span className="current-prompt" style={{ opacity: 0.7 }}>
@@ -2041,7 +2053,7 @@ const SettingsPage = ({
             >
               <div className="card-title">
                 <Database size={20} />
-                <span>資料管理 (功能開發中)</span>
+                <span>資料管理</span>
               </div>
               <span className="expand-arrow">{expandedSection === 'data' ? '▲' : '▼'}</span>
             </button>
@@ -2051,25 +2063,27 @@ const SettingsPage = ({
                 <div className="setting-group">
                   <label className="setting-label">匯出資料</label>
                   <div className="data-buttons">
+                    {/* ✨ 修改按鈕文字和功能 ✨ */}
                     <button onClick={exportChatHistory} className="data-btn export">
                       <Download size={16} />
-                      匯出聊天紀錄 (TXT)
+                      匯出全站資料 (.json)
                     </button>
                   </div>
                 </div>
                 <div className="setting-group">
                   <label className="setting-label">匯入資料</label>
                   <div className="data-buttons">
+                    {/* ✨ 修改檔案選擇器的 accept 屬性和綁定的函式 ✨ */}
                     <input
                       type="file"
                       id="import-chat"
-                      accept=".txt"
+                      accept=".json" 
                       onChange={handleImportChat}
                       style={{ display: 'none' }}
                     />
                     <label htmlFor="import-chat" className="data-btn import">
                       <Upload size={16} />
-                      匯入聊天紀錄 (TXT)
+                      匯入全站資料 (.json)
                     </label>
                   </div>
                 </div>
@@ -4330,6 +4344,144 @@ const formatStDate = (date, type = 'send_date') => {
     if (event.target) event.target.value = '';
   }, [currentUserProfile, activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
+  // ==================== 全新！全站資料匯出函式 ====================
+  const handleExportAllData = useCallback(async () => {
+    if (!window.confirm('您確定要匯出所有應用程式資料嗎？\n\n這將會產生一個包含您所有角色、對話和設定的 JSON 檔案。')) {
+      return;
+    }
+
+    try {
+      console.log("正在準備匯出所有資料...");
+      
+      // 從 IndexedDB 中一次性讀取所有需要的資料
+      const [
+        charactersToExport,
+        chatHistoriesToExport,
+        chatMetadatasToExport,
+        longTermMemoriesToExport,
+        promptsToExport,
+        oocCommandsToExport,
+        userProfilesToExport,
+        apiConfigsToExport // 我們也順便備份 API 配置，但不包含金鑰
+      ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+        const chars = await db.characters.toArray();
+        const proms = await db.prompts.toArray();
+        const configs = await db.apiConfigs.toArray();
+        const hist = (await db.kvStore.get('chatHistories'))?.value || {};
+        const meta = (await db.kvStore.get('chatMetadatas'))?.value || {};
+        const mem = (await db.kvStore.get('longTermMemories'))?.value || {};
+        const profiles = (await db.kvStore.get('userProfiles'))?.value || [];
+        const ooc = (await db.kvStore.get('oocCommands'))?.value || [];
+        return [chars, hist, meta, mem, proms, ooc, profiles, configs];
+      });
+
+      // 建立一個結構化的備份物件
+      const backupData = {
+        version: 'geniu5-backup-v1', // 加上版本號，方便未來升級
+        timestamp: new Date().toISOString(),
+        data: {
+          characters: charactersToExport,
+          chatHistories: chatHistoriesToExport,
+          chatMetadatas: chatMetadatasToExport,
+          longTermMemories: longTermMemoriesToExport,
+          prompts: promptsToExport,
+          oocCommands: oocCommandsToExport,
+          userProfiles: userProfilesToExport,
+          // 為了安全，我們只備份 API 配置的名稱和設定，但不包含敏感的 API 金鑰
+          apiConfigs: apiConfigsToExport.map(c => ({...c, keysByProvider: {}}))
+        }
+      };
+
+      // 將物件轉換為 JSON 字串
+      const jsonString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `geniu5_backup_${timestamp}.json`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      alert('✅ 所有資料已成功匯出！請妥善保管您的備份檔案。');
+
+    } catch (error) {
+      console.error("全站資料匯出失敗:", error);
+      alert(`❌ 匯出失敗：${error.message}`);
+    }
+  }, []); // 這個函式沒有依賴項，所以是空陣列
+
+  // ==================== 全新！全站資料匯入函式 ====================
+  const handleImportAllData = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target.result;
+        const backupData = JSON.parse(content);
+
+        // 進行基本的格式驗證
+        if (backupData.version !== 'geniu5-backup-v1' || !backupData.data) {
+          throw new Error('檔案格式不正確或不受支援。');
+        }
+
+        const data = backupData.data;
+
+        // 【極度重要的警告！】
+        if (!window.confirm(
+            '🚨🚨🚨 最高警告！🚨🚨🚨\n\n' +
+            '您確定要從檔案匯入所有資料嗎？\n\n' +
+            '此操作將會【完全覆蓋】您目前應用程式中的【所有】角色、對話紀錄和設定！\n\n' +
+            '這個動作無法復原！確定要繼續嗎？'
+        )) {
+            return; // 如果使用者取消，就立刻終止
+        }
+
+        console.log("正在清空現有資料並寫入新資料...");
+
+        // 使用資料庫交易，一次性完成所有寫入操作
+        await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+            // 1. 清空所有舊資料
+            await db.characters.clear();
+            await db.prompts.clear();
+            // 注意：我們不清空 apiConfigs，因為裡面可能存有使用者的金鑰
+            await db.kvStore.clear();
+
+            // 2. 寫入所有新資料
+            await db.characters.bulkPut(data.characters || []);
+            await db.prompts.bulkPut(data.prompts || []);
+            await db.kvStore.put({ key: 'chatHistories', value: data.chatHistories || {} });
+            await db.kvStore.put({ key: 'chatMetadatas', value: data.chatMetadatas || {} });
+            await db.kvStore.put({ key: 'longTermMemories', value: data.longTermMemories || {} });
+            await db.kvStore.put({ key: 'userProfiles', value: data.userProfiles || [] });
+            await db.kvStore.put({ key: 'oocCommands', value: data.oocCommands || [] });
+        });
+        
+        alert('✅ 資料已成功匯入！應用程式即將重新載入...');
+        
+        // 延遲一小段時間再重整，確保資料庫寫入完成
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+
+      } catch (error) {
+        console.error("全站資料匯入失敗:", error);
+        alert(`❌ 匯入失敗：${error.message}`);
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  }, []); // 這個函式也沒有依賴項
+
   const clearAllData = useCallback(() => {
     if (window.confirm('⚠️ 確定要清除所有資料嗎？此操作無法復原！\n\n將會清除：\n• 所有聊天紀錄\n• 角色資料\n• 提示詞\n• 使用者設定\n• API 配置')) {
       localStorage.clear();
@@ -4451,8 +4603,8 @@ const formatStDate = (date, type = 'send_date') => {
               onOpenThemeSwitcher={() => setIsThemeSwitcherOpen(true)}
               fontSize={fontSize}
               setFontSize={setFontSize}
-              exportChatHistory={exportChatHistory}
-              handleImportChat={handleImportChat}
+              exportChatHistory={handleExportAllData} // ✨ 將舊的 prop 替換為新的匯出函式
+              handleImportChat={handleImportAllData}  // ✨ 將舊的 prop 替換為新的匯入函式
               clearAllData={clearAllData}
               apiConfigs={apiConfigs}
               configName={configName}
