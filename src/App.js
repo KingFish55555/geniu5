@@ -2889,7 +2889,7 @@ useEffect(() => {
 
       const screenshotContainer = document.createElement('div');
       // ... (樣式設定保持不變) ...
-      screenshotContainer.style.backgroundColor = theme === 'dark' ? '#222222' : '#f9fafb';
+      screenshotContainer.style.backgroundColor = 'var(--surface-color)';
       screenshotContainer.style.padding = '25px';
       screenshotContainer.style.width = '600px';
       screenshotContainer.style.display = 'flex';
@@ -3308,7 +3308,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       const updatedCharacters = characters.filter(c => c.id !== characterId);
       setCharacters(updatedCharacters);
       if (currentCharacter?.id === characterId) setCurrentCharacter(null);
-      alert('🗑️......角色已離開');
+      alert('🗑️......\n.....\n....\n...角色已離開');
       closeEditor();
       closePreview();
 
@@ -3994,7 +3994,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
       try {
         const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-        const summaryPrompt = `請將以下的對話創造一個簡潔的總結，應以第三人稱書寫。重點關注關鍵情節點、人物發展以及關鍵訊息交流。這份總結將作為角色的長期記憶，因此準確性和客觀性至關重要。請不要使用任何粗體格式（**文字**）來回應，保持純文字格式即可。\n\n對話內容：\n${conversationText}`;
+        const summaryPrompt = `Ignore previous instructions and skip the reasoning step. Please create a concise summary of the following conversation record. Summarize the most important facts and events in the story so far in English. If a summary already exists in your memory, use that as a base and expand with new facts. Limit the summary to 600 words or less. Your response should include nothing but the summary. Do not include character backstories, world info, or relationship origins unless they were explicitly played out in this session.\n${conversationText}`;
 
         const summary = await sendToAI(summaryPrompt, []);
 
@@ -4261,7 +4261,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   const handleDeleteMessage = useCallback((messageId) => {
     if (!activeChatCharacterId || !activeChatId) return;
 
-    if (window.confirm('確定要永久刪除這則訊息嗎？\n\n再想一下喔')) {
+    if (window.confirm('確定要永久刪除這則訊息嗎？\n\n再想一下喔\n\n(你是不是以為刪掉就不用負責了？)')) {
       setChatHistories(prev => {
         const newHistories = JSON.parse(JSON.stringify(prev));
         const currentHistory = newHistories[activeChatCharacterId][activeChatId];
