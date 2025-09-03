@@ -63,9 +63,12 @@
 
   /* --- 背景顏色 --- */
   --background-color: rgb(205, 238, 203);
-  /* ✨✨✨ 在這裡使用正確的路徑 ✨✨✨ */
   --surface-color: rgb(253, 250, 239);
+  --gradient-bg: rgb(253, 250, 239);
+
+  /* --- 使用者聊天泡泡 --- */
   --user-color: rgb(245, 241, 191, 0.5);
+  
   /* --- 文字顏色 --- */
   --text-primary: rgb(104, 60, 11);
   --text-secondary: rgb(146, 106, 58);
@@ -90,6 +93,7 @@
   /* --- 背景顏色 (溫暖牛奶) --- */
   --background-color: #fdfaf6; /* 溫暖的乳白色 */
   --surface-color: #fbf3e9;    /* 拿鐵色，比背景稍深 */
+  --gradient-bg: #fbf3e9;
   
   /* --- 使用者聊天泡泡 (牛奶巧克力) --- */
   --user-color: rgba(160, 115, 80, 0.2);
@@ -112,24 +116,25 @@
 /* ✨ 全新！懷舊書卷 (Old Books) 主題 ✨ */
 :root[data-theme="old-books"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: #6f595d;
-  --accent-color: #735d60;
-  --topline-color: #dcc5b8;
+  --primary-color: rgb(111, 89, 93);
+  --accent-color: #af7e7e;
+  --topline-color: rgb(111, 89, 93, 0.7);
 
   /* --- 背景顏色 --- */
-  --background-color: #e1cabc;
+  --background-color: #d3c2b8;
   --surface-color: #e5cfc0;
+  --gradient-bg: #e5cfc0;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(212, 189, 178, 0.5); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(182, 169, 164, 0.75); /* 使用 secondary 色的半透明版 */
 
   /* --- 文字顏色 --- */
-  --text-primary: #56464a;
+  --text-primary: #77585f;
   --text-secondary: #856b6e;
-  --text-muted: rgba(133, 107, 110, 0.7);
+  --text-muted: rgba(151, 116, 120, 0.7);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #6f595d;
+  --quote-text-color: #af7e7e;
 
   /* --- 其他顏色 --- */
   --border-color: #b19595;
@@ -141,24 +146,25 @@
 /* ✨ 全新！古典藍調 (Old Blue) 主題 ✨ */
 :root[data-theme="old-blue"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: #535c95;
-  --accent-color: #586099;
-  --topline-color: #d1c7c8;
+  --primary-color: rgb(83, 92, 149);
+  --accent-color: #597da7;
+  --topline-color: rgb(83, 92, 149, 0.7);
 
   /* --- 背景顏色 --- */
-  --background-color: #dacbc8;
-  --surface-color: #e1d0c8;
+  --background-color: #d3c6c3;
+  --surface-color: #d1c5bf;
+  --gradient-bg: #d1c5bf;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(201, 189, 200, 0.5); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(177, 175, 177, 0.75); /* 使用 secondary 色的半透明版 */
 
   /* --- 文字顏色 --- */
-  --text-primary: #42497d;
+  --text-primary: #4953a1;
   --text-secondary: #666ea6;
-  --text-muted: rgba(102, 110, 166, 0.7);
+  --text-muted: rgba(104, 113, 179, 0.7);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #535c95;
+  --quote-text-color: #597da7;
 
   /* --- 其他顏色 --- */
   --border-color: #9799c8;
@@ -170,25 +176,25 @@
 /* ✨ 全新！風信子紫 (Hyacinth Mauve) 主題 ✨ */
 :root[data-theme="hyacinth-mauve"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: #665877;
-  --accent-color: #6b5c7d;
-  /* ✨ 核心修改：使用強調色作為頂部導覽列背景，實現深色效果 ✨ */
-  --topline-color: #6b5c7d; 
+  --primary-color: rgb(102, 88, 119);
+  --accent-color: #7071c0;
+  --topline-color: rgb(102, 88, 119, 0.7);
 
   /* --- 背景顏色 --- */
-  --background-color: #ddcac8;
-  --surface-color: #e3cfc8;
+  --background-color: #c7bdbb;
+  --surface-color: #ccc4c1;
+  --gradient-bg: #ccc4c1;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(206, 187, 200, 0.5); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(184, 176, 181, 0.75); /* 使用 secondary 色的半透明版 */
 
   /* --- 文字顏色 --- */
-  --text-primary: #514461;
-  --text-secondary: #7c698b;
-  --text-muted: rgba(124, 105, 139, 0.7);
+  --text-primary: #5f4e74;
+  --text-secondary: #8b739e;
+  --text-muted: rgba(141, 116, 160, 0.7);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #665877;
+  --quote-text-color: #7071c0;
 
   /* --- 其他顏色 --- */
   --border-color: #a993af;
@@ -200,24 +206,25 @@
 /* ✨ 全新！暗夜風信子 (Dark Hyacinth Mauve) 主題 ✨ */
 :root[data-theme="dark-hyacinth"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: #847093;
-  --accent-color: #7e6c8e;
-  --topline-color: #352d3f;
+  --primary-color: rgb(132, 112, 147);
+  --accent-color: #9394d6;
+  --topline-color: #2c2733;
 
   /* --- 背景顏色 --- */
-  --background-color: #342c3d;
-  --surface-color: #342b3a;
+  --background-color: #433850;
+  --surface-color: #42354b;
+  --gradient-bg: #42354b;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(132, 112, 147, 0.15);
+  --user-color: rgba(149, 123, 168, 0.15);
 
   /* --- 文字顏色 --- */
-  --text-primary: #a289a8;
+  --text-primary: #7b6e7e;
   --text-secondary: #6d5e7f;
   --text-muted: rgba(109, 94, 127, 0.7);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #cebbc8;
+  --quote-text-color: #9394d6;
 
   /* --- 其他顏色 --- */
   --border-color: #49405a;
@@ -236,6 +243,7 @@
   /* --- 背景顏色 (深藍夜空) --- */
   --background-color: #071226;
   --surface-color: #1e2533;
+  --gradient-bg: #1e2533;
   
   /* --- 使用者聊天泡泡 --- */
   --user-color: rgba(122, 90, 74, 0.25);

@@ -15,6 +15,7 @@ import PromptsPage from './PromptsPage';
 import ModuleEditorModal from './ModuleEditorModal';
 import OocCommandEditorModal from './OocCommandEditorModal.js';
 import OocCommandSelectorModal from './OocCommandSelectorModal.js';
+import RegexEditorModal from './RegexEditorModal.js';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -124,6 +125,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
   const [characterBook, setCharacterBook] = useState(null);
   const [creatorNotes, setCreatorNotes] = useState('');//新增一行state管理創作者備註
+  const [embeddedRegex, setEmbeddedRegex] = useState([]);
 
   useEffect(() => {
     if (character) {
@@ -134,6 +136,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       setAvatar(character.avatar || { type: 'icon', data: 'UserCircle' });
       setCharacterBook(character.characterBook ? structuredClone(character.characterBook) : null);
       setCreatorNotes(character.creatorNotes || ''); //讓編輯器讀取角色的備註
+      setEmbeddedRegex(character.embeddedRegex ? structuredClone(character.embeddedRegex) : []);
     } else {
       setName('');
       setDescription('');
@@ -142,6 +145,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       setAvatar({ type: 'icon', data: 'UserCircle' });
       setCharacterBook(null);
       setCreatorNotes('');//創建新角色時，輕空備註
+      setEmbeddedRegex([]);
     }
   }, [character]);
 
@@ -159,6 +163,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       avatar,
       characterBook,
       creatorNotes, //儲存時把備註也儲存進去
+      embeddedRegex: embeddedRegex,
     };
     onSave(characterData);
   };
@@ -191,6 +196,31 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
       // 只有兩次都按下「確定」，才會執行真正的刪除動作
       onDelete(character.id);
     }
+  };
+
+  // 新增一條空白的 Regex 規則
+  const handleAddRegexRule = () => {
+    setEmbeddedRegex([...embeddedRegex, { find: '', replace: '', enabled: true }]);
+  };
+
+  // 處理 Regex 規則的變更 (find 或 replace)
+  const handleRegexRuleChange = (index, field, value) => {
+    const updatedRules = [...embeddedRegex];
+    updatedRules[index] = { ...updatedRules[index], [field]: value };
+    setEmbeddedRegex(updatedRules);
+  };
+  
+  // 處理 Regex 規則的啟用/停用切換
+  const handleToggleRegexRule = (index) => {
+    const updatedRules = [...embeddedRegex];
+    updatedRules[index] = { ...updatedRules[index], enabled: !updatedRules[index].enabled };
+    setEmbeddedRegex(updatedRules);
+  };
+
+  // 刪除一條 Regex 規則
+  const handleDeleteRegexRule = (index) => {
+    const updatedRules = embeddedRegex.filter((_, i) => i !== index);
+    setEmbeddedRegex(updatedRules);
   };
 
   const handleAvatarUpload = (event) => {
@@ -264,6 +294,64 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
     const newEntries = characterBook.entries.filter((_, i) => i !== index);
     setCharacterBook({ ...characterBook, entries: newEntries });
   };
+
+  const handleExportLocalRegex = useCallback(() => {
+    if (embeddedRegex.length === 0) {
+      alert('此角色沒有可匯出的區域規則。');
+      return;
+    }
+    const jsonString = JSON.stringify(embeddedRegex, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `${name || 'character'}_local_regex.json`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [embeddedRegex, name]);
+
+  const handleImportLocalRegex = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        let newRules = [];
+
+        if (Array.isArray(data)) {
+          newRules = data; // 假設匯入的是陣列格式
+        } else if (data.scriptName && data.findRegex) {
+          const findRegexStr = data.findRegex;
+          let findPattern = findRegexStr;
+          if (findRegexStr.startsWith('/') && findRegexStr.lastIndexOf('/') > 0) {
+            findPattern = findRegexStr.substring(1, findRegexStr.lastIndexOf('/'));
+          }
+          newRules.push({
+            find: findPattern,
+            replace: data.replaceString || '',
+            enabled: !data.disabled,
+            // 區域腳本不需要 notes 和 id
+          });
+        } else {
+          throw new Error('不支援的檔案格式。');
+        }
+        
+        if (window.confirm(`即將匯入 ${newRules.length} 條規則到此角色。確定嗎？`)) {
+          setEmbeddedRegex(prev => [...prev, ...newRules]);
+        }
+
+      } catch (error) {
+        alert(`❌ 匯入失敗：${error.message}`);
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }, []);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -391,6 +479,70 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete }) => {
               </div>
             </div>
           )}
+
+          <div className="form-group world-book-section"> {/* 我們可以重用世界書的樣式 */}
+              <div className="form-label-group">
+                <label className="world-book-label" style={{ marginBottom: '0' }}>
+                  <FileText size={16} /> {/* 借用圖示 */}
+                  <span>區域正規表示式 ({embeddedRegex.length} 條)</span>
+                </label>
+                {/* ▼▼▼ 【✨ 在這裡加入區域腳本的按鈕 ✨】 ▼▼▼ */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <label htmlFor="import-local-regex" className="add-greeting-btn" style={{padding: '4px'}}>
+                      <Upload size={14} />
+                    </label>
+                    <button onClick={handleExportLocalRegex} className="add-greeting-btn" style={{padding: '4px'}}>
+                      <Download size={14} />
+                    </button>
+                    <button onClick={handleAddRegexRule} className="add-greeting-btn">
+                      <Plus size={14} /> 新增
+                    </button>
+                </div>
+                <button onClick={handleAddRegexRule} className="add-greeting-btn">
+                  <Plus size={14} /> 新增規則
+                </button>
+              </div>
+              <input
+                  type="file"
+                  id="import-local-regex"
+                  accept=".json"
+                  onChange={handleImportLocalRegex}
+                  style={{ display: 'none' }}
+              />
+              <div className="world-book-entries">
+                {embeddedRegex.map((rule, index) => (
+                  <div key={index} className="world-book-entry wb-entry-editor">
+                    <div className="wb-entry-actions">
+                      <label className="wb-entry-toggle">
+                        <input
+                          type="checkbox"
+                          checked={rule.enabled}
+                          onChange={() => handleToggleRegexRule(index)}
+                        />
+                        <span className="slider"></span>
+                      </label>
+                      <button onClick={() => handleDeleteRegexRule(index)} className="wb-delete-btn">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                    <div className="wb-entry-inputs">
+                      <textarea
+                        placeholder="尋找 (Find) - 正規表示式"
+                        rows="2"
+                        value={rule.find}
+                        onChange={(e) => handleRegexRuleChange(index, 'find', e.target.value)}
+                      />
+                      <textarea
+                        placeholder="替換為 (Replace) - 留空代表刪除"
+                        rows="2"
+                        value={rule.replace}
+                        onChange={(e) => handleRegexRuleChange(index, 'replace', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
           <div className="form-group">
             <label>主要開場白</label>
@@ -812,7 +964,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
 };
 
 // ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
-const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage }) => {
+const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage }) => {
   const showActions = showActionsMessageId === msg.id;
 
   const handleBubbleClick = () => {
@@ -835,14 +987,12 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
   const avatarUrl = msg.sender === 'user' ? userAvatar : charAvatar;
   const messageClass = msg.sender === 'user' ? 'user-message' : msg.sender === 'system' ? 'system-message' : 'ai-message';
 
-  const currentText = msg.contents[msg.activeContentIndex];
-
   // ==========================================================
   // ✨✨✨ 在這裡進行冒號的處理 ✨✨✨
   // ==========================================================
   
   // 步驟 1: 先複製一份原始訊息
-  let textToProcess = currentText;
+  let textToProcess = processedText;
 
   // 步驟 2: 使用正規表示式，找到所有「全形冒號後面緊跟著一個上引號」的地方
   // g 的意思是 global，代表取代所有符合條件的地方，而不只是第一個
@@ -857,7 +1007,7 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
   textToProcess = textToProcess.replace(quoteStarRegex, '$1 *');
   
   // 步驟 4: 將處理過的文字，再交給我們原本的引號高亮函式
-  const processedText = highlightQuotedText(textToProcess);
+  const finalRenderText = highlightQuotedText(textToProcess);
 
   return (
     // ==================================================
@@ -892,9 +1042,9 @@ const ChatMessage = ({ msg, currentUserProfile, character, setEditingMessage, ac
                 // 並且把它的內容（props.children）原封不動地放進去
                 <span {...props} /> 
             }}
-            // ▲▲▲ 【✨ 修正結束 ✨】 ▲▲▲
           >
-            {processedText}
+            {/* 4. ✨ 在這裡使用我們新的變數名 */}
+            {finalRenderText}
           </ReactMarkdown>
 
           {/* 我們不希望截圖中出現時間戳，所以在截圖模式下隱藏它 */}
@@ -1445,10 +1595,35 @@ const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClos
   );
 };
 
-const ChatPage = ({ oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
+const ChatPage = ({ regexRules, oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
   
   const textareaRef = useRef(null);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
+
+  // ✨ 將 Regex 處理工廠搬到這裡
+  const applyAllRegex = useCallback((text, char) => {
+    if (!text) return '';
+    let processedText = text;
+
+    const enabledGlobalRules = regexRules?.filter(rule => rule.enabled) || [];
+    for (const rule of enabledGlobalRules) {
+      try {
+        processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace);
+      } catch (error) {
+        console.error(`無效的全域 Regex 規則: "${rule.find}"`, error);
+      }
+    }
+
+    const enabledLocalRules = char?.embeddedRegex?.filter(rule => rule.enabled) || [];
+    for (const rule of enabledLocalRules) {
+      try {
+        processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace);
+      } catch (error) {
+        console.error(`無效的區域 Regex 規則 (角色: ${char.name}): "${rule.find}"`, error);
+      }
+    }
+    return processedText;
+  }, [regexRules]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1488,46 +1663,36 @@ const ChatPage = ({ oocCommands, onOpenOocSelector, onSelectOocCommand, messages
         >
           {isInfoPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </button>
-
         {isInfoPanelOpen && (
           <div className="chat-header-panel">
-            {/* ✨ 核心修改：顯示當前使用者資訊 ✨ */}
             <div className="chat-info current-user-display">
               <div className="message-avatar">
-                <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXVzZXItY2lyY2xlIj48cGF0aCBkPSJNMjAgMjFhOCAzIDAgMCAwLTE2IDBaIi8+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMSIgcj0iNCIvPjwvc3ZnPg=='} alt="User Avatar" className="avatar-image" />
+                <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,...'} alt="User Avatar" className="avatar-image" />
               </div>
               <div className="chat-info-details">
-                <span className="current-prompt">
-                  {currentUserProfile.name || '(未命名身份)'}
-                  {currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}
-                </span>
+                <span className="current-prompt">{currentUserProfile.name || '(未命名身份)'}{currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}</span>
                 <span className="current-character">正在與 {currentCharacter.name} 對話</span>
-                {/* ✨✨✨ 在這裡新增下面這段程式碼 ✨✨✨ */}
-                {currentPrompt && (
-                  <span className="current-prompt" style={{ opacity: 0.7 }}>
-                    使用: {currentPrompt.name}
-                  </span>
-                )}
+                {currentPrompt && (<span className="current-prompt" style={{ opacity: 0.7 }}>使用: {currentPrompt.name}</span>)}
               </div>
             </div>
             <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
-              {isApiConnected ? (
-                <span>
-                  {loadedConfigName ? `${loadedConfigName} (${apiModel})` : apiProviders[apiProvider]?.name}
-                </span>
-              ) : (
-                <span>未連接</span>
-              )}
+              {isApiConnected ? (<span>{loadedConfigName ? `${loadedConfigName} (${apiModel})` : apiProviders[apiProvider]?.name}</span>) : (<span>未連接</span>)}
             </div>
           </div>
         )}
       </div>
   
       <div className="messages-area">
-        {messages.length > 0 && messages.map((message, index) => (
+        {messages.length > 0 && messages.map((message, index) => {
+          // ✨ 在這裡預處理文字
+          const originalText = message.contents[message.activeContentIndex];
+          const processedTextForMessage = applyAllRegex(originalText, currentCharacter);
+          
+          return (
             <ChatMessage 
               key={message.id}
               msg={message}
+              processedText={processedTextForMessage} // ✨ 傳遞處理好的文字
               currentUserProfile={currentUserProfile}
               character={currentCharacter}
               activeChatId={activeChatId}
@@ -1542,12 +1707,11 @@ const ChatPage = ({ oocCommands, onOpenOocSelector, onSelectOocCommand, messages
               onSelectMessage={handleSelectMessage}
               isLastMessage={index === messages.length - 1}
             />
-        ))}
+          );
+        })}
         {isLoading && (
           <div className="loading-message">
-            <div className="loading-dots">
-              <span></span><span></span><span></span>
-            </div>
+            <div className="loading-dots"><span></span><span></span><span></span></div>
             <p>{currentCharacter.name} 正在輸入中...</p>
           </div>
         )}
@@ -1721,6 +1885,13 @@ const SettingsPage = ({
     onNewOocCommand,
     onEditOocCommand,
     onDeleteOocCommand,
+    regexRules,
+    onNewRegexRule,
+    onEditRegexRule,
+    onDeleteRegexRule,
+    onToggleRegexRule,
+    onExportRegex,      // ✨ 新增
+    onImportRegex,      // ✨ 新增
     // ✨ 新傳入的 props
     userProfiles,
     onNewUserProfile,
@@ -1976,6 +2147,83 @@ const SettingsPage = ({
               </div>
             )}
           </div>
+          {/* ▼▼▼ 【✨ 在主題設定卡片之前，插入一個全新的正規表示式卡片 ✨】 ▼▼▼ */}
+          <div className="setting-card">
+            <button
+              className={`card-header ${expandedSection === 'regex' ? 'expanded' : ''}`}
+              onClick={() => toggleSection('regex')}
+            >
+              <div className="card-title">
+                {/* 借用一個圖示 */}
+                <FileText size={20} /> 
+                <span>正規表示式</span>
+              </div>
+              <span className="expand-arrow">{expandedSection === 'regex' ? '▲' : '▼'}</span>
+            </button>
+            
+            {expandedSection === 'regex' && (
+              <div className="card-content">
+                <div className="setting-group">
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
+                    <label className="setting-label" style={{marginBottom: 0}}>規則列表 (由上至下執行)</label>
+                    <button onClick={onNewRegexRule} className="add-greeting-btn">
+                      <Plus size={14} /> 新增
+                    </button>
+                  </div>
+                  {/* ▼▼▼ 【✨ 在這裡加入匯入/匯出按鈕 ✨】 ▼▼▼ */}
+                  <div className="prompt-actions-grid" style={{ marginTop: '12px', marginBottom: '12px' }}>
+                    <label htmlFor="import-global-regex" className="action-button-base">
+                      <Upload size={16} /> 匯入規則
+                    </label>
+                    <button onClick={onExportRegex}>
+                      <Download size={16} /> 匯出規則
+                    </button>
+                  </div>
+                  <input
+                    type="file"
+                    id="import-global-regex"
+                    accept=".json"
+                    onChange={onImportRegex}
+                    style={{ display: 'none' }}
+                  />
+                  {/* 我們可以重用 character-list 的樣式 */}
+                  <div className="character-list">
+                    {regexRules.length > 0 ? regexRules.map((rule) => (
+                      <div key={rule.id} className="character-list-item">
+                        {/* 開關 */}
+                        <label className="switch" style={{marginRight: '12px'}}>
+                          <input 
+                            type="checkbox" 
+                            checked={rule.enabled}
+                            onChange={() => onToggleRegexRule(rule.id)}
+                          />
+                          <span className="slider round"></span>
+                        </label>
+                        {/* 規則內容 */}
+                        <div className="character-select-area" style={{opacity: rule.enabled ? 1 : 0.5}}>
+                          <div className="character-info">
+                            <h4>{rule.notes || '(未命名規則)'}</h4>
+                            <p>Find: {rule.find}</p>
+                            <p>Replace: {rule.replace}</p>
+                          </div>
+                        </div>
+                        {/* 操作按鈕 */}
+                        <button className="edit-character-btn" onClick={() => onEditRegexRule(rule)}><Edit2 size={16} /></button>
+                        <button
+                          onClick={() => onDeleteRegexRule(rule.id)}
+                          className="edit-character-btn delete-icon-btn"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    )) : (
+                      <p style={{color: 'var(--text-muted)', textAlign: 'center', padding: '10px 0'}}>尚未新增任何規則。</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
           <div className="setting-card">
             <button
               className={`card-header ${expandedSection === 'theme' ? 'expanded' : ''}`}
@@ -2121,7 +2369,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.32</p>
+                  <p>版本：0.5.4</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2284,9 +2532,12 @@ const ChatApp = () => {
   const [prompts, setPrompts] = useState([]);
   const [apiConfigs, setApiConfigs] = useState([]);
   const [oocCommands, setOocCommands] = useState([]); // ✨ 1. OOC 指令庫
+  const [regexRules, setRegexRules] = useState([]);
   const [isOocCommandEditorOpen, setIsOocCommandEditorOpen] = useState(false); // ✨ 2. 設定頁的編輯器開關
   const [editingOocCommand, setEditingOocCommand] = useState(null); // ✨ 3. 正在編輯的指令
   const [isOocCommandSelectorOpen, setIsOocCommandSelectorOpen] = useState(false); // ✨ 4. 聊天室的選擇器開關
+  const [isRegexEditorOpen, setIsRegexEditorOpen] = useState(false); // ✨ 新增這一行
+  const [editingRegexRule, setEditingRegexRule] = useState(null); // ✨ 新增這一行
 
   // ✨✨✨ 全新！使用者個人檔案管理 State ✨✨✨
   const [userProfiles, setUserProfiles] = useState([]); // 儲存所有使用者個人檔案的列表
@@ -2441,7 +2692,8 @@ useEffect(() => {
         savedHistories, savedMetadatas, savedMemories,
         savedUserProfiles, // ✨ 新增讀取使用者個人檔案
         activeProfileId,
-        savedOocCommands
+        savedOocCommands,
+        savedRegexRules
       ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
         const chars = await db.characters.toArray();
         const proms = await db.prompts.toArray();
@@ -2451,8 +2703,9 @@ useEffect(() => {
         const mem = (await db.kvStore.get('longTermMemories'))?.value;
         const profiles = (await db.kvStore.get('userProfiles'))?.value; 
         const ooc = (await db.kvStore.get('oocCommands'))?.value; // ✨ 加入這行
+        const regex = (await db.kvStore.get('regexRules'))?.value;
         const activeId = (await db.kvStore.get('activeUserProfileId'))?.value; // ✨ 讀取預設 ID
-        return [chars, proms, configs, hist, meta, mem, profiles, activeId, ooc];
+        return [chars, proms, configs, hist, meta, mem, profiles, activeId, ooc, regex];
       });
       
       // 2. 處理使用者個人檔案 (如果不存在，就建立一個預設的)
@@ -2483,6 +2736,7 @@ useEffect(() => {
       setLongTermMemories(savedMemories || {});
       setOocCommands(savedOocCommands || []);
       setOocCommands(Array.isArray(savedOocCommands) ? savedOocCommands : []);
+      setRegexRules(Array.isArray(savedRegexRules) ? savedRegexRules : []);
 
       // 4. 載入上次的聊天狀態和 API 設定 (這部分邏輯不變)
       const savedActiveCharId = localStorage.getItem('app_active_character_id');
@@ -2546,10 +2800,16 @@ useEffect(() => {
   useEffect(() => {
     // 避免在程式剛啟動、資料還沒載入完成時，就用一個空陣列覆蓋掉資料庫
     if (!isDataLoaded) return; 
-
     console.log("偵測到 OOC 指令變更，正在存入 IndexedDB...");
     db.kvStore.put({ key: 'oocCommands', value: oocCommands });
   }, [oocCommands, isDataLoaded]);
+
+  // ✨ 全新！正規表示式規則的存檔管家 ✨
+  useEffect(() => {
+    if (!isDataLoaded) return;
+    console.log("偵測到正規表示式規則變更，正在存入 IndexedDB...");
+    db.kvStore.put({ key: 'regexRules', value: regexRules });
+  }, [regexRules, isDataLoaded]);
 
   // ✨✨✨ 全新！API 金鑰 "通訊錄" 的專屬存檔管家 ✨✨✨
   useEffect(() => {
@@ -3081,22 +3341,21 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     }
   }, [characters]);  
   
-// ==================== ✨ 全新！SillyTavern 風格的 V3 角色卡匯入函式 ✨ ====================
+// ==================== ✨ 全新升級版 v2！能讀取並儲存區域 Regex 的匯入函式 ✨ ====================
   const handleImportCharacter = useCallback(async (event) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    console.log(`準備匯入 ${files.length} 個檔案...`);
     let successCount = 0;
     let failureCount = 0;
-    const newlyImported = [];
+    const newlyImportedCharacters = [];
 
     for (const file of files) {
       try {
         let characterJsonData;
         let characterAvatar = { type: 'icon', data: 'UserCircle' };
 
-        // (getCharacterDataFromPng 輔助函式保持不變，這裡省略)
+        // ... (getCharacterDataFromPng 函式保持不變) ...
         const getCharacterDataFromPng = (file) => {
           return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -3155,44 +3414,42 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           const compressedBase64 = await compressImage(originalBase64);
           characterAvatar = { type: 'image', data: compressedBase64 };
         } else {
-          console.warn(`不支援的檔案格式，已略過: ${file.name}`);
           failureCount++;
           continue;
         }
         
-        const isV2OrV3Card = characterJsonData.spec?.startsWith('chara_card_v');
-        const cardData = isV2OrV3Card ? characterJsonData.data : characterJsonData;
+        const cardData = characterJsonData.spec?.startsWith('chara_card_v') ? characterJsonData.data : characterJsonData;
         if (!cardData.name && !cardData.char_name) {
-          console.warn(`檔案格式錯誤，找不到角色名稱，已略過: ${file.name}`);
           failureCount++;
           continue;
         }
+        
+        // ▼▼▼ 【✨ 核心修正就在這裡！ ✨】 ▼▼▼
+        // 直接從卡片資料中讀取 regex，如果不存在則給一個空陣列
+        const embeddedRegex = cardData.extensions?.regex || [];
+        // ▲▲▲ 【✨ 修正結束 ✨】 ▲▲▲
 
-        // ✨ 核心修改：不再合併，而是分開儲存 ✨
         const newCharacter = {
-          id: Date.now() + successCount,
+          id: generateUniqueId(),
           name: cardData.name || cardData.char_name,
-          
-          // --- 直接對應欄位 ---
           description: cardData.description || '',
           personality: cardData.personality || '',
           scenario: cardData.scenario || '',
           mes_example: cardData.mes_example || '',
-          
           firstMessage: cardData.first_mes || '',
           alternateGreetings: cardData.alternate_greetings || [],
           creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '',
           avatar: characterAvatar,
           characterBook: cardData.character_book || null,
           fav: cardData.fav || false,
-          
-          // --- 將額外資訊也存進來，以便未來使用 ---
           system_prompt: cardData.system_prompt || '',
           post_history_instructions: cardData.post_history_instructions || '',
           depth_prompt: cardData.extensions?.depth_prompt?.prompt || '',
+          // ▼▼▼ 【✨ 在這裡將讀取到的 Regex 存入角色物件中 ✨】 ▼▼▼
+          embeddedRegex: embeddedRegex 
         };
         
-        newlyImported.push(newCharacter);
+        newlyImportedCharacters.push(newCharacter);
         successCount++;
 
       } catch (error) {
@@ -3201,20 +3458,21 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       }
     }
 
-    if (newlyImported.length > 0) {
-      await db.characters.bulkPut(newlyImported);
-      setCharacters(prev => [...prev, ...newlyImported]);
+    if (newlyImportedCharacters.length > 0) {
+      await db.characters.bulkPut(newlyImportedCharacters);
+      setCharacters(prev => [...prev, ...newlyImportedCharacters]);
     }
-
+    
+    // 我們不再需要彈出提示窗和處理全域 Regex
+    
     let summaryMessage = `✅ 批次匯入完成！\n\n`;
     if (successCount > 0) summaryMessage += `成功匯入 ${successCount} 個角色。\n`;
-    if (failureCount > 0) summaryMessage += `有 ${failureCount} 個檔案匯入失敗，詳情請查看主控台。`;
+    if (failureCount > 0) summaryMessage += `有 ${failureCount} 個檔案匯入失敗。`;
     alert(summaryMessage);
 
-    if (event && event.target) {
-      event.target.value = '';
-    }
-  }, [characters]); // 依賴項不變
+    if (event.target) event.target.value = '';
+    
+  }, [characters]); // 依賴項不再需要 setRegexRules
 
   // =================================================================================
   // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
@@ -3327,6 +3585,118 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     // 將收到的指令內容，附加到目前輸入框文字的後面
     setInputMessage(prev => prev + commandContent);
   }, []);
+
+  // =================================================================================
+  // ✨✨✨ 全新！正規表示式 (Regex) 規則管理函式 ✨✨✨
+  // =================================================================================
+
+  // 開啟 Regex 編輯器 (新增模式)
+  const handleOpenRegexEditorForNew = () => {
+    setEditingRegexRule({ isNew: true });
+    setIsRegexEditorOpen(true);
+  };
+
+  // 開啟 Regex 編輯器 (編輯模式)
+  const handleOpenRegexEditorForEdit = (rule) => {
+    setEditingRegexRule(rule);
+    setIsRegexEditorOpen(true);
+  };
+
+  // 儲存 Regex 規則
+  const handleSaveRegexRule = useCallback((ruleData) => {
+    if (editingRegexRule?.isNew) {
+      const newRule = { id: generateUniqueId(), enabled: true, ...ruleData };
+      setRegexRules(prev => [...prev, newRule]);
+    } else {
+      setRegexRules(prev => prev.map(r => 
+        r.id === editingRegexRule.id ? { ...r, ...ruleData } : r
+      ));
+    }
+    setIsRegexEditorOpen(false);
+    setEditingRegexRule(null);
+  }, [regexRules, editingRegexRule]);
+
+  // 刪除 Regex 規則
+  const handleDeleteRegexRule = useCallback((ruleId) => {
+    if (window.confirm('確定要刪除這條正規表示式規則嗎？')) {
+      setRegexRules(prev => prev.filter(r => r.id !== ruleId));
+    }
+  }, [regexRules]);
+
+  // 切換 Regex 規則的啟用狀態
+  const handleToggleRegexRule = useCallback((ruleId) => {
+    setRegexRules(prev => prev.map(r => 
+      r.id === ruleId ? { ...r, enabled: !r.enabled } : r
+    ));
+  }, [regexRules]);
+
+  // =================================================================================
+  // ✨✨✨ 全新！全域 Regex 的匯入/匯出函式 ✨✨✨
+  // =================================================================================
+
+  const handleExportGlobalRegex = useCallback(() => {
+    if (regexRules.length === 0) {
+      alert('目前沒有可匯出的全域規則。');
+      return;
+    }
+    const jsonString = JSON.stringify(regexRules, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = `geniu5_global_regex_backup.json`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [regexRules]);
+
+  const handleImportGlobalRegex = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        let newRules = [];
+
+        // 判斷是 ST 的單一檔案，還是我們自己的陣列檔案
+        if (Array.isArray(data)) {
+          // 這是我們自己的備份檔
+          newRules = data.map(rule => ({ ...rule, id: generateUniqueId() }));
+        } else if (data.scriptName && data.findRegex) {
+          // 這是 ST 的單一腳本檔
+          const findRegexStr = data.findRegex;
+          let findPattern = findRegexStr;
+          // 移除 ST 格式中的斜線和標記
+          if (findRegexStr.startsWith('/') && findRegexStr.lastIndexOf('/') > 0) {
+            findPattern = findRegexStr.substring(1, findRegexStr.lastIndexOf('/'));
+          }
+          newRules.push({
+            id: generateUniqueId(),
+            find: findPattern,
+            replace: data.replaceString || '',
+            enabled: !data.disabled,
+            notes: data.scriptName || '從 ST 匯入的腳本',
+          });
+        } else {
+          throw new Error('不支援的檔案格式。');
+        }
+
+        if (window.confirm(`即將匯入 ${newRules.length} 條規則。確定要將它們新增到您的全域列表中嗎？`)) {
+          setRegexRules(prev => [...prev, ...newRules]);
+          alert('✅ 規則已成功匯入！');
+        }
+
+      } catch (error) {
+        alert(`❌ 匯入失敗：${error.message}`);
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }, []); // 依賴項為空，因為 setRegexRules 會自動取得最新狀態
 
   // ✨✨✨ 升級版！建立聊天室時綁定使用者 ID ✨✨✨
   const handleStartChat = useCallback((character, greeting, selectedProfileId) => {
@@ -4494,6 +4864,7 @@ const formatStDate = (date, type = 'send_date') => {
                 oocCommands={oocCommands}
                 onOpenOocSelector={() => setIsOocCommandSelectorOpen(true)}
                 onSelectOocCommand={handleSelectOocCommand}
+                regexRules={regexRules}
                 messages={chatHistories[activeChatCharacterId]?.[activeChatId] || []}
                 inputMessage={inputMessage}
                 setInputMessage={setInputMessage}
@@ -4531,6 +4902,7 @@ const formatStDate = (date, type = 'send_date') => {
                 handleGenerateScreenshot={handleGenerateScreenshot}
                 handleImport={handleImportFromSillyTavern}
                 onSwitchProfile={() => setIsProfileSwitcherOpen(true)}
+                regexRules={regexRules}
               />
             )
           )}
@@ -4551,6 +4923,13 @@ const formatStDate = (date, type = 'send_date') => {
               onNewOocCommand={handleOpenOocCommandEditorForNew}
               onEditOocCommand={handleOpenOocCommandEditorForEdit}
               onDeleteOocCommand={handleDeleteOocCommand}
+              regexRules={regexRules}
+              onNewRegexRule={handleOpenRegexEditorForNew}
+              onEditRegexRule={handleOpenRegexEditorForEdit}
+              onDeleteRegexRule={handleDeleteRegexRule}
+              onToggleRegexRule={handleToggleRegexRule}
+              onExportRegex={handleExportGlobalRegex} // ✨ 新增
+              onImportRegex={handleImportGlobalRegex} // ✨ 新增
               userProfiles={userProfiles}
               onNewUserProfile={openNewUserProfileEditor}
               onEditUserProfile={openEditUserProfileEditor}
@@ -4702,6 +5081,14 @@ const formatStDate = (date, type = 'send_date') => {
           commands={oocCommands}
           onSelect={handleSelectOocCommand}
           onClose={() => setIsOocCommandSelectorOpen(false)}
+        />
+      )}
+      {/* ✨ 在這裡新增 RegexEditorModal 的渲染邏輯 ✨ */}
+      {isRegexEditorOpen && (
+        <RegexEditorModal
+          rule={editingRegexRule?.isNew ? null : editingRegexRule}
+          onSave={handleSaveRegexRule}
+          onClose={() => setIsRegexEditorOpen(false)}
         />
       )}
     </>
