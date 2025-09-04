@@ -4899,12 +4899,39 @@ const formatStDate = (date, type = 'send_date') => {
     reader.readAsText(file);
   }, []); // 這個函式也沒有依賴項
 
-  const clearAllData = useCallback(() => {
-    if (window.confirm('⚠️ 確定要清除所有資料嗎？此操作無法復原！\n\n將會清除：\n• 所有聊天紀錄\n• 角色資料\n• 提示詞\n• 使用者設定\n• API 配置')) {
-      localStorage.clear();
-      window.location.reload();
+  const clearAllData = useCallback(async () => { // ✨ 1. 將函式改為 async
+    // ✨ 2. 使用更嚴厲的警告文字
+    if (window.confirm(
+        '🚨🚨🚨【最終警告】🚨🚨🚨\n\n' +
+        '您確定要永久刪除此應用程式的所有資料嗎？\n\n' +
+        '此操作將會清除【所有】角色、聊天紀錄、世界書、使用者個人檔案和 API 設定。\n\n' +
+        '這個動作【無法復原】！'
+    )) {
+      try {
+        console.log("正在清除所有 IndexedDB 資料...");
+
+        // ✨ 3. 核心修正：使用資料庫交易來清空所有資料表
+        await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+            await db.characters.clear();      // 清空角色表
+            await db.prompts.clear();         // 清空提示詞表
+            await db.apiConfigs.clear();      // 清空 API 配置表
+            await db.kvStore.clear();         // 清空包含聊天、世界書、使用者等的核心儲存區
+        });
+
+        // ✨ 4. 我們也把 localStorage 清理掉，確保萬無一失
+        localStorage.clear();
+
+        alert('✅ 所有資料已成功清除。應用程式即將重新啟動。');
+
+        // ✨ 5. 在所有操作成功後，才重新載入頁面
+        window.location.reload();
+
+      } catch (error) {
+        console.error("清除所有資料失敗:", error);
+        alert(`❌ 清除資料時發生錯誤：${error.message}`);
+      }
     }
-  }, []);
+}, []);
 
   return (
     // 我們用一個 Fragment (<>) 作為最外層的容器
