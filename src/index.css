@@ -3785,34 +3785,31 @@ input[type="range"]:hover::-webkit-slider-thumb {
   word-break: break-word;
 }
 
-/* ================================== */
-/* ✨ 世界書條目狀態指示燈 (藍綠燈) ✨ */
-/* ================================== */
+/* ======================================= */
+/* ✨ 世界書狀態指示燈 (最終版：圖示+色點) ✨ */
+/* ======================================= */
 
-.wb-entry-header-main {
-  position: relative;
-  /* 為了給指示燈留出空間 */
-  padding-left: 20px;
+.wb-entry-header-status {
+  /* 將指示燈固定在標題左側 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; /* 給予固定寬度以對齊 */
+  flex-shrink: 0;
 }
 
-.wb-entry-header-main::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
+.wb-status-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: var(--text-muted); /* 預設是灰色 */
 }
 
 /* 🟢 綠燈：選擇性觸發 */
-.wb-entry-header-main.selective::before {
-  background-color: #4CAF50; /* 綠色 */
+.wb-status-dot.green {
+  background-color: #4CAF50;
 }
 
-/* 🔵 藍燈：常駐觸發 (優先級高於綠燈) */
-.wb-entry-header-main.constant::before {
-  background-color: #2196F3; /* 藍色 */
+/* 🔵 藍燈：常駐觸發 */
+.wb-status-dot.blue {
+  background-color: #2196F3;
 }
