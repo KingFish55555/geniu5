@@ -3729,3 +3729,57 @@ input[type="range"]:hover::-webkit-slider-thumb {
     gap: 12px; /* 讓內容區塊有統一間距 */
     animation: fadeIn 0.3s ease; /* 增加淡入效果 */
 }
+
+/* ================================================= */
+/* ✨ Markdown 安全網 - 防止文字溢出聊天泡泡的終極版 ✨ */
+/* ================================================= */
+
+/* --- 1. 針對「所有」聊天泡泡內的文字設定通用換行規則 --- */
+/* 這樣可以捕獲段落 <p>、列表 <li>、標題 <h1> 等等 */
+.bubble-wrapper {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word; /* 作為備用，確保在各種情況下都能斷詞 */
+}
+
+/* --- 2. 針對「引言區塊」的特別強化 (您已解決的部分) --- */
+.bubble-wrapper blockquote {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* --- 3. 針對「程式碼區塊」的核心修正 (解決您這次提出的問題) --- */
+
+/* 應用於 `code` (單行) 和 ```code``` (多行) */
+.bubble-wrapper pre,
+.bubble-wrapper code {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  
+  /* 讓它在水平方向上可以滾動，這是最後一道防線，以防萬一 */
+  overflow-x: auto; 
+  
+  /* 為了美觀，加上一點內距和圓角 */
+  padding: 2px 6px;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.05); /* 給個淡淡的背景色以茲區別 */
+}
+
+/* ✨ 這條規則是解決 ```code``` 區塊的關鍵！ ✨ */
+.bubble-wrapper pre {
+  /* 告訴瀏覽器：請保留我原本的換行和空格，但如果文字太長了，請幫我換行！ */
+  white-space: pre-wrap; 
+}
+
+/* --- 4. 針對「表格」的預防性防護 --- */
+/* 防止表格內的長單字撐爆整個表格 */
+.bubble-wrapper table,
+.bubble-wrapper td,
+.bubble-wrapper th {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
