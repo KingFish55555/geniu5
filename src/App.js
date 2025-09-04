@@ -122,15 +122,18 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
 };
 
 // 角色編輯器組件 (彈出式視窗)
-const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) => { // ✨ 1. 接收 worldBooks 作為 prop
+const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) => {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [firstMessage, setFirstMessage] = useState('');
   const [alternateGreetings, setAlternateGreetings] = useState([]);
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
-  const [attachedWorldBookIds, setAttachedWorldBookIds] = useState([]);
   const [creatorNotes, setCreatorNotes] = useState('');
   const [embeddedRegex, setEmbeddedRegex] = useState([]);
+
+  // ✨ 1. 核心修改：狀態從陣列改成單一字串
+  //    用來儲存被選中的「主要知識書」的 ID。預設為空字串代表 "--- None ---"。
+  const [mainLorebookId, setMainLorebookId] = useState('');
 
   useEffect(() => {
     if (character) {
@@ -139,16 +142,18 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
       setFirstMessage(character.firstMessage || '');
       setAlternateGreetings(character.alternateGreetings || []);
       setAvatar(character.avatar || { type: 'icon', data: 'UserCircle' });
-      setAttachedWorldBookIds(character.attachedWorldBookIds || []);
+      // ✨ 2. 核心修改：讀取角色資料中新的 `mainLorebookId` 欄位
+      setMainLorebookId(character.mainLorebookId || ''); // 舊角色卡可能沒有，所以給個預設值
       setCreatorNotes(character.creatorNotes || '');
       setEmbeddedRegex(character.embeddedRegex ? structuredClone(character.embeddedRegex) : []);
     } else {
+      // 創建新角色時，清空所有欄位
       setName('');
       setDescription('');
       setFirstMessage('');
       setAlternateGreetings([]);
       setAvatar({ type: 'icon', data: 'UserCircle' });
-      setAttachedWorldBookIds([]); // ✨ 修正：創建新角色時清空
+      setMainLorebookId(''); // ✨ 新角色預設不選擇任何知識書
       setCreatorNotes('');
       setEmbeddedRegex([]);
     }
@@ -166,20 +171,17 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
       firstMessage,
       alternateGreetings: alternateGreetings.filter(g => g.trim() !== ''),
       avatar,
-      attachedWorldBookIds,
+      // ✨ 3. 核心修改：儲存時，使用新的 `mainLorebookId` 欄位
+      mainLorebookId: mainLorebookId, // 不再使用 attachedWorldBookIds
       creatorNotes,
       embeddedRegex: embeddedRegex,
     };
     onSave(characterData);
   };
 
-  // ✨ 2. 在這裡定義處理函式
-  const handleToggleWorldBookAttachment = (bookId) => {
-    setAttachedWorldBookIds(prevIds =>
-        prevIds.includes(bookId)
-            ? prevIds.filter(id => id !== bookId)
-            : [...prevIds, bookId]
-    );
+  // ✨ 4. 全新：處理下拉選單變更的函式
+  const handleMainLorebookChange = (event) => {
+    setMainLorebookId(event.target.value);
   };
 
   const handleDelete = () => {
@@ -397,27 +399,28 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
             />
           </div>
           
-          {/* ✨✨✨ 全新！世界書關聯區塊 ✨✨✨ */}
-          <div className="form-group world-book-section">
-                    <label className="world-book-label">
-                        <Globe size={16} />
-                        <span>啟用的世界書</span>
-                    </label>
-                    <div className="world-book-selector-list">
-                        {worldBooks.length > 0 ? worldBooks.map(book => (
-                            <label key={book.id} className="wb-selector-item">
-                                <input
-                                    type="checkbox"
-                                    checked={attachedWorldBookIds.includes(book.id)}
-                                    onChange={() => handleToggleWorldBookAttachment(book.id)}
-                                />
-                                <span className="wb-selector-name">{book.name}</span>
-                            </label>
-                        )) : (
-                            <p className="empty-list-text">還沒有建立任何全域世界書。</p>
-                        )}
-                    </div>
-                </div>
+          {/* ✨✨✨ 5. 核心修改：用新的下拉選單 UI 替換掉舊的勾選列表 ✨✨✨ */}
+            <div className="form-group world-book-section">
+                <label className="world-book-label">
+                    <Globe size={16} />
+                    <span>主要知識書 (Main Lorebook)</span>
+                </label>
+                <p className="setting-description">
+                  選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。
+                </p>
+                <select 
+                    className="setting-select" 
+                    value={mainLorebookId} 
+                    onChange={handleMainLorebookChange}
+                >
+                    <option value="">--- None ---</option>
+                    {worldBooks.map(book => (
+                        <option key={book.id} value={book.id}>
+                            {book.name}
+                        </option>
+                    ))}
+                </select>
+            </div>
 
           <div className="form-group world-book-section"> {/* 我們可以重用世界書的樣式 */}
               <div className="form-label-group">
@@ -3307,75 +3310,23 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     let successCount = 0;
     let failureCount = 0;
     const newlyImportedCharacters = [];
-    // ✨ 1. 新增一個陣列，用來存放從角色卡中誕生的新世界書
     const newlyCreatedWorldBooks = [];
+
+    // ✨ 1. 為了提高比對效率，我們先為所有「已存在」的世界書建立內容指紋
+    const existingBookFingerprints = new Map(
+      worldBooks.map(book => [JSON.stringify(book.entries), book.id])
+    );
 
     for (const file of files) {
       try {
+        // ... (前面解析檔案的部分，保持不變)
         let characterJsonData;
         let characterAvatar = { type: 'icon', data: 'UserCircle' };
-
-        // (getCharacterDataFromPng 函式保持不變)
-        const getCharacterDataFromPng = (file) => {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    try {
-                        const buffer = e.target.result;
-                        const view = new DataView(buffer);
-                        if (view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) { return reject(new Error('不是有效的 PNG 檔案。')); }
-                        let offset = 8;
-                        const textDecoder = new TextDecoder('utf-8');
-                        while (offset < view.byteLength) {
-                            const length = view.getUint32(offset);
-                            const type = textDecoder.decode(buffer.slice(offset + 4, offset + 8));
-                            if (type === 'tEXt') {
-                                const chunkData = buffer.slice(offset + 8, offset + 8 + length);
-                                let keyword = '';
-                                let i = 0;
-                                while (i < length) {
-                                    const charCode = new DataView(chunkData).getUint8(i);
-                                    if (charCode === 0) { break; }
-                                    keyword += String.fromCharCode(charCode);
-                                    i++;
-                                }
-                                if (keyword === 'chara') {
-                                    const base64Data = textDecoder.decode(chunkData.slice(i + 1));
-                                    const decodedJsonString = base64ToUtf8(base64Data);
-                                    resolve(JSON.parse(decodedJsonString));
-                                    return;
-                                }
-                            }
-                            offset += 12 + length;
-                        }
-                        reject(new Error('在 PNG 檔案中找不到角色資料 (tEXt chunk)。'));
-                    } catch (err) { reject(new Error('解析 PNG 檔案失敗：' + err.message)); }
-                };
-                reader.onerror = () => reject(new Error('讀取檔案失敗。'));
-                reader.readAsArrayBuffer(file);
-            });
-        };
-
-        if (file.type === 'application/json' || file.name.endsWith('.json')) {
-          characterJsonData = JSON.parse(await file.text());
-        } else if (file.type === 'image/png') {
-          characterJsonData = await getCharacterDataFromPng(file);
-          const originalBase64 = await new Promise((resolve) => {
-              const reader = new FileReader();
-              reader.onload = (e) => resolve(e.target.result);
-              reader.readAsDataURL(file);
-          });
-          const compressedBase64 = await compressImage(originalBase64);
-          characterAvatar = { type: 'image', data: compressedBase64 };
-        } else {
-          failureCount++; continue;
-        }
-        
+        const getCharacterDataFromPng = (file) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = (e) => { try { const buffer = e.target.result; const view = new DataView(buffer); if (view.getUint32(0) !== 0x89504E47 || view.getUint32(4) !== 0x0D0A1A0A) { return reject(new Error('不是有效的 PNG 檔案。')); } let offset = 8; const textDecoder = new TextDecoder('utf-8'); while (offset < view.byteLength) { const length = view.getUint32(offset); const type = textDecoder.decode(buffer.slice(offset + 4, offset + 8)); if (type === 'tEXt') { const chunkData = buffer.slice(offset + 8, offset + 8 + length); let keyword = ''; let i = 0; while (i < length) { const charCode = new DataView(chunkData).getUint8(i); if (charCode === 0) { break; } keyword += String.fromCharCode(charCode); i++; } if (keyword === 'chara') { const base64Data = textDecoder.decode(chunkData.slice(i + 1)); const decodedJsonString = base64ToUtf8(base64Data); resolve(JSON.parse(decodedJsonString)); return; } } offset += 12 + length; } reject(new Error('在 PNG 檔案中找不到角色資料 (tEXt chunk)。')); } catch (err) { reject(new Error('解析 PNG 檔案失敗：' + err.message)); } }; reader.onerror = () => reject(new Error('讀取檔案失敗。')); reader.readAsArrayBuffer(file); });
+        if (file.type === 'application/json' || file.name.endsWith('.json')) { characterJsonData = JSON.parse(await file.text()); } else if (file.type === 'image/png') { characterJsonData = await getCharacterDataFromPng(file); const originalBase64 = await new Promise((resolve) => { const reader = new FileReader(); reader.onload = (e) => resolve(e.target.result); reader.readAsDataURL(file); }); const compressedBase64 = await compressImage(originalBase64); characterAvatar = { type: 'image', data: compressedBase64 }; } else { failureCount++; continue; }
         const cardData = characterJsonData.spec?.startsWith('chara_card_v') ? characterJsonData.data : characterJsonData;
-        if (!cardData.name && !cardData.char_name) {
-          failureCount++; continue;
-        }
-        
+        if (!cardData.name && !cardData.char_name) { failureCount++; continue; }
+
         const newCharacter = {
           id: generateUniqueId(),
           name: cardData.name || cardData.char_name,
@@ -3388,23 +3339,38 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           avatar: characterAvatar,
           fav: cardData.fav || false,
           embeddedRegex: cardData.extensions?.regex || [],
-          // ✨ 2. 預設的 attachedWorldBookIds 為空陣列
-          attachedWorldBookIds: [],
+          mainLorebookId: '', 
         };
         
-        // ✨ 3. 檢查是否存在 character_book，並且裡面有條目
+        // ✨ 2. 核心修改：開始執行聰明的檢查邏輯
         if (cardData.character_book && Object.keys(cardData.character_book.entries || {}).length > 0) {
-            console.log(`在角色 ${newCharacter.name} 中發現內嵌世界書，正在轉換...`);
-            const newBook = {
-                id: `wb_imp_${generateUniqueId()}`,
-                name: cardData.character_book.name || `${newCharacter.name}的角色書`,
-                entries: cardData.character_book.entries,
-            };
             
-            // ✨ 4. 將新書加入待辦列表
-            newlyCreatedWorldBooks.push(newBook);
-            // ✨ 5. 將新書的 ID 直接關聯到新角色身上
-            newCharacter.attachedWorldBookIds.push(newBook.id);
+            // 步驟 A：為「即將匯入」的世界書創建內容指紋
+            const incomingBookEntries = cardData.character_book.entries;
+            const incomingBookFingerprint = JSON.stringify(incomingBookEntries);
+
+            // 步驟 B：檢查這個指紋是否已經存在於我們的 Map 中
+            if (existingBookFingerprints.has(incomingBookFingerprint)) {
+                // 如果存在，代表這本書已經有了！
+                const existingBookId = existingBookFingerprints.get(incomingBookFingerprint);
+                newCharacter.mainLorebookId = existingBookId; // 直接關聯到現有的書
+                console.log(`偵測到重複的世界書，角色 ${newCharacter.name} 將關聯至現有的世界書 ID: ${existingBookId}`);
+
+            } else {
+                // 如果不存在，這是一本全新的書
+                const newBook = {
+                    id: `wb_imp_${generateUniqueId()}`,
+                    name: cardData.character_book.name || `${newCharacter.name}的角色書`,
+                    entries: incomingBookEntries,
+                };
+                
+                newlyCreatedWorldBooks.push(newBook); // 加入「待新增」列表
+                newCharacter.mainLorebookId = newBook.id; // 關聯到即將新增的書
+
+                // ✨ 3. 核心修改：將這本新書的指紋也加入 Map，
+                //    這樣如果在同一次匯入中有多張卡片用同一本世界書，也能正確處理！
+                existingBookFingerprints.set(incomingBookFingerprint, newBook.id);
+            }
         }
 
         newlyImportedCharacters.push(newCharacter);
@@ -3416,28 +3382,25 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       }
     }
 
-    // ✨ 6. 在所有檔案處理完畢後，一次性更新 state
+    // ... (後續更新 state 和資料庫的部分，保持不變)
     if (newlyCreatedWorldBooks.length > 0) {
         const updatedBooks = [...worldBooks, ...newlyCreatedWorldBooks];
         setWorldBooks(updatedBooks);
         await db.kvStore.put({ key: 'worldBooks', value: updatedBooks });
     }
-
     if (newlyImportedCharacters.length > 0) {
         const updatedCharacters = [...characters, ...newlyImportedCharacters];
         setCharacters(updatedCharacters);
         await db.characters.bulkPut(newlyImportedCharacters);
     }
-    
     let summaryMessage = `✅ 批次匯入完成！\n`;
     if (successCount > 0) summaryMessage += `成功匯入 ${successCount} 個角色。\n`;
-    if (newlyCreatedWorldBooks.length > 0) summaryMessage += `並自動生成了 ${newlyCreatedWorldBooks.length} 本世界書。\n`;
+    if (newlyCreatedWorldBooks.length > 0) summaryMessage += `並自動創建了 ${newlyCreatedWorldBooks.length} 本新的主要知識書。\n`;
     if (failureCount > 0) summaryMessage += `有 ${failureCount} 個檔案匯入失敗。`;
     alert(summaryMessage);
-
     if (event.target) event.target.value = '';
     
-  }, [characters, worldBooks]); // ✨ 7. 記得加入 worldBooks 作為依賴項
+}, [characters, worldBooks]); // ✨ 7. 記得加入 worldBooks 作為依賴項
 
   // =================================================================================
   // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
@@ -3904,7 +3867,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
     // ✨ [升級] 處理世界書邏輯 (完整版)
     const triggeredEntries = [];
-    const activeBookIds = currentCharacter.attachedWorldBookIds || [];
+    const activeBookIds = currentCharacter.mainLorebookId ? [currentCharacter.mainLorebookId] : [];
     const activeBooks = worldBooks.filter(book => activeBookIds.includes(book.id));
 
     for (const book of activeBooks) {
