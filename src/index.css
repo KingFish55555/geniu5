@@ -19,9 +19,9 @@
 }
 
 :root[data-theme="dark"] {
-  --primary-color: #313131;
+  --primary-color: #707070;
   --accent-color: #272727;
-  --background-color: #222222;
+  --background-color: #161616;
   --surface-color: #202020;
   --border-color: #5a5a5a;
   --text-primary: #f9fafb;
@@ -32,15 +32,15 @@
   --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
   --quote-text-color: #8ac2e6;
   --middle-color: #505050;
-  --topline-color: #222222;
+  --topline-color: #161616;
   --user-color: #313131;
 }
 
 :root[data-theme="light"] {
-  --primary-color: #cfd8e7;      /* 中性灰 */
+  --primary-color: #a6afc0;      /* 中性灰 */
   --accent-color: #4b5563;       /* 深灰 */
   --background-color: #f9fafb;   /* 極淺灰白 */
-  --surface-color: #f3f4f6;      /* 淺灰 */
+  --surface-color: #e6e8ec;      /* 淺灰 */
   --border-color: #e5e7eb;       /* 邊框灰 */
   --text-primary: #111827;       /* 深黑 */
   --text-secondary: #6b7280;     /* 中灰 */
@@ -64,7 +64,7 @@
   /* --- 背景顏色 --- */
   --background-color: rgb(205, 238, 203);
   --surface-color: rgb(253, 250, 239);
-  --gradient-bg: rgb(253, 250, 239);
+  --gradient-bg: rgb(205, 238, 203);
 
   /* --- 使用者聊天泡泡 --- */
   --user-color: rgb(245, 241, 191, 0.5);
@@ -93,7 +93,7 @@
   /* --- 背景顏色 (溫暖牛奶) --- */
   --background-color: #fdfaf6; /* 溫暖的乳白色 */
   --surface-color: #fbf3e9;    /* 拿鐵色，比背景稍深 */
-  --gradient-bg: #fbf3e9;
+  --gradient-bg: #fdfaf6;
   
   /* --- 使用者聊天泡泡 (牛奶巧克力) --- */
   --user-color: rgba(160, 115, 80, 0.2);
@@ -118,26 +118,26 @@
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(111, 89, 93);
   --accent-color: #af7e7e;
-  --topline-color: rgb(111, 89, 93, 0.7);
+  --topline-color: rgb(111, 89, 93, 0.8);
 
   /* --- 背景顏色 --- */
-  --background-color: #d3c2b8;
-  --surface-color: #e5cfc0;
-  --gradient-bg: #e5cfc0;
+  --background-color: #e7d8cf;
+  --surface-color: #e4d3c7;
+  --gradient-bg: #e7d8cf;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(182, 169, 164, 0.75); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(133, 107, 110, 0.25); 
 
   /* --- 文字顏色 --- */
   --text-primary: #77585f;
-  --text-secondary: #856b6e;
-  --text-muted: rgba(151, 116, 120, 0.7);
+  --text-secondary: rgb(133, 107, 110);
+  --text-muted: rgb(172, 134, 134);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #af7e7e;
+  --quote-text-color: rgb(197, 133, 133);
 
   /* --- 其他顏色 --- */
-  --border-color: #b19595;
+  --border-color: rgb(111, 89, 93, 0.45);
   --middle-color: #d4bdb2;
   --shadow-light: rgba(86, 70, 74, 0.1);
   --shadow-medium: rgba(86, 70, 74, 0.2);
@@ -148,23 +148,23 @@
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(83, 92, 149);
   --accent-color: #597da7;
-  --topline-color: rgb(83, 92, 149, 0.7);
+  --topline-color: rgb(83, 92, 149, 0.8);
 
   /* --- 背景顏色 --- */
-  --background-color: #d3c6c3;
-  --surface-color: #d1c5bf;
-  --gradient-bg: #d1c5bf;
+  --background-color: #e4d5d1;
+  --surface-color: #e4d7d1;
+  --gradient-bg: #e4d5d1;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(177, 175, 177, 0.75); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(138, 138, 138, 0.25); 
 
   /* --- 文字顏色 --- */
-  --text-primary: #4953a1;
-  --text-secondary: #666ea6;
-  --text-muted: rgba(104, 113, 179, 0.7);
+  --text-primary: #545980;
+  --text-secondary: rgba(138, 138, 138); 
+  --text-muted: rgb(143, 168, 196);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #597da7;
+  --quote-text-color: rgb(84, 126, 173);
 
   /* --- 其他顏色 --- */
   --border-color: #9799c8;
@@ -176,22 +176,22 @@
 /* ✨ 全新！風信子紫 (Hyacinth Mauve) 主題 ✨ */
 :root[data-theme="hyacinth-mauve"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: rgb(102, 88, 119);
+  --primary-color: rgb(86, 72, 104);
   --accent-color: #7071c0;
-  --topline-color: rgb(102, 88, 119, 0.7);
+  --topline-color: rgba(86, 72, 104, 0.8);
 
   /* --- 背景顏色 --- */
-  --background-color: #c7bdbb;
-  --surface-color: #ccc4c1;
-  --gradient-bg: #ccc4c1;
+  --background-color: #dbceca;
+  --surface-color: #d1c3c0;
+  --gradient-bg: #dbceca;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(184, 176, 181, 0.75); /* 使用 secondary 色的半透明版 */
+  --user-color: rgba(126, 101, 116, 0.25); 
 
   /* --- 文字顏色 --- */
-  --text-primary: #5f4e74;
-  --text-secondary: #8b739e;
-  --text-muted: rgba(141, 116, 160, 0.7);
+  --text-primary: #544863;
+  --text-secondary: rgba(126, 101, 116); 
+  --text-muted: rgb(151, 132, 167);
   
   /* --- 點綴色 --- */
   --quote-text-color: #7071c0;
@@ -206,25 +206,25 @@
 /* ✨ 全新！暗夜風信子 (Dark Hyacinth Mauve) 主題 ✨ */
 :root[data-theme="dark-hyacinth"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: rgb(132, 112, 147);
-  --accent-color: #9394d6;
-  --topline-color: #2c2733;
+  --primary-color: #484264;
+  --accent-color: #665892;
+  --topline-color: rgba(71, 61, 77, 0.8);
 
   /* --- 背景顏色 --- */
-  --background-color: #433850;
-  --surface-color: #42354b;
-  --gradient-bg: #42354b;
+  --background-color: #141218;
+  --surface-color: #272135;
+  --gradient-bg: #141218;
   
   /* --- 使用者聊天泡泡 --- */
-  --user-color: rgba(149, 123, 168, 0.15);
+  --user-color: rgba(143, 120, 155, 0.25);
 
   /* --- 文字顏色 --- */
-  --text-primary: #7b6e7e;
-  --text-secondary: #6d5e7f;
-  --text-muted: rgba(109, 94, 127, 0.7);
+  --text-primary: #bdb2c0;
+  --text-secondary: rgb(143, 120, 155);
+  --text-muted: rgb(113, 101, 121);
   
   /* --- 點綴色 --- */
-  --quote-text-color: #9394d6;
+  --quote-text-color: #66669e;
 
   /* --- 其他顏色 --- */
   --border-color: #49405a;
@@ -236,20 +236,20 @@
 /* ✨ 全新！藍月夜 (Blue Moon) 主題 ✨ */
 :root[data-theme="blue-moon"] {
   /* --- 互動與主要顏色 (焦糖棕) --- */
-  --primary-color: #775343;
-  --accent-color: #c89967;
+  --primary-color: #c89967;
+  --accent-color: #775343;
   --topline-color: #0c1e3c;
 
   /* --- 背景顏色 (深藍夜空) --- */
   --background-color: #071226;
   --surface-color: #1e2533;
-  --gradient-bg: #1e2533;
+  --gradient-bg: #071226;
   
   /* --- 使用者聊天泡泡 --- */
   --user-color: rgba(122, 90, 74, 0.25);
 
   /* --- 文字顏色 (月光白) --- */
-  --text-primary: #d2cec6;
+  --text-primary: #cec7b7;
   --text-secondary: #7e93b0;
   --text-muted: rgba(126, 147, 176, 0.7);
   
@@ -261,6 +261,36 @@
   --middle-color: #1b2841;
   --shadow-light: rgba(0, 0, 0, 0.2);
   --shadow-medium: rgba(0, 0, 0, 0.4);
+}
+
+/* ✨ 塵墜滝下 (moriarty) 主題 ✨ */
+:root[data-theme="moriarty"] {
+/* --- 互動與主要顏色 --- */
+--primary-color: rgb(58, 58, 82);
+--accent-color: #2C96D9;
+--topline-color: rgb(58, 58, 82, 0.8);
+
+/* --- 背景顏色 --- */
+--background-color: #8d9fc9;
+--surface-color: rgb(175, 196, 224);;
+--gradient-bg: #8d9fc9;
+
+/* --- 使用者聊天泡泡 --- */
+--user-color: rgba(36, 163, 196, 0.25);
+
+/* --- 文字顏色 --- */
+--text-primary: #42425f;
+--text-secondary: rgb(93, 100, 145);
+--text-muted: #6a6f9e;
+
+/* --- 點綴色 --- */
+--quote-text-color: #308fca;
+
+/* --- 其他顏色 --- */
+--border-color: #676da3;
+--middle-color: #515686;
+--shadow-light: rgba(81, 68, 97, 0.1);
+--shadow-medium: rgba(81, 68, 97, 0.2);
 }
 
 /* 引號內文字的專屬樣式 */
@@ -553,8 +583,8 @@ body {
   right: 15px;
   z-index: 6; /* 確保按鈕在面板之上，永遠可以點擊 */
   
-  background: rgba(128, 128, 128, 0.2);
-  color: var(--text-muted);
+  background: var(--text-muted);
+  color: var(--topline-color);
   border: none;
   width: 32px;
   height: 32px;
@@ -567,8 +597,8 @@ body {
 }
 
 .info-panel-toggle-btn:hover {
-  background: rgba(128, 128, 128, 0.4);
-  color: var(--text-primary);
+  background: var(--topline-color);
+  color: var(--text-muted);
 }
 
 /* ✨ 4. 這些是原本就在的樣式，我們把它們保留下來 */
@@ -595,13 +625,13 @@ body {
 }
 
 .connection-status.connected {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
+  color: var(--primary-color);
+  background: var(--background-color);
 }
 
 .connection-status.disconnected {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
+  color: var(--text-muted);
+  background: var(--background-color);
 }
 
 /* Messages Area */
@@ -687,9 +717,9 @@ body {
 }
 
 .system-message .message-content {
-  background: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fbbf24;
+  background: var(--text-muted);
+  color: var(--quote-text-color);
+  border: 1px solid var(--quote-text-color);
   max-width: 90%;
 }
 
@@ -766,7 +796,7 @@ body {
 
 .send-button {
   background: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
   border: none;
   border-radius: 50%;
   width: 45px;
@@ -845,7 +875,7 @@ body {
 
 .card-header.expanded {
   background: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
 }
 
 .card-title {
@@ -1004,8 +1034,26 @@ body {
   flex: 1;
 }
 
+.api-key-input .setting-input::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.api-key-input .setting-input::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.api-key-input .setting-input::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.api-key-input .setting-input::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
+}
+
 .test-btn {
-  background: #5c5c5c;
+  background: var(--text-muted);
   color: white;
   border: none;
   padding: 12px 16px;
@@ -1020,11 +1068,11 @@ body {
 }
 
 .test-btn:hover:not(:disabled) {
-  background: var(--accent-color);
+  background: var(--quote-text-color);
 }
 
 .test-btn:disabled {
-  background: var(--text-muted);
+  background: var(--primary-color);
   cursor: not-allowed;
 }
 
@@ -1056,7 +1104,7 @@ body {
 .theme-btn.active {
   border-color: var(--primary-color);
   background: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
 }
 
 /* Data Management Buttons - 小尺寸版本 */
@@ -1083,36 +1131,36 @@ body {
 }
 
 .data-btn.export {
-  border-color: #10b981;
-  color: #10b981;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
   background: var(--background-color);
 }
 
 .data-btn.export:hover {
-  background: #10b981;
-  color: white;
+  background: var(--primary-color);
+  color: var(--background-color);
 }
 
 .data-btn.import {
-  border-color: #3b82f6;
-  color: #3b82f6;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
   background: var(--background-color);
 }
 
 .data-btn.import:hover {
-  background: #3b82f6;
-  color: white;
+  background: var(--primary-color);
+  color: var(--background-color);
 }
 
 .data-btn.danger {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
   background: var(--background-color);
 }
 
 .data-btn.danger:hover {
-  background: #ef4444;
-  color: white;
+  background: var(--quote-text-color);
+  color: var(--background-color);
 }
 
 .data-btn svg {
@@ -1122,8 +1170,8 @@ body {
 
 /* Save Button */
 .save-btn {
-  background: #10b981;
-  color: white;
+  background: var(--surface-color);
+  color: var(--text-muted);
   border: none;
   padding: 12px 20px;
   border-radius: 8px;
@@ -1140,7 +1188,7 @@ body {
 }
 
 .save-btn:hover {
-  background: #059669;
+  background: var(--primary-color);
 }
 
 /* About Info */
@@ -1186,7 +1234,7 @@ body {
 .about-btn:hover {
   border-color: var(--primary-color);
   background: var(--primary-color);
-  color: white;
+  color: var(--background-color);
 }
 
 /* Scrollbar Styling */
@@ -1295,7 +1343,7 @@ body {
 }
 
 .delete-btn {
-  background: #ef4444;
+  background:  var(--quote-text-color);
   color: white;
   border: none;
   padding: 8px 12px;
@@ -1308,7 +1356,7 @@ body {
 }
 
 .delete-btn:hover:not(:disabled) {
-  background: #dc2626;
+  background:  var(--quote-text-color);
 }
 
 .delete-btn:disabled {
@@ -1318,14 +1366,14 @@ body {
 
 /* 新增一個專門用於圖示按鈕的刪除樣式 */
 .delete-icon-btn {
-  border-color: #ef4444;
-  color: #ef4444;
+  border-color: var(--text-muted);
+  color: var(--text-muted);
 }
 
 .delete-icon-btn:hover {
-  background-color: #ef4444;
-  color: white;
-  border-color: #ef4444;
+  background-color:  var(--quote-text-color);
+  color: var(--text-muted);
+  border-color:  var(--quote-text-color);
 }
 
 .divider {
@@ -1416,22 +1464,22 @@ body {
 }
 
 .editor-buttons .save-btn {
-  background-color: #10b981;
-  color: white;
+  background-color: var(--text-muted);
+  color: var(--background-color);
 }
 .editor-buttons .save-btn:hover {
-  background-color: #059669;
+  background-color: var(--primary-color);
 }
 
 .editor-buttons .delete-btn {
-  background-color: #ef4444;
-  color: white;
+  background-color: var(--text-muted);
+  color: var(--background-color);
 }
 .editor-buttons .delete-btn:hover:not(:disabled) {
-  background-color: #dc2626;
+  background-color: var(--text-muted);
 }
 .editor-buttons .delete-btn:disabled {
-  background-color: var(--text-muted);
+  background-color: var(--quote-text-color);
   cursor: not-allowed;
 }
 
@@ -1557,6 +1605,24 @@ body {
   padding-right: 10px;
 }
 
+.modal-body::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
+}
+
 .modal-body .form-group {
   margin-bottom: 16px;
 }
@@ -1578,6 +1644,24 @@ body {
 }
 .modal-body textarea {
   resize: vertical;
+}
+
+.modal-body textarea::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.modal-body textarea::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.modal-body textarea::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.modal-body textarea::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
 }
 
 .avatar-form-group .avatar-editor {
@@ -1630,10 +1714,10 @@ body {
   width: 38px;
   height: 38px;
   padding: 0;
-  border: 1px solid #ef4444;
+  border: 1px solid var(--quote-text-color);
   border-radius: 6px;
   background: var(--background-color);
-  color: #ef4444;
+  color: var(--quote-text-color);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1641,8 +1725,8 @@ body {
   transition: all 0.2s ease;
 }
 .delete-character-icon-btn:hover {
-  background-color: #ef4444;
-  color: white;
+  background-color: var(--quote-text-color);
+  color: var(--surface-color);
 }
 
 .modal-footer {
@@ -1665,11 +1749,11 @@ body {
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: #10b981;
-  color: white;
+  background-color: var(--text-muted);
+  color: var(--surface-color);
 }
 .footer-btn.save-btn:hover {
-  background-color: #059669;
+  background-color: var(--primary-color);
 }
 
 .form-label-group {
@@ -1826,7 +1910,7 @@ body {
 
 .edit-character-btn:hover {
   background: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
   border-color: var(--primary-color);
 }
 
@@ -1853,7 +1937,7 @@ body {
 
 .import-button:hover {
   background: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
   border-color: var(--primary-color);
 }
 
@@ -1864,7 +1948,7 @@ body {
   width: 56px;
   height: 56px;
   background-color: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
   border: none;
   border-radius: 50%;
   display: flex;
@@ -2045,6 +2129,24 @@ body {
   padding: 4px;
 }
 
+.world-book-entries::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.world-book-entries::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.world-book-entries::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.world-book-entries::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
+}
+
 .world-book-entry {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
@@ -2124,7 +2226,7 @@ body {
 }
 
 input:checked + .slider {
-  background-color: #10b981;
+  background-color: var(--primary-color);
 }
 
 input:checked + .slider:before {
@@ -2199,8 +2301,8 @@ input:checked + .slider:before {
   position: absolute;
   bottom: 76px; /* 比編輯按鈕高一點 */
   background: var(--surface-color);
-  border: 1px solid #dc3545; /* 紅色邊框 */
-  color: #dc3545; /* 紅色文字 */
+  border: 1px solid var(--primary-color); /* 紅色邊框 */
+  color: var(--primary-color); /* 紅色文字 */
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -2225,8 +2327,8 @@ input:checked + .slider:before {
 
 /* 刪除按鈕 hover 效果 */
 .delete-message-btn:hover {
-  background: #dc3545;
-  color: white;
+  background: var(--primary-color);
+  color: var(--quote-text-color);
 }
 
 /* 用戶訊息的按鈕位置 */
@@ -2268,15 +2370,18 @@ input:checked + .slider:before {
 
 .edit-btn {
   padding: 6px 14px;
-  border: none;
+  margin: 1px;
   border-radius: 6px;
   cursor: pointer;
   font-weight: 500;
+  background-color: var(--primary-color);
+  border: 1px solid var(--surface-color);
+  color: var(--surface-color);
 }
 
 .edit-btn.save {
   background-color: var(--primary-color);
-  color: white;
+  color: var(--surface-color);
 }
 
 .edit-btn.cancel {
@@ -2309,7 +2414,7 @@ select:focus {
 }
 .pin-chat-btn.active {
   opacity: 1;
-  color: #ffc107;
+  color: var(--quote-text-color);
 }
 
 /* Version Control & Action Toolbar Styles */
@@ -2428,6 +2533,23 @@ select:focus {
     padding: 15px;
 }
 
+.message-input::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.message-input::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.message-input::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.message-input::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
+}
 
 /* + 按鈕的樣式 */
 .input-menu-btn {
@@ -2454,7 +2576,7 @@ select:focus {
 .input-menu-btn.open {
   transform: rotate(45deg);
   background-color: var(--primary-color);
-  color: white;
+  color:  var(--surface-color);
 }
 
 /* 選單本體的樣式 */
@@ -2477,7 +2599,7 @@ select:focus {
 .input-menu-item {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2532,7 +2654,7 @@ select:focus {
 /* 單一操作按鈕的樣式 */
 .swipe-action-btn {
   border: none;
-  color: white;
+  color: var(--surface-color);
   font-weight: 500;
   cursor: pointer;
   width: 70px; /* 每個按鈕寬 70px */
@@ -2543,24 +2665,26 @@ select:focus {
 }
 
 .swipe-action-btn.pin {
-  background-color: #f59e0b; /* 橘色 */
+  background-color: var(--primary-color);
 }
 .swipe-action-btn.pin:hover {
-  background-color: #d97706;
+  background-color: var(--text-muted);
+  color: var(--surface-color);
 }
 
 .swipe-action-btn.delete {
-  background-color: #ef4444; /* 紅色 */
+  background-color: var(--quote-text-color);
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
 }
 .swipe-action-btn.delete:hover {
-  background-color: #dc2626;
+  background-color: var(--text-muted);
+  color: var(--surface-color);
 }
 
 /* "更多" 按鈕 (...) 的樣式 */
 .more-actions-btn {
-  background: var(--middle-color);
+  background: var(--surface-color);
   border: none;
   color: var(--text-secondary);
   padding: 8px;
@@ -2572,9 +2696,10 @@ select:focus {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: 0.3s;
 }
 .more-actions-btn:hover {
-  background-color: var(--surface-color);
+  background-color: var(--text-muted);
 }
 
 /* 最後，我們需要稍微調整一下 character-list-item 的樣式 */
@@ -2898,25 +3023,27 @@ select:focus {
 }
 
 .screenshot-btn.cancel:hover {
-  background-color: #ef4444;
-  border-color: #ef4444;
-  color: white;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--surface-color);
 }
 
 .screenshot-btn.confirm {
-  background-color: #10b981;
-  border-color: #10b981;
-  color: white;
+  background-color: var(--surface-color);
+  border-color: var(--surface-color);
+  color: var(--text-muted);
 }
 
 .screenshot-btn.confirm:hover:not(:disabled) {
-  background-color: #059669;
-  border-color: #059669;
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--surface-color);
 }
 
 .screenshot-btn:disabled {
   background-color: var(--text-muted);
   border-color: var(--text-muted);
+  color: var(--surface-color);
   cursor: not-allowed;
   opacity: 0.7;
 }
@@ -2951,17 +3078,18 @@ select:focus {
 
 /* 按鈕懸停時的效果 */
 .fav-character-btn:hover {
-  border-color: #f59e0b; /* 金黃色 */
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
 }
 
 /* 按鈕被收藏時的樣式 (核心！) */
 .fav-character-btn.favorited {
-  border-color: #f59e0b;
-  color: #f59e0b;
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
 }
 
 .fav-character-btn.favorited svg {
-  fill: #f59e0b; /* 讓星星圖示被填滿金色 */
+  fill: var(--quote-text-color);/* 讓星星圖示被填滿金色 */
   transform: scale(1.1); /* 稍微放大，增加視覺回饋 */
 }
 
@@ -3206,7 +3334,7 @@ select:focus {
 }
 
 input:checked + .slider {
-  background-color: #10b981; /* 綠色 */
+  background-color: var(--primary-color);
 }
 
 input:disabled + .slider {
