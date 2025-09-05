@@ -597,6 +597,67 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
   );
 };
 
+// =================================================================================
+// ✨✨✨ 全新！聊天知識書選擇器 Modal ✨✨✨
+// =================================================================================
+const AuxiliaryLorebookSelectorModal = ({ show, worldBooks, selectedIds, onSave, onClose }) => {
+  // 用一個暫時的 state 來管理使用者在視窗內的勾選，按下儲存後才真正生效
+  const [tempSelectedIds, setTempSelectedIds] = useState([]);
+
+  useEffect(() => {
+    // 當視窗打開時，將外部傳入的已選 ID 同步到我們的暫時 state
+    if (show) {
+      setTempSelectedIds(selectedIds || []);
+    }
+  }, [show, selectedIds]);
+
+  if (!show) return null;
+
+  // 處理勾選/取消勾選的邏輯
+  const handleToggle = (bookId) => {
+    setTempSelectedIds(prev =>
+      prev.includes(bookId)
+        ? prev.filter(id => id !== bookId)
+        : [...prev, bookId]
+    );
+  };
+  
+  const handleSave = () => {
+    onSave(tempSelectedIds); // 將最終選定的 ID 列表傳回給父元件
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header"><h3>選擇聊天知識書</h3><button onClick={onClose} className="close-btn"><X size={20} /></button></div>
+        <div className="modal-body">
+          <p className="setting-description" style={{ marginBottom: '16px' }}>
+            您可以在此為本次聊天額外啟用一本或多本世界書。
+          </p>
+          <div className="world-book-selector-list">
+            {worldBooks.length > 0 ? worldBooks.map(book => (
+                <label key={book.id} className="wb-selector-item">
+                    <input
+                        type="checkbox"
+                        checked={tempSelectedIds.includes(book.id)}
+                        onChange={() => handleToggle(book.id)}
+                    />
+                    <span className="wb-selector-name">{book.name}</span>
+                </label>
+            )) : (
+                <p className="empty-list-text">還沒有建立任何世界書。</p>
+            )}
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={handleSave} className="footer-btn save-btn"><Save size={16}/> 儲存選擇</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
 const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage }) => {
   const showActions = showActionsMessageId === msg.id;
@@ -1230,203 +1291,103 @@ const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClos
   );
 };
 
-const ChatPage = ({ regexRules, oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
+const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexRules, oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
   
   const textareaRef = useRef(null);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
 
-  // ✨ 將 Regex 處理工廠搬到這裡
-  const applyAllRegex = useCallback((text, char) => {
-    if (!text) return '';
-    let processedText = text;
+  // ✨ 1. 核心新增：計算當前啟用的「聊天知識書」
+  const activeAuxiliaryBooks = useMemo(() => {
+    if (!currentCharacter || !activeChatId) return [];
+    
+    // 從 metadata 中讀取這個聊天室儲存的額外世界書 ID 列表
+    const auxBookIds = chatMetadatas[currentCharacter.id]?.[activeChatId]?.auxiliaryBookIds || [];
+    
+    // 從總世界書列表中，篩選出 ID 匹配的書
+    return worldBooks.filter(book => auxBookIds.includes(book.id));
+  }, [worldBooks, chatMetadatas, currentCharacter, activeChatId]);
 
-    const enabledGlobalRules = regexRules?.filter(rule => rule.enabled) || [];
-    for (const rule of enabledGlobalRules) {
-      try {
-        processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace);
-      } catch (error) {
-        console.error(`無效的全域 Regex 規則: "${rule.find}" - App.js:1614`, error);
-      }
-    }
+  // ✨✨✨ 1. 在這裡加入計算主要知識書的 useMemo ✨✨✨
+  const activeMainBook = useMemo(() => {
+    if (!currentCharacter?.mainLorebookId || !worldBooks) return null;
+    return worldBooks.find(book => book.id === currentCharacter.mainLorebookId);
+  }, [worldBooks, currentCharacter]);
 
-    const enabledLocalRules = char?.embeddedRegex?.filter(rule => rule.enabled) || [];
-    for (const rule of enabledLocalRules) {
-      try {
-        processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace);
-      } catch (error) {
-        console.error(`無效的區域 Regex 規則 (角色: ${char.name}): "${rule.find}" - App.js:1623`, error);
-      }
-    }
-    return processedText;
-  }, [regexRules]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, messagesEndRef]);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (textarea) {
-      textarea.style.height = 'auto';
-      textarea.style.height = `${textarea.scrollHeight}px`;
-    }
-  }, [inputMessage]);
-
-  const handleSend = () => {
-    if (inputMessage.trim()) {
-      sendMessage();
-    } else {
-      continueGeneration();
-    }
-  };
-
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
+  const applyAllRegex = useCallback((text, char) => { if (!text) return ''; let processedText = text; const enabledGlobalRules = regexRules?.filter(rule => rule.enabled) || []; for (const rule of enabledGlobalRules) { try { processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace); } catch (error) { console.error(`無效的全域 Regex 規則: "${rule.find}"`, error); } } const enabledLocalRules = char?.embeddedRegex?.filter(rule => rule.enabled) || []; for (const rule of enabledLocalRules) { try { processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace); } catch (error) { console.error(`無效的區域 Regex 規則 (角色: ${char.name}): "${rule.find}"`, error); } } return processedText; }, [regexRules]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, messagesEndRef]);
+  useEffect(() => { const textarea = textareaRef.current; if (textarea) { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; } }, [inputMessage]);
+  const handleSend = () => { if (inputMessage.trim()) { sendMessage(); } else { continueGeneration(); } };
+  const handleKeyPress = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
   const isButtonDisabled = isLoading || (!inputMessage.trim() && messages.length === 0);
 
   return (
     <div className="page-content">
       <div className="chat-header-container">
-        <button 
-          className="info-panel-toggle-btn" 
-          onClick={() => setIsInfoPanelOpen(!isInfoPanelOpen)}
-        >
-          {isInfoPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </button>
+        <button className="info-panel-toggle-btn" onClick={() => setIsInfoPanelOpen(!isInfoPanelOpen)}> {isInfoPanelOpen ? <ChevronUp size={20} /> : <ChevronDown size={20} />} </button>
         {isInfoPanelOpen && (
           <div className="chat-header-panel">
             <div className="chat-info current-user-display">
-              <div className="message-avatar">
-                <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,...'} alt="User Avatar" className="avatar-image" />
-              </div>
+              <div className="message-avatar"> <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,...'} alt="User Avatar" className="avatar-image" /> </div>
               <div className="chat-info-details">
                 <span className="current-prompt">{currentUserProfile.name || '(未命名身份)'}{currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}</span>
                 <span className="current-character">正在與 {currentCharacter.name} 對話</span>
                 {currentPrompt && (<span className="current-prompt" style={{ opacity: 0.7 }}>使用: {currentPrompt.name}</span>)}
+                
+                {/* ✨✨✨ 2. 在 JSX 中加入顯示主要知識書的 span ✨✨✨ */}
+                {activeMainBook && (
+                  <span className="current-prompt" style={{ opacity: 0.7 }}>
+                    主要知識書: {activeMainBook.name}
+                  </span>
+                )}
+
+                {/* ✨ 2. 核心新增：顯示已啟用的聊天知識書 */}
+                {activeAuxiliaryBooks.length > 0 && (
+                  <span className="current-prompt" style={{ opacity: 0.7, fontStyle: 'italic' }}>
+                    聊天知識書: {activeAuxiliaryBooks.map(book => book.name).join('， ')}
+                  </span>
+                )}
+
               </div>
             </div>
-            <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}>
-              {isApiConnected ? (<span>{loadedConfigName ? `${loadedConfigName} (${apiModel})` : apiProviders[apiProvider]?.name}</span>) : (<span>未連接</span>)}
-            </div>
+            <div className={`connection-status ${isApiConnected ? 'connected' : 'disconnected'}`}> {isApiConnected ? (<span>{loadedConfigName ? `${loadedConfigName} (${apiModel})` : apiProviders[apiProvider]?.name}</span>) : (<span>未連接</span>)} </div>
           </div>
         )}
       </div>
   
       <div className="messages-area">
-        {messages.length > 0 && messages.map((message, index) => {
-          // ✨ 在這裡預處理文字
-          const originalText = message.contents[message.activeContentIndex];
-          const processedTextForMessage = applyAllRegex(originalText, currentCharacter);
-          
-          return (
-            <ChatMessage 
-              key={message.id}
-              msg={message}
-              processedText={processedTextForMessage} // ✨ 傳遞處理好的文字
-              currentUserProfile={currentUserProfile}
-              character={currentCharacter}
-              activeChatId={activeChatId}
-              setEditingMessage={setEditingMessage}
-              handleDeleteMessage={handleDeleteMessage}
-              showActionsMessageId={showActionsMessageId}
-              setShowActionsMessageId={setShowActionsMessageId}
-              handleRegenerate={handleRegenerate}
-              onChangeVersion={onChangeVersion}
-              isScreenshotMode={isScreenshotMode}
-              isSelected={selectedMessageIds.includes(message.id)}
-              onSelectMessage={handleSelectMessage}
-              isLastMessage={index === messages.length - 1}
-            />
-          );
-        })}
-        {isLoading && (
-          <div className="loading-message">
-            <div className="loading-dots"><span></span><span></span><span></span></div>
-            <p>{currentCharacter.name} 正在輸入中...</p>
-          </div>
-        )}
+        {messages.length > 0 && messages.map((message, index) => { const originalText = message.contents[message.activeContentIndex]; const processedTextForMessage = applyAllRegex(originalText, currentCharacter); return ( <ChatMessage key={message.id} msg={message} processedText={processedTextForMessage} currentUserProfile={currentUserProfile} character={currentCharacter} activeChatId={activeChatId} setEditingMessage={setEditingMessage} handleDeleteMessage={handleDeleteMessage} showActionsMessageId={showActionsMessageId} setShowActionsMessageId={setShowActionsMessageId} handleRegenerate={handleRegenerate} onChangeVersion={onChangeVersion} isScreenshotMode={isScreenshotMode} isSelected={selectedMessageIds.includes(message.id)} onSelectMessage={handleSelectMessage} isLastMessage={index === messages.length - 1} /> ); })}
+        {isLoading && ( <div className="loading-message"> <div className="loading-dots"><span></span><span></span><span></span></div> <p>{currentCharacter.name} 正在輸入中...</p> </div> )}
         <div ref={messagesEndRef} />
       </div>
   
       <div className="input-area-wrapper">
-        {isScreenshotMode ? (
-          <div className="screenshot-toolbar">
-            <button className="screenshot-btn cancel" onClick={handleToggleScreenshotMode}><X size={18} /><span>取消</span></button>
-            <span className="screenshot-info">已選擇 {selectedMessageIds.length} 則訊息</span>
-            <button className="screenshot-btn confirm" onClick={handleGenerateScreenshot} disabled={selectedMessageIds.length === 0}><Check size={18} /><span>生成圖片</span></button>
-          </div>
+        {isScreenshotMode ? ( <div className="screenshot-toolbar"> <button className="screenshot-btn cancel" onClick={handleToggleScreenshotMode}><X size={18} /><span>取消</span></button> <span className="screenshot-info">已選擇 {selectedMessageIds.length} 則訊息</span> <button className="screenshot-btn confirm" onClick={handleGenerateScreenshot} disabled={selectedMessageIds.length === 0}><Check size={18} /><span>生成圖片</span></button> </div>
         ) : (
           <>
             {isInputMenuOpen && (
               <div className="input-menu">
-                {/* ✨ 核心修改：新增「切換身份」按鈕 ✨ */}
-                <button className="input-menu-item" onClick={() => { onSwitchProfile(); setIsInputMenuOpen(false); }}>
-                  <Users size={20} />
-                  <span>切換身份</span>
+                <button className="input-menu-item" onClick={() => { onSwitchProfile(); setIsInputMenuOpen(false); }}> <Users size={20} /> <span>切換身份</span> </button>
+                
+                {/* ✨ 3. 核心新增：加入「聊天知識書」按鈕 */}
+                <button className="input-menu-item" onClick={() => { onOpenAuxLorebookSelector(); setIsInputMenuOpen(false); }}>
+                  <Globe size={20} />
+                  <span>聊天知識書</span>
                 </button>
-                <button className="input-menu-item" onClick={() => { onOpenOocSelector(); setIsInputMenuOpen(false); }}>
-                  <MessageSquarePlus size={20} />
-                  <span>OOC 指令</span>
-                </button>
-                <button className="input-menu-item" onClick={() => { setIsMemoryModalOpen(true); setIsInputMenuOpen(false); }}>
-                  <BookOpen size={20} />
-                  <span>長期記憶</span>
-                </button>
-                <button className="input-menu-item" onClick={() => { setIsAuthorsNoteModalOpen(true); setIsInputMenuOpen(false); }}>
-                  <Settings size={20} />
-                  <span>Author's Note</span>
-                </button>
-                <button className="input-menu-item" onClick={() => { exportChat(); setIsInputMenuOpen(false); }}>
-                  <Download size={20} />
-                  <span>匯出聊天 (.jsonl)</span>
-                </button>
-                <button className="input-menu-item" onClick={() => { document.getElementById('st-import-input').click(); setIsInputMenuOpen(false); }}>
-                  <Upload size={20} />
-                  <span>匯入聊天 (.jsonl)</span>
-                </button>
-                <button className="input-menu-item" onClick={handleToggleScreenshotMode}>
-                  <Camera size={20} />
-                  <span>訊息截圖</span>
-                </button>
+
+                <button className="input-menu-item" onClick={() => { onOpenOocSelector(); setIsInputMenuOpen(false); }}> <MessageSquarePlus size={20} /> <span>OOC 指令</span> </button>
+                <button className="input-menu-item" onClick={() => { setIsMemoryModalOpen(true); setIsInputMenuOpen(false); }}> <BookOpen size={20} /> <span>長期記憶</span> </button>
+                <button className="input-menu-item" onClick={() => { setIsAuthorsNoteModalOpen(true); setIsInputMenuOpen(false); }}> <Settings size={20} /> <span>Author's Note</span> </button>
+                <button className="input-menu-item" onClick={() => { exportChat(); setIsInputMenuOpen(false); }}> <Download size={20} /> <span>匯出聊天 (.jsonl)</span> </button>
+                <button className="input-menu-item" onClick={() => { document.getElementById('st-import-input').click(); setIsInputMenuOpen(false); }}> <Upload size={20} /> <span>匯入聊天 (.jsonl)</span> </button>
+                <button className="input-menu-item" onClick={handleToggleScreenshotMode}> <Camera size={20} /> <span>訊息截圖</span> </button>
               </div>
             )}
 
-            <input 
-              type="file" 
-              id="st-import-input" 
-              accept=".jsonl" 
-              style={{ display: 'none' }} 
-              onChange={handleImport} 
-            />
-
+            <input type="file" id="st-import-input" accept=".jsonl" style={{ display: 'none' }} onChange={handleImport} />
             <div className="input-area">
-              <button 
-                className={`input-menu-btn ${isInputMenuOpen ? 'open' : ''}`}
-                onClick={() => setIsInputMenuOpen(!isInputMenuOpen)}
-              >
-                <Plus size={22} />
-              </button>
-              <textarea
-                ref={textareaRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                placeholder={currentCharacter ? `向 ${currentCharacter.name} 說話` : "輸入訊息..."}
-                className="message-input"
-                disabled={isLoading}
-                rows={1}
-              />
-              <button 
-                onClick={handleSend}
-                disabled={isButtonDisabled}
-                className="send-button"
-              >
-                {inputMessage.trim() ? <Send size={18} /> : <MoveRightIcon size={20} />}
-              </button>
+              <button className={`input-menu-btn ${isInputMenuOpen ? 'open' : ''}`} onClick={() => setIsInputMenuOpen(!isInputMenuOpen)}> <Plus size={22} /> </button>
+              <textarea ref={textareaRef} value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} placeholder={currentCharacter ? `向 ${currentCharacter.name} 說話` : "輸入訊息..."} className="message-input" disabled={isLoading} rows={1} />
+              <button onClick={handleSend} disabled={isButtonDisabled} className="send-button"> {inputMessage.trim() ? <Send size={18} /> : <MoveRightIcon size={20} />} </button>
             </div>
           </>
         )}
@@ -2009,7 +1970,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.52</p>
+                  <p>版本：0.5.53</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2213,6 +2174,7 @@ const ChatApp = () => {
   const [swipedChatId, setSwipedChatId] = useState(null);
   const [showActionsMessageId, setShowActionsMessageId] = useState(null);
   const messagesEndRef = useRef(null);
+  const [isAuxLorebookSelectorOpen, setIsAuxLorebookSelectorOpen] = useState(false);
 
   const [isScreenshotMode, setIsScreenshotMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState([]);
@@ -3141,23 +3103,46 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   // =================================================================================
   // ✨✨✨ 全新！世界書管理函式 ✨✨✨
   // =================================================================================
-  const handleAddWorldBook = useCallback(() => {
-      const newBook = {
-          id: `wb_${Date.now()}`,
-          name: '新的世界書',
-          entries: {},
-      };
-      const updatedBooks = [...worldBooks, newBook];
-      setWorldBooks(updatedBooks);
-      // 如果您希望新增後直接打開編輯器，可以修改 WorldBookPage 來實現
-  }, [worldBooks]);
+  const handleAddWorldBook = useCallback(async () => {
+    const newBook = {
+      id: `wb_${Date.now()}`,
+      name: '新的世界書',
+      description: '',
+      entries: {},
+    };
+    
+    // 使用 functional update 確保拿到最新的狀態
+    const updatedBooks = [...worldBooks, newBook];
+    setWorldBooks(updatedBooks);
+    
+    // 立即寫入資料庫確保同步
+    try {
+      await db.kvStore.put({ key: 'worldBooks', value: updatedBooks });
+    } catch (error) {
+      console.error("新增世界書後寫入 DB 失敗:", error);
+    }
+  }, [worldBooks]); // 依賴項保持不變
 
   const handleSaveWorldBook = useCallback(async (bookData) => {
-      const updatedBooks = worldBooks.map(b => b.id === bookData.id ? bookData : b);
-      setWorldBooks(updatedBooks);
-      await db.kvStore.put({ key: 'worldBooks', value: updatedBooks }); // 直接寫入確保即時性
-      alert(`✅ 已儲存世界書：「${bookData.name}」`);
-  }, [worldBooks]);
+    let savedBookName = '未知';
+    setWorldBooks(prevBooks => {
+        const updatedBooks = prevBooks.map(b => {
+            if (b.id === bookData.id) {
+                savedBookName = bookData.name;
+                return bookData;
+            }
+            return b;
+        });
+        
+        db.kvStore.put({ key: 'worldBooks', value: updatedBooks }).catch(error => {
+          console.error("儲存世界書後寫入 DB 失敗:", error);
+        });
+        
+        return updatedBooks;
+    });
+
+    alert(`✅ 已儲存世界書：「${savedBookName}」`);
+  }, [worldBooks]); // ✨✨✨ 核心修改：將依賴項從 [] 改為 [worldBooks] ✨✨✨
 
   const handleDeleteWorldBook = useCallback(async (bookId) => {
       const updatedBooks = worldBooks.filter(b => b.id !== bookId);
@@ -3195,43 +3180,39 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
             const text = await file.text();
             const data = JSON.parse(text);
 
-            // ✨ 核心修正點：
-            // 1. 我們只檢查最重要的 `entries` 是否存在。
-            // 2. 如果 `name` 不存在，我們就從檔名中提取一個作為備用。
             if (data.entries && typeof data.entries === 'object') {
-                
-                // ✨ 如果找不到 name，就用檔名（去掉 .json 後綴）
                 const bookName = data.name || file.name.replace(/\.json$/i, '');
-
                 const newBook = {
                     ...data,
-                    name: bookName, // ✨ 使用我們確定的名稱
+                    name: bookName,
                     id: `wb_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                 };
                 importedBooks.push(newBook);
+            } else {
+                console.warn(`檔案 ${file.name} 格式不正確，已跳過。`);
             }
-            // ✨ 如果 JSON 格式不對，我們甚至可以給個提示（可選）
-            else {
-                console.warn(`檔案 ${file.name} 格式不正確，缺少 'entries' 物件，已跳過。`);
-            }
-
         } catch (error) {
             console.error(`匯入世界書 ${file.name} 失敗:`, error);
-            // ✨ 可以在這裡給使用者一個錯誤提示
-            alert(`匯入檔案 "${file.name}" 時發生錯誤，請檢查檔案是否為有效的 JSON 格式。`);
+            alert(`匯入檔案 "${file.name}" 時發生錯誤。`);
         }
     }
 
     if (importedBooks.length > 0) {
-        const updatedBooks = [...worldBooks, ...importedBooks];
-        setWorldBooks(updatedBooks);
-        // ✨ 在 setState 後立即寫入資料庫，確保資料同步
-        await db.kvStore.put({ key: 'worldBooks', value: updatedBooks });
-        alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
+        // 使用 functional update 來合併新舊書籍
+        const finalBooks = [...worldBooks, ...importedBooks];
+        setWorldBooks(finalBooks);
+
+        // 立即寫入資料庫
+        try {
+          await db.kvStore.put({ key: 'worldBooks', value: finalBooks });
+          alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
+        } catch (error) {
+          console.error("匯入世界書後寫入 DB 失敗:", error);
+        }
     }
 
     if (event.target) event.target.value = '';
-}, [worldBooks]); // 依賴項保持不變
+  }, [worldBooks]); // 依賴項保持不變
 
   // =================================================================================
   // ✨✨✨ 全新！OOC 指令管理函式 ✨✨✨
@@ -3397,347 +3378,151 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     reader.readAsText(file);
   }, []); // 依賴項為空，因為 setRegexRules 會自動取得最新狀態
 
-  // ✨✨✨ 升級版！建立聊天室時綁定使用者 ID ✨✨✨
+  // ✨✨✨ 在這裡加入全新的「儲存聊天知識書」函式 ✨✨✨
+  const handleSaveAuxiliaryLorebooks = useCallback((selectedIds) => {
+    if (!activeChatCharacterId || !activeChatId) return;
+
+    setChatMetadatas(prev => {
+      const newMetas = JSON.parse(JSON.stringify(prev));
+      // 確保路徑存在
+      if (!newMetas[activeChatCharacterId]) newMetas[activeChatCharacterId] = {};
+      if (!newMetas[activeChatCharacterId][activeChatId]) {
+        newMetas[activeChatCharacterId][activeChatId] = { pinned: false, name: '', notes: '' };
+      }
+      
+      // ✨ 核心：將選擇的 ID 陣列儲存到這個聊天室的 metadata 中
+      newMetas[activeChatCharacterId][activeChatId].auxiliaryBookIds = selectedIds;
+      return newMetas;
+    });
+
+    setIsAuxLorebookSelectorOpen(false); // 儲存後自動關閉視窗
+    alert(`✅ 已更新 ${selectedIds.length} 本聊天知識書。`);
+  }, [activeChatCharacterId, activeChatId]);
+
+
+  // ✨✨✨ 用這個新版本【覆蓋】舊的 handleStartChat ✨✨✨
   const handleStartChat = useCallback((character, greeting, selectedProfileId) => {
     setCurrentCharacter(character);
-    
-    // 找出要用哪個使用者來替換佔位符
     const startingProfile = userProfiles.find(p => p.id === selectedProfileId) || userProfiles[0];
-
-    const allGreetings = [
-      character.firstMessage,
-      ...(character.alternateGreetings || [])
-    ].filter(Boolean).map(g => applyPlaceholders(g, character, startingProfile));
-
+    const allGreetings = [ character.firstMessage, ...(character.alternateGreetings || []) ].filter(Boolean).map(g => applyPlaceholders(g, character, startingProfile));
     const newChatId = `chat_${Date.now()}`;
-    
     let initialHistory = [];
     if (allGreetings.length > 0) {
       const selectedIndex = allGreetings.indexOf(applyPlaceholders(greeting, character, startingProfile));
-      const firstMessage = {
-        id: Date.now(),
-        sender: 'ai',
-        contents: allGreetings, 
-        activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, 
-        timestamp: getFormattedTimestamp(),
-      };
+      const firstMessage = { id: Date.now(), sender: 'ai', contents: allGreetings, activeContentIndex: selectedIndex !== -1 ? selectedIndex : 0, timestamp: getFormattedTimestamp(), };
       initialHistory = [firstMessage];
     }
-
-    setChatHistories(prev => {
-      const newHistories = { ...prev };
-      if (!newHistories[character.id]) newHistories[character.id] = {};
-      newHistories[character.id][newChatId] = initialHistory;
-      return newHistories;
-    });
+    setChatHistories(prev => { const newHistories = { ...prev }; if (!newHistories[character.id]) newHistories[character.id] = {}; newHistories[character.id][newChatId] = initialHistory; return newHistories; });
     
-    // ✨ 核心修改：在建立 metadata 時，把使用者 ID 存進去！
     setChatMetadatas(prev => {
       const newMetas = { ...prev };
       if (!newMetas[character.id]) newMetas[character.id] = {};
       newMetas[character.id][newChatId] = { 
-        name: '', 
-        notes: '', 
-        pinned: false, 
-        userProfileId: selectedProfileId // ✨ 在這裡綁定 ID
+        name: '', notes: '', pinned: false, 
+        userProfileId: selectedProfileId,
+        auxiliaryBookIds: [], // ✨ 核心：為新聊天室初始化一個空的聊天知識書陣列
       };
       return newMetas;
     });
     
     setActiveChatCharacterId(character.id);
     setActiveChatId(newChatId);
-
     closePreview();
     navigateToPage('chat');
-  }, [navigateToPage, getFormattedTimestamp, userProfiles]); // ✨ 新增 userProfiles 依賴項
+  }, [navigateToPage, getFormattedTimestamp, userProfiles]);
 
   const testApiConnection = useCallback(async () => {
-  if (!apiKey.trim()) {
-    alert('請至少輸入一個 API 金鑰！');
-    return;
-  }
-  setApiTestLoading(true);
-
-  // 1. 將輸入的文字拆分成金鑰陣列，並過濾掉空行
-  const allKeys = apiKey.split('\n').map(k => k.trim()).filter(k => k);
-  let isConnectionSuccessful = false;
-
-  // 2. 遍歷所有金鑰，逐一測試
-  for (let i = 0; i < allKeys.length; i++) {
-    const currentKey = allKeys[i];
-    console.log(`正在測試金鑰 #${i + 1}... - App.js:3775`);
-    try {
-      const provider = apiProviders[apiProvider];
-      // (這裡的測試邏輯和您原本的一樣，只是用了 currentKey)
-      let requestBody;
-      let endpoint = provider.endpoint;
-      const testMessage = '你好';
-
-      if (provider.isGemini) {
-        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
-        requestBody = { contents: [{ parts: [{ text: testMessage }] }] };
-      } else {
-        requestBody = { model: apiModel, messages: [{ role: 'user', content: testMessage }], max_tokens: 10 };
-      }
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: provider.headers(currentKey),
-        body: JSON.stringify(requestBody)
-      });
-
-      if (response.ok) {
-        // 3. 只要有一個金鑰成功，就立刻設定狀態並結束
-        setIsApiConnected(true);
-        const lastUsed = { provider: apiProvider, model: apiModel }; // 儲存所有金鑰
-        localStorage.setItem('app_last_used_api', JSON.stringify(lastUsed));
-        setCurrentApiKeyIndex(i); // ✨ 記住這個成功的金鑰索引！
-        alert(`✅ 金鑰 #${i + 1} 連接成功！`);
-        isConnectionSuccessful = true;
-        break; // 成功後就跳出 for 迴圈
-      } else {
-         console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status} - App.js:3806`);
-      }
-    } catch (error) {
-      console.error(`金鑰 #${i + 1} 發生錯誤: - App.js:3809`, error);
+    if (!apiKey.trim()) {
+      alert('請至少輸入一個 API 金鑰！');
+      return;
     }
-  }
-
-  // 4. 如果所有金鑰都試完了還是失敗，才顯示最終的失敗訊息
-  if (!isConnectionSuccessful) {
-    setIsApiConnected(false);
-    alert('❌ 所有 API 金鑰均無法連接。請檢查金鑰、網路連線或 API 服務狀態。');
-  }
-
-  setApiTestLoading(false);
-}, [apiKey, apiProvider, apiModel, apiProviders]);
-
-  // =================================================================================
-  // ✨✨✨ 終極版！sendToAI (v8) - 完美兼容 Gemini 與 Mistral/OpenAI ✨✨✨
-  // =================================================================================
-  const sendToAI = useCallback(async (userInput, currentMessages) => {
-    // --- 準備 API 和文字原料 (保持不變) ---
-    const provider = apiProviders[apiProvider];
-    if (!provider) throw new Error(`API provider "${apiProvider}" not found.`);
-    const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
-    if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。');
-    const currentKey = allKeys[currentApiKeyIndex];
-    if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
-    
-    const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
-    const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
-    
-    // ✨ [升級] 組合一個包含所有掃描來源的文字
-    const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`;
-    const contextScanSources = {
-        personaDescription: userDescription,
-        characterDescription: currentCharacter.description || '',
-        characterPersonality: currentCharacter.personality || '',
-        scenario: currentCharacter.scenario || '',
-        creatorNotes: currentCharacter.creatorNotes || '',
-        chatHistory: [...currentMessages, { contents: [userInput || ''], activeContentIndex: 0 }]
-            .slice(-5)
-            .map(msg => msg.contents[msg.activeContentIndex])
-            .join('\n'),
-    };
-
-    // ✨ [升級] 處理世界書邏輯 (完整版)
-    const triggeredEntries = [];
-    const activeBookIds = currentCharacter.mainLorebookId ? [currentCharacter.mainLorebookId] : [];
-    const activeBooks = worldBooks.filter(book => activeBookIds.includes(book.id));
-
-    for (const book of activeBooks) {
-        for (const entry of Object.values(book.entries || {})) {
-            if (entry.disable) continue;
-
-            let scanText = contextScanSources.chatHistory;
-            if(entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription;
-            if(entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription;
-            if(entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality;
-            if(entry.matchScenario) scanText += '\n' + contextScanSources.scenario;
-            if(entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes;
-
-            const keywords = entry.key || [];
-            // 這裡可以擴展成完整的 AND/NOT/NOR 邏輯，目前簡化為 OR
-            const foundKeyword = keywords.length === 0 || keywords.some(k => scanText.includes(k));
-
-            if (foundKeyword || entry.constant) {
-                triggeredEntries.push(entry);
-            }
-        }
-    }
-    
-    triggeredEntries.sort((a, b) => (a.order || 100) - (b.order || 100));
-
-    const worldInfoByPosition = {
-        before_char: triggeredEntries.filter(e => e.position === 0).map(e => e.content).join('\n'),
-        after_char: triggeredEntries.filter(e => e.position === 1).map(e => e.content).join('\n'),
-        top_an: triggeredEntries.filter(e => e.position === 2).map(e => e.content).join('\n'),
-        bottom_an: triggeredEntries.filter(e => e.position === 3).map(e => e.content).join('\n'),
-        // 為了簡化，暫不處理 @D 和 example message
-    };
-    
-    const finalAuthorsNote = [
-        worldInfoByPosition.top_an,
-        activeAuthorsNote,
-        worldInfoByPosition.bottom_an
-    ].filter(Boolean).join('\n');
-    
-    const finalCharDescription = [
-        worldInfoByPosition.before_char,
-        currentCharacter.description || '',
-        worldInfoByPosition.after_char
-    ].filter(Boolean).join('\n');
-      
-        // --- 步驟 3: 準備佔位符字典 (保持不變，但移除 chat_history) ---
-      // ✨ 核心修正：我們不再預先組合 chatHistoryString，因為不同 API 的處理方式不同
-      const placeholderMap = {
-        '{{char}}': currentCharacter.description || '',
-        '{{user}}': userDescription || '',
-        '{{description}}': currentCharacter.description || '',
-        '{{persona}}': userDescription || '',
-        '{{personality}}': currentCharacter.personality || '',
-        '{{Personality}}': currentCharacter.personality || '', // 兼容大小寫
-        '{{scenario}}': currentCharacter.scenario || '',
-        '{{mes_example}}': currentCharacter.mes_example || '',
-        '{{example_dialogue}}': currentCharacter.mes_example || '',
-        '{{memory}}': activeMemory || '',
-        '{{summary}}': activeMemory || '',
-        '{{authors_note}}': activeAuthorsNote || '',
-        '{{system_prompt}}': currentCharacter.system_prompt || '',
-        '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
-        '{{depth_prompt}}': currentCharacter.depth_prompt || '',
-        '{{group}}': currentCharacter.name,
-        '{{input}}': userInput || '',
-      };
-      
-      // ✨ 預處理角色描述中的 {{user}} 佔位符
-      if (currentCharacter.description) {
-          currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile);
-      }
-      if (currentCharacter.personality) {
-          currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile);
-      }
-
-      // --- 步驟 4: 【全新邏輯】組合請求 ---
-      let requestBody;
+    setApiTestLoading(true);
+  
+    // 1. 將輸入的文字拆分成金鑰陣列，並過濾掉空行
+    const allKeys = apiKey.split('\n').map(k => k.trim()).filter(k => k);
+    let isConnectionSuccessful = false;
+  
+    // 2. 遍歷所有金鑰，逐一測試
+    for (let i = 0; i < allKeys.length; i++) {
+      const currentKey = allKeys[i];
+      console.log(`正在測試金鑰 #${i + 1}...`);
       try {
-          const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
-          let preambleString = ''; // 用來拼接所有前導指令
-          let chatHistoryModuleFound = false;
-
-          // 遍歷所有模組，拼接成一個巨大的前導指令字串
-          for (const module of enabledModules) {
-              let moduleContent = module.content || '';
-
-              if (moduleContent.includes('{{chat_history}}')) {
-                  chatHistoryModuleFound = true;
-                  // 我們只取聊天歷史【之前】的部分
-                  preambleString += moduleContent.split('{{chat_history}}')[0];
-                  // 遇到聊天歷史就停止，後面的部分由 API 格式決定如何處理
-                  break; 
-              }
-
-              for (const [placeholder, value] of Object.entries(placeholderMap)) {
-                  if (placeholder === '{{chat_history}}') continue; // 忽略 chat_history
-                  const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
-                  moduleContent = moduleContent.replace(regex, value || '');
-              }
-              
-              if (moduleContent.trim()) {
-                  preambleString += moduleContent + '\n\n';
-              }
-          }
-          
-          let endpoint = provider.endpoint;
-          const headers = provider.headers(currentKey);
-          const maxOutputTokens = currentPrompt?.maxTokens || 4000;
-          const temperature = currentPrompt?.temperature || 1.2;
-
-          if (provider.isGemini) {
-              // --- Gemini 的處理邏輯 (模仿 ST 的單一 User Message) ---
-              endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
-              
-              // 重新組合對話歷史字串，包含 userInput
-              let fullChatHistoryString = currentMessages
-                  .map(msg => msg.contents[msg.activeContentIndex])
-                  .join('\n');
-              if (userInput && userInput.trim()) {
-                  if (fullChatHistoryString) fullChatHistoryString += '\n';
-                  fullChatHistoryString += userInput;
-              }
-
-              const finalPreamble = preambleString + fullChatHistoryString;
-
-              requestBody = {
-                contents: [{ role: 'user', parts: [{ text: finalPreamble }] }],
-                generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, },
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                ]
-              };
-
-          } else {
-              // --- Mistral / OpenAI 的處理邏輯 (標準 System + User/Assistant 格式) ---
-              const messages = [];
-
-              // 1. 將前導指令作為 System Message
-              if (preambleString.trim()) {
-                  messages.push({ role: 'system', content: preambleString.trim() });
-              }
-
-              // 2. 建立一來一回的對話歷史
-              currentMessages.forEach(msg => {
-                  messages.push({
-                      role: msg.sender === 'user' ? 'user' : 'assistant',
-                      content: msg.contents[msg.activeContentIndex]
-                  });
-              });
-
-              // 3. 加入本次的使用者輸入
-              if (userInput && userInput.trim()) {
-                  messages.push({ role: 'user', content: userInput });
-              }
-
-              requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature };
-          }
-
-          console.log(`【${apiProvider}】最終發送的請求: - App.js:3956`, JSON.stringify(requestBody, null, 2));
-          
-          // --- 步驟 5: 發送請求與處理回應 (保持不變) ---
-          const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
-          if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`API 請求失敗 (${response.status})：${errorText}`);
-          }
-          const data = await response.json();
-          let aiText = null;
-          if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          else if (apiProvider === 'claude') aiText = data.content?.[0]?.text;
-          else aiText = data.choices?.[0]?.message?.content;
-          
-          if (data.promptFeedback && data.promptFeedback.blockReason) {
-              throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`);
-          }
-          
-          if (aiText && aiText.trim() !== '') {
-              return aiText;
-          } else {
-              throw new Error('AI 回應為空或格式不正確');
-          }
-
+        const provider = apiProviders[apiProvider];
+        // (這裡的測試邏輯和您原本的一樣，只是用了 currentKey)
+        let requestBody;
+        let endpoint = provider.endpoint;
+        const testMessage = '你好';
+  
+        if (provider.isGemini) {
+          endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+          requestBody = { contents: [{ parts: [{ text: testMessage }] }] };
+        } else {
+          requestBody = { model: apiModel, messages: [{ role: 'user', content: testMessage }], max_tokens: 10 };
+        }
+  
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: provider.headers(currentKey),
+          body: JSON.stringify(requestBody)
+        });
+  
+        if (response.ok) {
+          // 3. 只要有一個金鑰成功，就立刻設定狀態並結束
+          setIsApiConnected(true);
+          const lastUsed = { provider: apiProvider, model: apiModel }; // 儲存所有金鑰
+          localStorage.setItem('app_last_used_api', JSON.stringify(lastUsed));
+          setCurrentApiKeyIndex(i); // ✨ 記住這個成功的金鑰索引！
+          alert(`✅ 金鑰 #${i + 1} 連接成功！`);
+          isConnectionSuccessful = true;
+          break; // 成功後就跳出 for 迴圈
+        } else {
+           console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status}`);
+        }
       } catch (error) {
-          console.error(`處理或發送請求時發生錯誤: - App.js:3981`, error);
-          throw error; 
+        console.error(`金鑰 #${i + 1} 發生錯誤:`, error);
       }
-  }, [
-      apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
-      currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
-      chatMetadatas, currentApiKeyIndex, worldBooks
-  ]);
+    }
+  
+    // 4. 如果所有金鑰都試完了還是失敗，才顯示最終的失敗訊息
+    if (!isConnectionSuccessful) {
+      setIsApiConnected(false);
+      alert('❌ 所有 API 金鑰均無法連接。請檢查金鑰、網路連線或 API 服務狀態。');
+    }
+  
+    setApiTestLoading(false);
+  }, [apiKey, apiProvider, apiModel, apiProviders]);
+
+  // ✨✨✨ 用這個新版本【覆蓋】舊的 sendToAI ✨✨✨
+  const sendToAI = useCallback(async (userInput, currentMessages) => {
+    // ... (此函式前面解析 API、掃描來源的部分保持不變) ...
+    const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`); const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null; const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null; const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`; const contextScanSources = { personaDescription: userDescription, characterDescription: currentCharacter.description || '', characterPersonality: currentCharacter.personality || '', scenario: currentCharacter.scenario || '', creatorNotes: currentCharacter.creatorNotes || '', chatHistory: [...currentMessages, { contents: [userInput || ''], activeContentIndex: 0 }].slice(-5).map(msg => msg.contents[msg.activeContentIndex]).join('\n'), };
+    
+    const triggeredEntries = [];
+
+    // ▼▼▼ 【✨✨✨ 最終核心修改點 ✨✨✨】 ▼▼▼
+    // 1. 取得角色的「主要知識書」ID
+    const mainBookId = currentCharacter.mainLorebookId;
+    // 2. 從當前聊天 metadata 中取得「聊天知識書」ID 列表
+    const auxiliaryBookIds = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || [];
+    // 3. 將兩者合併，並用 Set 去除重複，再過濾掉空值
+    const allActiveBookIds = [...new Set([mainBookId, ...auxiliaryBookIds].filter(Boolean))];
+    // ▲▲▲ 【✨✨✨ 修改結束 ✨✨✨】 ▲▲▲
+    
+    const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
+
+    // ... (此函式後面的所有部分都保持不變) ...
+    for (const book of activeBooks) { for (const entry of Object.values(book.entries || {})) { if (entry.disable) continue; let scanText = contextScanSources.chatHistory; if(entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription; if(entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription; if(entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality; if(entry.matchScenario) scanText += '\n' + contextScanSources.scenario; if(entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes; const keywords = entry.key || []; const foundKeyword = keywords.length === 0 || keywords.some(k => scanText.includes(k)); if (foundKeyword || entry.constant) { triggeredEntries.push(entry); } } }
+    triggeredEntries.sort((a, b) => (a.order || 100) - (b.order || 100));
+    const worldInfoByPosition = { before_char: triggeredEntries.filter(e => e.position === 0).map(e => e.content).join('\n'), after_char: triggeredEntries.filter(e => e.position === 1).map(e => e.content).join('\n'), top_an: triggeredEntries.filter(e => e.position === 2).map(e => e.content).join('\n'), bottom_an: triggeredEntries.filter(e => e.position === 3).map(e => e.content).join('\n'), };
+    const finalAuthorsNote = [ worldInfoByPosition.top_an, activeAuthorsNote, worldInfoByPosition.bottom_an ].filter(Boolean).join('\n');
+    const finalCharDescription = [ worldInfoByPosition.before_char, currentCharacter.description || '', worldInfoByPosition.after_char ].filter(Boolean).join('\n');
+    const placeholderMap = { '{{char}}': finalCharDescription, '{{user}}': userDescription, '{{description}}': finalCharDescription, '{{persona}}': userDescription, '{{personality}}': currentCharacter.personality || '', '{{Personality}}': currentCharacter.personality || '', '{{scenario}}': currentCharacter.scenario || '', '{{mes_example}}': currentCharacter.mes_example || '', '{{example_dialogue}}': currentCharacter.mes_example || '', '{{memory}}': activeMemory || '', '{{summary}}': activeMemory || '', '{{authors_note}}': finalAuthorsNote, '{{system_prompt}}': currentCharacter.system_prompt || '', '{{post_history_instructions}}': currentCharacter.post_history_instructions || '', '{{depth_prompt}}': currentCharacter.depth_prompt || '', '{{group}}': currentCharacter.name, '{{input}}': userInput || '', };
+    if (currentCharacter.description) { currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile); } if (currentCharacter.personality) { currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile); }
+    let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
+    let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
+    if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; let fullChatHistoryString = currentMessages.map(msg => msg.contents[msg.activeContentIndex]).join('\n'); if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } currentMessages.forEach(msg => { messages.push({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.contents[msg.activeContentIndex] }); }); if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
+    console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
+  }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
@@ -4646,6 +4431,10 @@ const formatStDate = (date, type = 'send_date') => {
               />
             ) : (
               <ChatPage
+                key={activeChatId}
+                worldBooks={worldBooks}
+                chatMetadatas={chatMetadatas}
+                onOpenAuxLorebookSelector={() => setIsAuxLorebookSelectorOpen(true)}
                 oocCommands={oocCommands}
                 onOpenOocSelector={() => setIsOocCommandSelectorOpen(true)}
                 onSelectOocCommand={handleSelectOocCommand}
@@ -4863,6 +4652,15 @@ const formatStDate = (date, type = 'send_date') => {
           onDelete={deletePrompt}
         />
       )}
+      {/* ✨✨✨ 在這裡渲染我們全新的 Modal ✨✨✨ */}
+      <AuxiliaryLorebookSelectorModal
+        show={isAuxLorebookSelectorOpen}
+        worldBooks={worldBooks}
+        // 從 metadata 中讀取當前聊天已選擇的 ID 列表
+        selectedIds={chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || []}
+        onSave={handleSaveAuxiliaryLorebooks}
+        onClose={() => setIsAuxLorebookSelectorOpen(false)}
+      />
       {/* ✨ 全新！OOC 指令編輯器 Modal ✨ */}
       {isOocCommandEditorOpen && (
         <OocCommandEditorModal

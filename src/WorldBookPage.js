@@ -2,13 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { Globe, Plus, Trash2, Edit2, X, Save, ChevronDown, Upload, Download, Link as LinkIcon } from 'lucide-react';
 
 // =================================================================================
-// ✨ 單一世界書條目編輯器 (最終功能完整版) ✨
+// ✨ 單一世界書條目編輯器 (v4 - 最終優化版) ✨
 // =================================================================================
 const WorldBookEntryEditor = ({ entry, onUpdate, onDelete, isCollapsed, onToggleCollapse }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isModeMenuOpen, setIsModeMenuOpen] = useState(false);
+  const modeMenuRef = React.useRef(null);
 
-  // ✨ 1. 核心修改：建立一個全新的「插入位置」選項列表
-  // 我們將 position 和 role 組合在一起，方便 UI 顯示和操作
+  // ✨ 1. 修正並重新排序插入位置選項，與 ST 保持一致
   const positionOptions = [
     { value: '0', label: '角色定義之前' },
     { value: '1', label: '角色定義之後' },
@@ -19,9 +20,6 @@ const WorldBookEntryEditor = ({ entry, onUpdate, onDelete, isCollapsed, onToggle
     { value: '4_0', label: '@D 在系統深度' },
     { value: '4_1', label: '@D 在使用者深度' },
     { value: '4_2', label: '@D 在 AI 深度' },
-    { value: '100', label: '作為「系統」指令' },
-    { value: '101', label: '作為「AI」回覆' },
-    { value: '102', label: '作為「使用者」發言' },
   ];
 
   const logicOptions = [
@@ -29,101 +27,148 @@ const WorldBookEntryEditor = ({ entry, onUpdate, onDelete, isCollapsed, onToggle
     { value: 1, label: '未完全包含' }, { value: 2, label: '完全不含 (NOR)' },
   ];
 
+  const modeOptions = [
+    { mode: 'constant', title: '常駐模式', icon: <div className="wb-status-dot blue"></div> },
+    { mode: 'selective', title: '選擇模式', icon: <div className="wb-status-dot green"></div> },
+    { mode: 'vectorized', title: '向量模式', icon: <LinkIcon size={14} color="#9E9E9E" /> }
+  ];
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(event.target)) {
+        setIsModeMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [modeMenuRef]);
+
+  // --- 所有處理函式 (保持不變) ---
   const handleChange = (field, value, type = 'string') => {
     let finalValue = value;
     if (type === 'number') finalValue = value === '' ? null : Number(value);
     else if (type === 'boolean') finalValue = !entry[field];
     onUpdate(entry.uid, { ...entry, [field]: finalValue });
   };
-  const handleKeysChange = (value) => {
+  const handleKeysChange = (value, field = 'key') => {
     const keysArray = value.split(',').map(k => k.trim()).filter(Boolean);
-    onUpdate(entry.uid, { ...entry, key: keysArray });
+    onUpdate(entry.uid, { ...entry, [field]: keysArray });
   };
   const getValue = (field, defaultValue) => entry[field] ?? defaultValue;
-
-  // ✨ 2. 核心修改：專門用來處理「插入位置」變更的函式
   const handlePositionChange = (e) => {
     const value = e.target.value;
     if (value.includes('_')) {
       const [pos, rol] = value.split('_');
-      // 當選擇 @D 模式時，同時更新 position 和 role
       onUpdate(entry.uid, { ...entry, position: Number(pos), role: Number(rol) });
     } else {
-      // 選擇其他模式時，更新 position 並將 role 重設為 0 (或 null)
       onUpdate(entry.uid, { ...entry, position: Number(value), role: 0 });
     }
   };
-
-  // ✨ 3. 核心修改：計算當前應顯示在下拉選單中的值
+  const handleModeChange = (mode) => {
+    onUpdate(entry.uid, { ...entry, selective: mode === 'selective', constant: mode === 'constant', vectorized: mode === 'vectorized' });
+    setIsModeMenuOpen(false);
+  };
   const currentPositionValue = useMemo(() => {
-    if (entry.position === 4) {
-      return `4_${entry.role ?? 0}`;
-    }
+    if (entry.position === 4) { return `4_${entry.role ?? 0}`; }
     return String(entry.position);
   }, [entry.position, entry.role]);
+  const currentMode = useMemo(() => {
+    if (entry.constant) return modeOptions[0];
+    if (entry.vectorized) return modeOptions[2];
+    return modeOptions[1];
+  }, [entry.constant, entry.selective, entry.vectorized]);
 
-  // ✨ 4. 核心修改：渲染狀態指示燈的函式
-  const renderStatusIcon = () => {
-    if (entry.vectorized) {
-      return <LinkIcon size={14} color="#9E9E9E" title="向量模式" />;
-    }
-    if (entry.constant) {
-      return <div className="wb-status-dot blue" title="常駐模式"></div>;
-    }
-    // 根據您的文件，selective 是預設，所以我們只在它為 true 時顯示綠燈
-    if (entry.selective) {
-      return <div className="wb-status-dot green" title="選擇模式"></div>;
-    }
-    return null; // 如果都不是，則不顯示任何東西
-  };
-
+  // ✨ 2. 全新的 JSX 渲染結構
   return (
-    <div className="wb-entry-editor-detailed">
-      <div className="wb-entry-header" onClick={onToggleCollapse}>
+    <div className="wb-entry-editor-st"
+    style={{ position: 'relative' }} /* ✨✨✨ 核心修改：在這裡加上內聯樣式 ✨✨✨ */
+  >
+      {/* --- 新的標頭佈局 --- */}
+      <div className="wb-entry-header-st" onClick={onToggleCollapse}>
         <ChevronDown size={18} className={`wb-collapse-icon ${isCollapsed ? 'collapsed' : ''}`} />
+        {/* ✨ 4. 核心修改：將下拉選單按鈕的邏輯和渲染分離 ✨ */}
+        <div className="wb-mode-selector" ref={modeMenuRef} onClick={(e) => e.stopPropagation()}>
+          <button className="wb-mode-trigger" onClick={() => setIsModeMenuOpen(!isModeMenuOpen)} title={`目前模式: ${currentMode.title}`}>
+            {currentMode.icon}
+          </button>
+        </div>
         
-        {/* ✨ 5. 核心修改：UI 結構調整，加入狀態指示燈 */}
-        <div className="wb-entry-header-status">
-          {renderStatusIcon()}
-        </div>
-
-        <input
-          type="text"
-          className="wb-entry-comment"
-          placeholder="條目標題/備註"
-          value={getValue('comment', '')}
-          onChange={(e) => { e.stopPropagation(); handleChange('comment', e.target.value); }}
-          onClick={(e) => e.stopPropagation()}
-        />
-
-        <div className="wb-entry-header-actions" onClick={(e) => e.stopPropagation()}>
-          <label className="switch">
-            <input type="checkbox" checked={!getValue('disable', false)} onChange={() => handleChange('disable', null, 'boolean')} />
-            <span className="slider round"></span>
-          </label>
-          <button onClick={() => onDelete(entry.uid)} className="wb-delete-btn"><Trash2 size={14} /></button>
-        </div>
+        <input type="text" className="wb-entry-comment" placeholder="條目標題/備註" value={getValue('comment', '')} onChange={(e) => { e.stopPropagation(); handleChange('comment', e.target.value); }} onClick={(e) => e.stopPropagation()} />
+        <label className="switch" onClick={(e) => e.stopPropagation()}>
+          <input type="checkbox" checked={!getValue('disable', false)} onChange={() => handleChange('disable', null, 'boolean')} />
+          <span className="slider round"></span>
+        </label>
+        <button onClick={(e) => { e.stopPropagation(); onDelete(entry.uid); }} className="wb-delete-btn"><Trash2 size={14} /></button>
       </div>
+      
+      {/* ✨ 4. 核心修改：將下拉選單本體移到這裡，讓它獨立於 header 渲染 ✨ */}
+          {isModeMenuOpen && (
+            <div className="wb-mode-menu-floating" ref={modeMenuRef}>
+              {modeOptions.map(opt => (
+                <button key={opt.mode} className="wb-mode-option-floating" onClick={(e) => { e.stopPropagation(); handleModeChange(opt.mode); }}>
+                  {opt.icon}
+                </button>
+              ))}
+            </div>
+          )}
 
       {!isCollapsed && (
-        <div className="wb-entry-body">
-            <div className="form-group"> <label>主要關鍵字 (用逗號,分隔)</label> <input type="text" value={getValue('key', []).join(', ')} onChange={(e) => handleKeysChange(e.target.value)} /> </div>
-            <div className="form-group"> <label>選填過濾器 (次要關鍵字)</label> <input type="text" placeholder="用逗號分隔" value={getValue('keysecondary', []).join(', ')} onChange={(e) => handleChange('keysecondary', e.target.value.split(',').map(k=>k.trim()))} /> </div>
-            
-            <div className="wb-entry-grid-small" style={{gridTemplateColumns: '1fr 1fr'}}>
-              <div className="form-group"> <label>關鍵字邏輯</label> <select className="setting-select" value={getValue('selectiveLogic', 0)} onChange={(e) => handleChange('selectiveLogic', e.target.value, 'number')}> {logicOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)} </select> </div>
-              <div className="form-group">
-                  <label>插入位置</label>
-                  {/* ✨ 6. 核心修改：將下拉選單綁定到新的計算值和處理函式 */}
-                  <select className="setting-select" value={currentPositionValue} onChange={handlePositionChange}>
-                      {positionOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                  </select>
+        <div className="wb-entry-body-st">
+          {/* 主要設定格線 */}
+          <div className="wb-entry-grid-main">
+            <div className="form-group-st"><label>插入位置</label><select className="setting-select" value={currentPositionValue} onChange={handlePositionChange}>{positionOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
+            <div className="form-group-st"><label>深度</label><input type="number" className="slider-value-input" value={getValue('depth', 4)} onChange={(e) => handleChange('depth', e.target.value, 'number')} disabled={entry.position !== 4} /></div>
+            <div className="form-group-st"><label>順序</label><input type="number" className="slider-value-input" value={getValue('order', 100)} onChange={(e) => handleChange('order', e.target.value, 'number')} /></div>
+            <div className="form-group-st"><label>觸發機率 %</label><input type="number" className="slider-value-input" value={getValue('probability', 100)} max={100} min={0} onChange={(e) => handleChange('probability', e.target.value, 'number')} /></div>
+          </div>
+          {/* 關鍵字區塊 */}
+          <div className="form-group-st"><label>主要關鍵字 (用逗號, 分隔)</label><input type="text" value={getValue('key', []).join(', ')} onChange={(e) => handleKeysChange(e.target.value, 'key')} /></div>
+          <div className="wb-entry-grid-keywords">
+            <div className="form-group-st"><label>關鍵字邏輯</label><select className="setting-select" value={getValue('selectiveLogic', 0)} onChange={(e) => handleChange('selectiveLogic', e.target.value, 'number')}>{logicOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
+            <div className="form-group-st"><label>選填過濾器 (次要關鍵字)</label><input type="text" placeholder="用逗號分隔" value={getValue('keysecondary', []).join(', ')} onChange={(e) => handleKeysChange(e.target.value, 'keysecondary')} /></div>
+          </div>
+          {/* 內容輸入框 */}
+          <div className="form-group-st"><label>內容</label><textarea className="wb-entry-content" placeholder="當觸發關鍵字時要插入的內容..." rows="5" value={getValue('content', '')} onChange={(e) => handleChange('content', e.target.value)} /></div>
+          
+          {/* 進階設定開關 */}
+          <button className="advanced-toggle-btn-st" onClick={(e) => { e.stopPropagation(); setIsAdvancedOpen(!isAdvancedOpen); }}>
+            <ChevronDown size={16} style={{ transform: isAdvancedOpen ? 'rotate(180deg)' : 'none' }} />
+            <span>進階設定</span>
+          </button>
+
+          {/* 進階設定區塊 */}
+          {isAdvancedOpen && (
+            <div className="wb-advanced-content-st">
+              <div className="wb-section-st">
+                <label className="wb-section-title">遞迴控制</label>
+                <div className="wb-toggles-grid-st">
+                  <label><input type="checkbox" checked={getValue('excludeRecursion', false)} onChange={() => handleChange('excludeRecursion', null, 'boolean')} /> 不可遞迴</label>
+                  <label><input type="checkbox" checked={getValue('preventRecursion', false)} onChange={() => handleChange('preventRecursion', null, 'boolean')} /> 防止遞迴</label>
+                  <div className="form-group-st recursion-delay"><label>遞迴延遲</label><input type="number" className="slider-value-input" value={getValue('delayUntilRecursion', 0)} onChange={(e) => handleChange('delayUntilRecursion', e.target.value, 'number')} /></div>
+                </div>
+              </div>
+              <div className="wb-section-st">
+                 <label className="wb-section-title">時間控制</label>
+                 <div className="wb-entry-grid-advanced">
+                    <div className="form-group-st"><label>黏性</label><input type="number" className="slider-value-input" value={getValue('sticky', 0)} onChange={(e) => handleChange('sticky', e.target.value, 'number')} /></div>
+                    <div className="form-group-st"><label>冷卻時間</label><input type="number" className="slider-value-input" value={getValue('cooldown', 0)} onChange={(e) => handleChange('cooldown', e.target.value, 'number')} /></div>
+                    <div className="form-group-st"><label>延遲</label><input type="number" className="slider-value-input" value={getValue('delay', 0)} onChange={(e) => handleChange('delay', e.target.value, 'number')} /></div>
+                 </div>
+              </div>
+              <div className="wb-section-st">
+                <label className="wb-section-title">額外匹配來源</label>
+                <div className="wb-toggles-grid-st extra-sources">
+                  <label><input type="checkbox" checked={getValue('matchPersonaDescription', false)} onChange={() => handleChange('matchPersonaDescription', null, 'boolean')} /> 使用者角色描述</label>
+                  <label><input type="checkbox" checked={getValue('matchCharacterDescription', false)} onChange={() => handleChange('matchCharacterDescription', null, 'boolean')} /> 角色描述</label>
+                  <label><input type="checkbox" checked={getValue('matchCharacterPersonality', false)} onChange={() => handleChange('matchCharacterPersonality', null, 'boolean')} /> 角色個性</label>
+                  <label><input type="checkbox" checked={getValue('matchScenario', false)} onChange={() => handleChange('matchScenario', null, 'boolean')} /> 場景設想</label>
+                  <label><input type="checkbox" checked={getValue('matchCreatorNotes', false)} onChange={() => handleChange('matchCreatorNotes', null, 'boolean')} /> 創作者備註</label>
+                </div>
               </div>
             </div>
-            
-            <textarea className="wb-entry-content" placeholder="當觸發關鍵字時要插入的內容..." rows="4" value={getValue('content', '')} onChange={(e) => handleChange('content', e.target.value)} />
-            <button className="advanced-toggle-btn" onClick={(e) => { e.stopPropagation(); setIsAdvancedOpen(!isAdvancedOpen); }}> <span>進階設定</span> <ChevronDown size={16} style={{ transform: isAdvancedOpen ? 'rotate(180deg)' : 'none' }} /> </button>
-            {isAdvancedOpen && ( <div className="wb-advanced-content"> <div className="wb-entry-grid-small"> <div className="form-group"><label>插入順序</label><input type="number" className="slider-value-input" value={getValue('order', 100)} onChange={(e) => handleChange('order', e.target.value, 'number')} /></div> <div className="form-group"><label>插入深度</label><input type="number" className="slider-value-input" value={getValue('depth', 4)} onChange={(e) => handleChange('depth', e.target.value, 'number')} disabled={entry.position !== 4} /></div> <div className="form-group"><label>觸發機率 %</label><input type="number" className="slider-value-input" value={getValue('probability', 100)} max={100} min={0} onChange={(e) => handleChange('probability', e.target.value, 'number')} /></div> <div className="form-group"><label>黏性 (回合)</label><input type="number" className="slider-value-input" value={getValue('sticky', 0)} onChange={(e) => handleChange('sticky', e.target.value, 'number')} /></div> <div className="form-group"><label>冷卻 (回合)</label><input type="number" className="slider-value-input" value={getValue('cooldown', 0)} onChange={(e) => handleChange('cooldown', e.target.value, 'number')} /></div> <div className="form-group"><label>掃描深度</label><input type="number" className="slider-value-input" placeholder="使用全域" value={getValue('scanDepth', '')} onChange={(e) => handleChange('scanDepth', e.target.value, 'number')} /></div> </div> <div className="wb-section"> <label className="wb-section-title">遞迴控制</label> <div className="wb-toggles-grid"> <label><input type="checkbox" checked={getValue('excludeRecursion', false)} onChange={() => handleChange('excludeRecursion', null, 'boolean')} /> 不可遞迴</label> <label><input type="checkbox" checked={getValue('preventRecursion', false)} onChange={() => handleChange('preventRecursion', null, 'boolean')} /> 防止遞迴</label> </div> <div className="form-group" style={{marginTop: '10px'}}><label>遞迴延遲 (層級)</label><input type="number" className="slider-value-input" value={getValue('delayUntilRecursion', 0)} onChange={(e) => handleChange('delayUntilRecursion', e.target.value, 'number')} /></div> </div> <div className="wb-section"> <label className="wb-section-title">額外匹配來源</label> <div className="wb-toggles-grid" style={{gridTemplateColumns: '1fr 1fr'}}> <label><input type="checkbox" checked={getValue('matchPersonaDescription', false)} onChange={() => handleChange('matchPersonaDescription', null, 'boolean')} /> 使用者角色描述</label> <label><input type="checkbox" checked={getValue('matchCharacterDescription', false)} onChange={() => handleChange('matchCharacterDescription', null, 'boolean')} /> 角色描述</label> <label><input type="checkbox" checked={getValue('matchCharacterPersonality', false)} onChange={() => handleChange('matchCharacterPersonality', null, 'boolean')} /> 角色個性</label> <label><input type="checkbox" checked={getValue('matchScenario', false)} onChange={() => handleChange('matchScenario', null, 'boolean')} /> 場景設想</label> <label><input type="checkbox" checked={getValue('matchCreatorNotes', false)} onChange={() => handleChange('matchCreatorNotes', null, 'boolean')} /> 創作者備註</label> </div> </div> </div> )}
+          )}
         </div>
       )}
     </div>
@@ -177,7 +222,12 @@ const WorldBookEditorModal = ({ book, onSave, onClose }) => {
   };
   
   const handleSave = () => { onSave(editedBook); onClose(); };
-  const sortedEntries = Object.values(editedBook.entries || {}).sort((a, b) => (a.uid) - (b.uid));
+  const sortedEntries = Object.values(editedBook.entries || {}).sort((a, b) => {
+    // 使用 displayIndex 進行排序，如果某個條目缺少該值，則使用 uid 作為備用
+    const indexA = a.displayIndex ?? a.uid;
+    const indexB = b.displayIndex ?? b.uid;
+    return indexA - indexB;
+  });
   
   return (
     <div className="modal-overlay" onClick={onClose}>
