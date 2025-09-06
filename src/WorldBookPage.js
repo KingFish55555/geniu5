@@ -1,6 +1,111 @@
 import React, { useState, useMemo } from 'react';
 import { Globe, Plus, Trash2, Edit2, X, Save, ChevronDown, Upload, Download, Link as LinkIcon } from 'lucide-react';
 
+// ==================== 共用：SillyTavern 世界書條目欄位映射函數 ====================
+export const mapWorldBookEntryFields = (entry) => {
+  // 🔧 處理角色卡與獨立世界書的欄位差異
+  const ext = entry.extensions || {};
+  
+  // 📋 position 轉換函數
+  const convertPosition = (pos) => {
+    if (typeof pos === 'string') {
+      const posMap = {
+        'before_char': 0,
+        'after_char': 1,
+        'top_an': 2,
+        'bottom_an': 3,
+        'at_depth': 4,
+        'before_example': 5,
+        'after_example': 6
+      };
+      return posMap[pos] !== undefined ? posMap[pos] : 1;
+    }
+    return Number(pos) || 1;
+  };
+  
+  const position = convertPosition((ext.position ?? entry.position));
+  const isAtDepthMode = position === 4;
+  
+  return {
+    // === 基本識別欄位 ===
+    uid: Number((entry.uid ?? entry.id)) || 0,
+    displayIndex: Number((ext.display_index ?? entry.displayIndex ?? entry.uid ?? entry.id)) || 0,
+    comment: String(entry.comment || ''),
+    
+    // === 關鍵字與觸發設定 ===
+    key: Array.isArray(entry.keys) ? entry.keys : (Array.isArray(entry.key) ? entry.key : []),
+    keysecondary: Array.isArray(entry.secondary_keys) ? entry.secondary_keys : (Array.isArray(entry.keysecondary) ? entry.keysecondary : []),
+    selectiveLogic: Number((ext.selectiveLogic ?? entry.selectiveLogic)) || 0,
+    
+    // === 內容欄位 ===
+    content: String(entry.content || ''),
+    
+    // === 觸發策略 ===
+    constant: Boolean(entry.constant),
+    vectorized: Boolean((ext.vectorized ?? entry.vectorized)),
+    selective: entry.selective !== false,
+    disable: Boolean(entry.disable) || !Boolean(entry.enabled),
+    
+    // === 插入位置設定 ===
+    position: position,
+    role: isAtDepthMode ? (Number((ext.role ?? entry.role)) || 0) : null,
+    depth: isAtDepthMode ? (Number((ext.depth ?? entry.depth)) || 4) : 4,
+    order: Number((ext.insertion_order ?? entry.insertion_order ?? entry.order)) || 100,
+    
+    // === 機率控制 ===
+    probability: Number((ext.probability ?? entry.probability)) || 100,
+    useProbability: Boolean((ext.useProbability ?? entry.useProbability)),
+    
+    // === 群組管理 ===
+    group: String((ext.group ?? entry.group) || ''),
+    groupOverride: Boolean((ext.group_override ?? entry.groupOverride)),
+    groupWeight: Number((ext.group_weight ?? entry.groupWeight)) || 100,
+    
+    // === 遞迴控制 ===
+    excludeRecursion: Boolean((ext.exclude_recursion ?? entry.excludeRecursion)),
+    preventRecursion: Boolean((ext.prevent_recursion ?? entry.preventRecursion)),
+    delayUntilRecursion: Number((ext.delay_until_recursion ?? entry.delayUntilRecursion)) || 0,
+    
+    // === 時間控制 ===
+    sticky: Number((ext.sticky ?? entry.sticky)) || 0,
+    cooldown: Number((ext.cooldown ?? entry.cooldown)) || 0,
+    delay: Number((ext.delay ?? entry.delay)) || 0,
+    
+    // === 匹配設定 ===
+    caseSensitive: ((ext.case_sensitive ?? entry.caseSensitive) !== null) ? 
+      Boolean((ext.case_sensitive ?? entry.caseSensitive)) : null,
+    matchWholeWords: ((ext.match_whole_words ?? entry.matchWholeWords) !== null) ? 
+      Boolean((ext.match_whole_words ?? entry.matchWholeWords)) : null,
+    useGroupScoring: ((ext.use_group_scoring ?? entry.useGroupScoring) !== null) ? 
+      Boolean((ext.use_group_scoring ?? entry.useGroupScoring)) : null,
+    scanDepth: ((ext.scan_depth ?? entry.scanDepth) !== null) ? 
+      Number((ext.scan_depth ?? entry.scanDepth)) : null,
+    
+    // === 額外匹配來源 ===
+    matchPersonaDescription: Boolean((ext.match_persona_description ?? entry.matchPersonaDescription)),
+    matchCharacterDescription: Boolean((ext.match_character_description ?? entry.matchCharacterDescription)),
+    matchCharacterPersonality: Boolean((ext.match_character_personality ?? entry.matchCharacterPersonality)),
+    matchCharacterDepthPrompt: Boolean((ext.match_character_depth_prompt ?? entry.matchCharacterDepthPrompt)),
+    matchScenario: Boolean((ext.match_scenario ?? entry.matchScenario)),
+    matchCreatorNotes: Boolean((ext.match_creator_notes ?? entry.matchCreatorNotes)),
+    
+    // === 觸發時機控制 ===
+    triggers: Array.isArray(ext.triggers) ? ext.triggers : (Array.isArray(entry.triggers) ? entry.triggers : []),
+    
+    // === 自動化與擴展 ===
+    automationId: String((ext.automation_id ?? entry.automationId) || ''),
+    addMemo: entry.addMemo !== false,
+    
+    // === 新增欄位 ===
+    characterFilter: entry.characterFilter || {
+      isExclude: false,
+      names: [],
+      tags: []
+    },
+    ignoreBudget: Boolean(entry.ignoreBudget)
+  };
+};
+
 // =================================================================================
 // ✨ 單一世界書條目編輯器 (v4 - 最終優化版) ✨
 // =================================================================================
@@ -158,13 +263,89 @@ const WorldBookEntryEditor = ({ entry, onUpdate, onDelete, isCollapsed, onToggle
                  </div>
               </div>
               <div className="wb-section-st">
-                <label className="wb-section-title">額外匹配來源</label>
-                <div className="wb-toggles-grid-st extra-sources">
-                  <label><input type="checkbox" checked={getValue('matchPersonaDescription', false)} onChange={() => handleChange('matchPersonaDescription', null, 'boolean')} /> 使用者角色描述</label>
-                  <label><input type="checkbox" checked={getValue('matchCharacterDescription', false)} onChange={() => handleChange('matchCharacterDescription', null, 'boolean')} /> 角色描述</label>
-                  <label><input type="checkbox" checked={getValue('matchCharacterPersonality', false)} onChange={() => handleChange('matchCharacterPersonality', null, 'boolean')} /> 角色個性</label>
-                  <label><input type="checkbox" checked={getValue('matchScenario', false)} onChange={() => handleChange('matchScenario', null, 'boolean')} /> 場景設想</label>
-                  <label><input type="checkbox" checked={getValue('matchCreatorNotes', false)} onChange={() => handleChange('matchCreatorNotes', null, 'boolean')} /> 創作者備註</label>
+  <label className="wb-section-title">額外匹配來源</label>
+  <div className="wb-toggles-grid-st extra-sources">
+    <label><input type="checkbox" checked={getValue('matchPersonaDescription', false)} onChange={() => handleChange('matchPersonaDescription', null, 'boolean')} /> 使用者角色描述</label>
+    <label><input type="checkbox" checked={getValue('matchCharacterDescription', false)} onChange={() => handleChange('matchCharacterDescription', null, 'boolean')} /> 角色描述</label>
+    <label><input type="checkbox" checked={getValue('matchCharacterPersonality', false)} onChange={() => handleChange('matchCharacterPersonality', null, 'boolean')} /> 角色個性</label>
+    <label><input type="checkbox" checked={getValue('matchCharacterDepthPrompt', false)} onChange={() => handleChange('matchCharacterDepthPrompt', null, 'boolean')} /> 角色備註</label>
+    <label><input type="checkbox" checked={getValue('matchScenario', false)} onChange={() => handleChange('matchScenario', null, 'boolean')} /> 場景設想</label>
+    <label><input type="checkbox" checked={getValue('matchCreatorNotes', false)} onChange={() => handleChange('matchCreatorNotes', null, 'boolean')} /> 創作者備註</label>
+  </div>
+</div>
+              <div className="wb-section-st">
+                <label className="wb-section-title">機率與群組設定</label>
+                <div className="wb-toggles-grid-st">
+                  <label><input type="checkbox" checked={getValue('useProbability', false)} onChange={() => handleChange('useProbability', null, 'boolean')} /> 啟用機率觸發</label>
+                  <div className="form-group-st"><label>群組名稱</label><input type="text" className="slider-value-input" placeholder="留空表示無群組" value={getValue('group', '')} onChange={(e) => handleChange('group', e.target.value)} /></div>
+                  <div className="form-group-st"><label>群組權重</label><input type="number" className="slider-value-input" value={getValue('groupWeight', 100)} onChange={(e) => handleChange('groupWeight', e.target.value, 'number')} /></div>
+                  <label><input type="checkbox" checked={getValue('groupOverride', false)} onChange={() => handleChange('groupOverride', null, 'boolean')} /> 群組優先</label>
+                </div>
+              </div>
+
+              <div className="wb-section-st">
+                <label className="wb-section-title">匹配設定</label>
+                <div className="wb-toggles-grid-st">
+                  <div className="form-group-st">
+                    <label>區分大小寫</label>
+                    <select className="setting-select" value={getValue('caseSensitive', null) === null ? 'global' : getValue('caseSensitive', null).toString()} onChange={(e) => {
+                      const val = e.target.value;
+                      handleChange('caseSensitive', val === 'global' ? null : val === 'true');
+                    }}>
+                      <option value="global">使用全域設定</option>
+                      <option value="true">是</option>
+                      <option value="false">否</option>
+                    </select>
+                  </div>
+                  <div className="form-group-st">
+                    <label>匹配完整單字</label>
+                    <select className="setting-select" value={getValue('matchWholeWords', null) === null ? 'global' : getValue('matchWholeWords', null).toString()} onChange={(e) => {
+                      const val = e.target.value;
+                      handleChange('matchWholeWords', val === 'global' ? null : val === 'true');
+                    }}>
+                      <option value="global">使用全域設定</option>
+                      <option value="true">是</option>
+                      <option value="false">否</option>
+                    </select>
+                  </div>
+                  <div className="form-group-st"><label>掃描深度</label><input type="number" className="slider-value-input" placeholder="留空使用全域" value={getValue('scanDepth', null) || ''} onChange={(e) => handleChange('scanDepth', e.target.value === '' ? null : e.target.value, 'number')} /></div>
+                </div>
+              </div>
+
+              <div className="wb-section-st">
+                <label className="wb-section-title">觸發時機</label>
+                <div className="wb-toggles-grid-st triggers-grid">
+                  {[
+                    { value: 'normal', label: '正常生成' },
+                    { value: 'continue', label: '繼續生成' },
+                    { value: 'impersonate', label: 'AI扮演使用者' },
+                    { value: 'swipe', label: 'Swipe' },
+                    { value: 'regenerate', label: '重新生成' },
+                    { value: 'quiet', label: 'Quiet生成' }
+                  ].map(trigger => (
+                    <label key={trigger.value}>
+                      <input 
+                        type="checkbox" 
+                        checked={(getValue('triggers', []) || []).includes(trigger.value)} 
+                        onChange={() => {
+                          const currentTriggers = getValue('triggers', []) || [];
+                          const newTriggers = currentTriggers.includes(trigger.value) 
+                            ? currentTriggers.filter(t => t !== trigger.value)
+                            : [...currentTriggers, trigger.value];
+                          handleChange('triggers', newTriggers);
+                        }} 
+                      /> {trigger.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="wb-section-st">
+                <label className="wb-section-title">其他設定</label>
+                <div className="wb-toggles-grid-st">
+                  <label><input type="checkbox" checked={getValue('addMemo', true)} onChange={() => handleChange('addMemo', null, 'boolean')} /> 添加備忘</label>
+                  <label><input type="checkbox" checked={getValue('ignoreBudget', false)} onChange={() => handleChange('ignoreBudget', null, 'boolean')} /> 忽略預算限制</label>
+                  <div className="form-group-st"><label>自動化ID</label><input type="text" className="slider-value-input" placeholder="用於腳本識別" value={getValue('automationId', '')} onChange={(e) => handleChange('automationId', e.target.value)} /></div>
                 </div>
               </div>
             </div>
@@ -203,13 +384,86 @@ const WorldBookEditorModal = ({ book, onSave, onClose }) => {
   const handleBookInfoChange = (field, value) => { setEditedBook(prev => ({ ...prev, [field]: value })); };
   
   const handleAddEntry = () => {
-    const newUid = Date.now();
-    const newEntry = {
-      uid: newUid, key: [], content: '', comment: '新條目', disable: false, position: 0, order: 100, probability: 100, selectiveLogic: 0, selective: true, constant: false, addMemo: true, depth: 4, sticky: 0, cooldown: 0, excludeRecursion: false, preventRecursion: false, delayUntilRecursion: 0
-    };
-    setEditedBook(prev => ({ ...prev, entries: { ...prev.entries, [newUid]: newEntry } }));
-    setCollapsedUids(prev => ({...prev, [String(newUid)]: false}));
+  const newUid = Date.now();
+  // ✨ 完整的 SillyTavern 標準預設值
+  const newEntry = {
+    // === 基本識別欄位 ===
+    uid: newUid,
+    displayIndex: newUid,
+    comment: '新條目',
+    
+    // === 關鍵字與觸發設定 ===
+    key: [],
+    keysecondary: [],
+    selectiveLogic: 0,
+    
+    // === 內容欄位 ===
+    content: '',
+    
+    // === 觸發策略 ===
+    constant: false,
+    vectorized: false,
+    selective: true,
+    disable: false,
+    
+    // === 插入位置設定 ===
+    position: 0,
+    role: null,
+    depth: 4,
+    order: 100,
+    
+    // === 機率控制 ===
+    probability: 100,
+    useProbability: false,
+    
+    // === 群組管理 ===
+    group: '',
+    groupOverride: false,
+    groupWeight: 100,
+    
+    // === 遞迴控制 ===
+    excludeRecursion: false,
+    preventRecursion: false,
+    delayUntilRecursion: 0,
+    
+    // === 時間控制 ===
+    sticky: 0,
+    cooldown: 0,
+    delay: 0,
+    
+    // === 匹配設定 ===
+    caseSensitive: null,
+    matchWholeWords: null,
+    useGroupScoring: null,
+    scanDepth: null,
+    
+    // === 額外匹配來源 ===
+    matchPersonaDescription: false,
+    matchCharacterDescription: false,
+    matchCharacterPersonality: false,
+    matchCharacterDepthPrompt: false,
+    matchScenario: false,
+    matchCreatorNotes: false,
+    
+    // === 觸發時機控制 ===
+    triggers: [],
+    
+    // === 自動化與擴展 ===
+    automationId: '',
+    addMemo: true,
+    
+    // === 新增欄位 ===
+    characterFilter: {
+      isExclude: false,
+      names: [],
+      tags: []
+    },
+    ignoreBudget: false
   };
+  
+  setEditedBook(prev => ({ ...prev, entries: { ...prev.entries, [newUid]: newEntry } }));
+  setCollapsedUids(prev => ({...prev, [String(newUid)]: false}));
+};
 
   const handleUpdateEntry = (uid, updatedEntry) => { setEditedBook(prev => ({ ...prev, entries: { ...prev.entries, [uid]: updatedEntry }})); };
   
@@ -237,16 +491,16 @@ const WorldBookEditorModal = ({ book, onSave, onClose }) => {
           <div className="form-group"><label>世界書名稱</label><input type="text" value={editedBook.name || ''} onChange={(e) => handleBookInfoChange('name', e.target.value)} /></div>
           <div className="form-label-group" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}><label>條目 ({sortedEntries.length})</label><button onClick={handleAddEntry} className="add-greeting-btn"><Plus size={14}/> 新增條目</button></div>
           <div className="world-book-entries-detailed">
-            {sortedEntries.map(entry => (
-              <WorldBookEntryEditor 
-                key={entry.uid} 
-                entry={entry} 
-                onUpdate={handleUpdateEntry} 
-                onDelete={handleDeleteEntry} 
-                isCollapsed={!!collapsedUids[String(entry.uid)]} // ✨ 加上 !! 確保總是布林值
-                onToggleCollapse={() => toggleCollapse(entry.uid)} 
-              />
-            ))}
+            {sortedEntries.map((entry, index) => (
+  <WorldBookEntryEditor 
+    key={`entry-${entry.uid}-${index}`}  // ✅ 使用組合鍵確保唯一性
+    entry={entry} 
+    onUpdate={handleUpdateEntry} 
+    onDelete={handleDeleteEntry} 
+    isCollapsed={!!collapsedUids[String(entry.uid)]}
+    onToggleCollapse={() => toggleCollapse(entry.uid)} 
+  />
+))}
           </div>
         </div>
         <div className="modal-footer"><button onClick={handleSave} className="footer-btn save-btn"><Save size={16}/> 儲存</button></div>

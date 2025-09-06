@@ -16,7 +16,7 @@ import ModuleEditorModal from './ModuleEditorModal';
 import OocCommandEditorModal from './OocCommandEditorModal.js';
 import OocCommandSelectorModal from './OocCommandSelectorModal.js';
 import RegexEditorModal from './RegexEditorModal.js';
-import WorldBookPage from './WorldBookPage.js';
+import WorldBookPage, { mapWorldBookEntryFields } from './WorldBookPage.js';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -1970,7 +1970,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.53</p>
+                  <p>版本：0.5.54</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2996,12 +2996,43 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           mainLorebookId: '',
         };
         
-        if (cardData.character_book && Object.keys(cardData.character_book.entries || {}).length > 0) {
-            const incomingBookEntries = cardData.character_book.entries;
+        if (cardData.character_book && (
+  (Array.isArray(cardData.character_book.entries) && cardData.character_book.entries.length > 0) ||
+  (!Array.isArray(cardData.character_book.entries) && Object.keys(cardData.character_book.entries || {}).length > 0)
+)) {
+          const incomingBookEntries = cardData.character_book.entries;
+
             
-            // ✨✨✨ 核心修正：確保每個 entry 都被完整地複製 ✨✨✨
-            // 我們深拷貝一份 entries，確保所有屬性都被保留下來
-            const sanitizedEntries = JSON.parse(JSON.stringify(incomingBookEntries));
+            // ✨ 處理陣列或物件格式的 entries
+            let sanitizedEntries = {};
+            
+           if (Array.isArray(incomingBookEntries)) {
+  // 角色卡格式：陣列轉物件，重新分配連續的 uid
+  let currentUid = 0;
+  incomingBookEntries.forEach((entry, index) => {
+    if (entry && typeof entry === 'object') {
+      const mappedEntry = mapWorldBookEntryFields(entry);
+      mappedEntry.uid = currentUid;  // ✅ 使用連續的 uid
+      mappedEntry.displayIndex = currentUid;  // ✅ 同步更新 displayIndex
+      sanitizedEntries[String(currentUid)] = mappedEntry;
+      currentUid++;
+    }
+  });
+} else {
+  // 獨立世界書格式：物件，確保 uid 連續
+  let currentUid = 0;
+  Object.keys(incomingBookEntries).forEach(key => {
+    const entry = incomingBookEntries[key];
+    if (entry && typeof entry === 'object') {
+      const mappedEntry = mapWorldBookEntryFields(entry);
+      mappedEntry.uid = currentUid;  // ✅ 重新分配連續 uid
+      mappedEntry.displayIndex = currentUid;  // ✅ 同步更新 displayIndex
+      sanitizedEntries[String(currentUid)] = mappedEntry;
+      currentUid++;
+    }
+  });
+}
+        
             const incomingBookFingerprint = JSON.stringify(sanitizedEntries);
 
             if (existingBookFingerprints.has(incomingBookFingerprint)) {
@@ -3171,48 +3202,84 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   }, [worldBooks]);
 
   const handleImportWorldBook = useCallback(async (event) => {
-    const files = event.target.files;
-    if (!files) return;
+  const files = event.target.files;
+  if (!files) return;
 
-    const importedBooks = [];
-    for (const file of files) {
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
+  const importedBooks = [];
 
-            if (data.entries && typeof data.entries === 'object') {
-                const bookName = data.name || file.name.replace(/\.json$/i, '');
-                const newBook = {
-                    ...data,
-                    name: bookName,
-                    id: `wb_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                };
-                importedBooks.push(newBook);
-            } else {
-                console.warn(`檔案 ${file.name} 格式不正確，已跳過。`);
-            }
-        } catch (error) {
-            console.error(`匯入世界書 ${file.name} 失敗:`, error);
-            alert(`匯入檔案 "${file.name}" 時發生錯誤。`);
-        }
+  for (const file of files) {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // 驗證是否為有效的世界書格式
+      if (!data.entries || typeof data.entries !== 'object') {
+        console.warn(`檔案 ${file.name} 格式不正確，已跳過。`);
+        continue;
+      }
+
+// ✨ 處理陣列或物件格式的 entries（與角色卡匯入邏輯統一）
+let sanitizedEntries = {};
+
+if (Array.isArray(data.entries)) {
+  // 陣列格式：重新分配連續的 uid
+  let currentUid = 0;
+  data.entries.forEach((entry, index) => {
+    if (entry && typeof entry === 'object') {
+      const mappedEntry = mapWorldBookEntryFields(entry);
+      mappedEntry.uid = currentUid;
+      mappedEntry.displayIndex = currentUid;
+      sanitizedEntries[String(currentUid)] = mappedEntry;
+      currentUid++;
     }
-
-    if (importedBooks.length > 0) {
-        // 使用 functional update 來合併新舊書籍
-        const finalBooks = [...worldBooks, ...importedBooks];
-        setWorldBooks(finalBooks);
-
-        // 立即寫入資料庫
-        try {
-          await db.kvStore.put({ key: 'worldBooks', value: finalBooks });
-          alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
-        } catch (error) {
-          console.error("匯入世界書後寫入 DB 失敗:", error);
-        }
+  });
+} else {
+  // 物件格式：確保 uid 連續
+  let currentUid = 0;
+  Object.keys(data.entries).forEach(key => {
+    const entry = data.entries[key];
+    if (entry && typeof entry === 'object') {
+      const mappedEntry = mapWorldBookEntryFields(entry);
+      mappedEntry.uid = currentUid;
+      mappedEntry.displayIndex = currentUid;
+      sanitizedEntries[String(currentUid)] = mappedEntry;
+      currentUid++;
     }
+  });
+}
 
-    if (event.target) event.target.value = '';
-  }, [worldBooks]); // 依賴項保持不變
+      const bookName = data.name || file.name.replace(/\.json$/i, '');
+      const newBook = {
+        id: `wb_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        name: bookName,
+        description: String(data.description || ''),
+        entries: sanitizedEntries
+      };
+      
+      importedBooks.push(newBook);
+      
+    } catch (error) {
+      console.error(`匯入世界書 ${file.name} 失敗:`, error);
+      alert(`匯入檔案 "${file.name}" 時發生錯誤：${error.message}`);
+    }
+  }
+
+  if (importedBooks.length > 0) {
+    const finalBooks = [...worldBooks, ...importedBooks];
+    setWorldBooks(finalBooks);
+
+    // 立即寫入資料庫
+    try {
+      await db.kvStore.put({ key: 'worldBooks', value: finalBooks });
+      alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
+    } catch (error) {
+      console.error("匯入世界書後寫入 DB 失敗:", error);
+      alert('⚠️ 匯入成功但儲存時發生錯誤，請重新啟動應用。');
+    }
+  }
+
+  if (event.target) event.target.value = '';
+}, [worldBooks]);
 
   // =================================================================================
   // ✨✨✨ 全新！OOC 指令管理函式 ✨✨✨
@@ -3509,18 +3576,17 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     // ▲▲▲ 【✨✨✨ 修改結束 ✨✨✨】 ▲▲▲
     
     const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
-
-    // ... (此函式後面的所有部分都保持不變) ...
     for (const book of activeBooks) { for (const entry of Object.values(book.entries || {})) { if (entry.disable) continue; let scanText = contextScanSources.chatHistory; if(entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription; if(entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription; if(entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality; if(entry.matchScenario) scanText += '\n' + contextScanSources.scenario; if(entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes; const keywords = entry.key || []; const foundKeyword = keywords.length === 0 || keywords.some(k => scanText.includes(k)); if (foundKeyword || entry.constant) { triggeredEntries.push(entry); } } }
     triggeredEntries.sort((a, b) => (a.order || 100) - (b.order || 100));
     const worldInfoByPosition = { before_char: triggeredEntries.filter(e => e.position === 0).map(e => e.content).join('\n'), after_char: triggeredEntries.filter(e => e.position === 1).map(e => e.content).join('\n'), top_an: triggeredEntries.filter(e => e.position === 2).map(e => e.content).join('\n'), bottom_an: triggeredEntries.filter(e => e.position === 3).map(e => e.content).join('\n'), };
+
     const finalAuthorsNote = [ worldInfoByPosition.top_an, activeAuthorsNote, worldInfoByPosition.bottom_an ].filter(Boolean).join('\n');
     const finalCharDescription = [ worldInfoByPosition.before_char, currentCharacter.description || '', worldInfoByPosition.after_char ].filter(Boolean).join('\n');
     const placeholderMap = { '{{char}}': finalCharDescription, '{{user}}': userDescription, '{{description}}': finalCharDescription, '{{persona}}': userDescription, '{{personality}}': currentCharacter.personality || '', '{{Personality}}': currentCharacter.personality || '', '{{scenario}}': currentCharacter.scenario || '', '{{mes_example}}': currentCharacter.mes_example || '', '{{example_dialogue}}': currentCharacter.mes_example || '', '{{memory}}': activeMemory || '', '{{summary}}': activeMemory || '', '{{authors_note}}': finalAuthorsNote, '{{system_prompt}}': currentCharacter.system_prompt || '', '{{post_history_instructions}}': currentCharacter.post_history_instructions || '', '{{depth_prompt}}': currentCharacter.depth_prompt || '', '{{group}}': currentCharacter.name, '{{input}}': userInput || '', };
     if (currentCharacter.description) { currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile); } if (currentCharacter.personality) { currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile); }
     let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
     let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
-    if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; let fullChatHistoryString = currentMessages.map(msg => msg.contents[msg.activeContentIndex]).join('\n'); if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } currentMessages.forEach(msg => { messages.push({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.contents[msg.activeContentIndex] }); }); if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
+   if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; let fullChatHistoryString = currentMessages.map(msg => msg.contents[msg.activeContentIndex]).join('\n'); if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } currentMessages.forEach(msg => { messages.push({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.contents[msg.activeContentIndex] }); }); if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
     console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
@@ -4476,7 +4542,6 @@ const formatStDate = (date, type = 'send_date') => {
                 handleGenerateScreenshot={handleGenerateScreenshot}
                 handleImport={handleImportFromSillyTavern}
                 onSwitchProfile={() => setIsProfileSwitcherOpen(true)}
-                regexRules={regexRules}
               />
             )
           )}
