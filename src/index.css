@@ -5,6 +5,7 @@
   --font-size-small: 14px;
   --font-size-medium: 16px;
   --font-size-large: 18px;
+  -webkit-tap-highlight-color: transparent
 }
 
 /* 根據 data-font-size 屬性，設定基礎字體大小變數 */
@@ -24,12 +25,12 @@
   --background-color: #161616;
   --surface-color: #202020;
   --border-color: #5a5a5a;
-  --text-primary: #f9fafb;
+  --text-primary: #f2f3f4;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
   --shadow-light: rgba(0, 0, 0, 0.4);
   --shadow-medium: rgba(0, 0, 0, 0.6);
-  --gradient-bg: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  --gradient-bg: #161616;
   --quote-text-color: #8ac2e6;
   --middle-color: #505050;
   --topline-color: #161616;
@@ -39,22 +40,22 @@
 :root[data-theme="light"] {
   --primary-color: #a6afc0;      /* 中性灰 */
   --accent-color: #4b5563;       /* 深灰 */
-  --background-color: #f9fafb;   /* 極淺灰白 */
+  --background-color: #f4f4f4;   /* 極淺灰白 */
   --surface-color: #e6e8ec;      /* 淺灰 */
   --border-color: #bdbdbd;       /* 邊框灰 */
-  --text-primary: #111827;       /* 深黑 */
+  --text-primary: rgb(17, 24, 39);       /* 深黑 */
   --text-secondary: #6b7280;     /* 中灰 */
   --text-muted: #9ca3af;         /* 淺灰 */
-  --shadow-light: rgba(0, 0, 0, 0.05);
-  --shadow-medium: rgba(0, 0, 0, 0.1);
-  --gradient-bg: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  --shadow-light: rgba(12, 16, 26, 0.15);
+  --shadow-medium: rgba(12, 16, 26, 0.25);
+  --gradient-bg: #f9fafb;
   --quote-text-color: #587c9a;
   --middle-color: #e7e7e7;
   --topline-color: #f9fafb;
   --user-color: #cfd8e7;
 }
 
-/* ✨ 全新！蟲餡包綠主題 (路徑修正版) ✨ */
+/* ✨ 蟲餡包綠主題 ✨ */
 :root[data-theme="蟲餡包綠"] {
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(80, 133, 78);
@@ -79,11 +80,11 @@
   /* --- 其他顏色 --- */
   --border-color: rgba(168, 168, 168, 0.438);
   --middle-color: #e7e7e7;
-  --shadow-light: rgba(88, 71, 12, 0.15);
-  --shadow-medium: rgba(88, 71, 12, 0.315);
+  --shadow-light: rgba(83, 48, 9, 0.15);
+  --shadow-medium: rgba(83, 48, 9, 0.25);
 }
 
-/* ✨ 全新！牛奶可可主題 ✨ */
+/* ✨ 牛奶可可主題 ✨ */
 :root[data-theme="牛奶可可"] {
   /* --- 互動與主要顏色 (香醇巧克力) --- */
   --primary-color: rgb(160, 115, 80);
@@ -109,11 +110,11 @@
   /* --- 其他顏色 --- */
   --border-color: rgba(188, 165, 146, 0.5); /* 邊框 */
   --middle-color: #e7e7e7;
-  --shadow-light: rgba(88, 60, 42, 0.1);
-  --shadow-medium: rgba(88, 60, 42, 0.2);
+  --shadow-light: rgba(62, 42, 30, 0.15);
+  --shadow-medium: rgba(62, 42, 30, 0.25);
 }
 
-/* ✨ 全新！懷舊書卷 (Old Books) 主題 ✨ */
+/* ✨ 懷舊書頁主題 ✨ */
 :root[data-theme="old-books"] {
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(111, 89, 93);
@@ -129,7 +130,7 @@
   --user-color: rgba(133, 107, 110, 0.25); 
 
   /* --- 文字顏色 --- */
-  --text-primary: #77585f;
+  --text-primary: rgb(119, 88, 95);
   --text-secondary: rgb(133, 107, 110);
   --text-muted: rgb(172, 134, 134);
   
@@ -137,13 +138,13 @@
   --quote-text-color: rgb(197, 133, 133);
 
   /* --- 其他顏色 --- */
-  --border-color: rgb(111, 89, 93, 0.45);
+  --border-color: rgb(192, 144, 144);
   --middle-color: #d4bdb2;
-  --shadow-light: rgba(86, 70, 74, 0.1);
-  --shadow-medium: rgba(86, 70, 74, 0.2);
+  --shadow-light: rgba(91, 68, 73, 0.15);
+  --shadow-medium: rgba(91, 68, 73, 0.25);
 }
 
-/* ✨ 全新！古典藍調 (Old Blue) 主題 ✨ */
+/* ✨ 舊時光藍主題 ✨ */
 :root[data-theme="old-blue"] {
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(83, 92, 149);
@@ -151,15 +152,15 @@
   --topline-color: rgb(83, 92, 149, 0.8);
 
   /* --- 背景顏色 --- */
-  --background-color: #e4d5d1;
-  --surface-color: #e4d7d1;
-  --gradient-bg: #e4d5d1;
+  --background-color: #dbd1ca;
+  --surface-color: #d1c6c0;
+  --gradient-bg: #dbd1ca;
   
   /* --- 使用者聊天泡泡 --- */
   --user-color: rgba(138, 138, 138, 0.25); 
 
   /* --- 文字顏色 --- */
-  --text-primary: #545980;
+  --text-primary: rgb(84, 89, 128);
   --text-secondary: rgba(138, 138, 138); 
   --text-muted: rgb(143, 168, 196);
   
@@ -167,13 +168,13 @@
   --quote-text-color: rgb(84, 126, 173);
 
   /* --- 其他顏色 --- */
-  --border-color: #9799c8;
+  --border-color: rgb(148, 177, 211);
   --middle-color: #c9bdc8;
-  --shadow-light: rgba(66, 73, 125, 0.1);
-  --shadow-medium: rgba(66, 73, 125, 0.2);
+  --shadow-light: rgba(67, 71, 102, 0.15);
+  --shadow-medium: rgba(67, 71, 102,, 0.25);
 }
 
-/* ✨ 全新！風信子紫 (Hyacinth Mauve) 主題 ✨ */
+/* ✨ 芋泥奶凍主題 ✨ */
 :root[data-theme="hyacinth-mauve"] {
   /* --- 互動與主要顏色 --- */
   --primary-color: rgb(86, 72, 104);
@@ -189,7 +190,7 @@
   --user-color: rgba(126, 101, 116, 0.25); 
 
   /* --- 文字顏色 --- */
-  --text-primary: #544863;
+  --text-primary: rgb(84, 72, 99);
   --text-secondary: rgba(126, 101, 116); 
   --text-muted: rgb(151, 132, 167);
   
@@ -197,18 +198,45 @@
   --quote-text-color: #7071c0;
 
   /* --- 其他顏色 --- */
-  --border-color: #a993af;
+  --border-color: rgb(163, 138, 183);
   --middle-color: #cebbc8;
-  --shadow-light: rgba(81, 68, 97, 0.1);
-  --shadow-medium: rgba(81, 68, 97, 0.2);
+  --shadow-light: rgba(68, 58, 80, 0.15);
+  --shadow-medium: rgba(68, 58, 80, 0.25);
 }
 
-/* ✨ 全新！暗夜風信子 (Dark Hyacinth Mauve) 主題 ✨ */
+/* ✨ 靜霧森語主題 ✨ */
+:root[data-theme="misty forest"] {
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #3c563e;
+  --accent-color: #48684c;
+  --topline-color: rgba(48, 54, 45, 0.8);
+  /* --- 背景顏色 --- */
+  --background-color: #121614;
+  --surface-color: #1c2421;
+  --gradient-bg: #121614;
+  
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(110, 127, 106, 0.25);
+  /* --- 文字顏色 --- */
+  --text-primary: #a6aea2;
+  --text-secondary: rgb(110, 127, 106);
+  --text-muted: #5b635a;
+  
+  /* --- 點綴色 --- */
+  --quote-text-color: #5e9b76;
+  /* --- 其他顏色 --- */
+  --border-color: #657163;
+  --middle-color: #252e28;
+  --shadow-light: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.5);
+}
+
+/* ✨ 深林莓果主題 ✨ */
 :root[data-theme="dark-hyacinth"] {
   /* --- 互動與主要顏色 --- */
-  --primary-color: #484264;
+  --primary-color: rgb(72, 66, 100);
   --accent-color: #665892;
-  --topline-color: rgba(71, 61, 77, 0.8);
+  --topline-color: rgba(59, 50, 66, 0.8);
 
   /* --- 背景顏色 --- */
   --background-color: #141218;
@@ -219,21 +247,21 @@
   --user-color: rgba(143, 120, 155, 0.25);
 
   /* --- 文字顏色 --- */
-  --text-primary: #bdb2c0;
+  --text-primary: rgb(189, 178, 192);
   --text-secondary: rgb(143, 120, 155);
-  --text-muted: rgb(113, 101, 121);
+  --text-muted: #716579;
   
   /* --- 點綴色 --- */
   --quote-text-color: #66669e;
 
   /* --- 其他顏色 --- */
-  --border-color: #49405a;
+  --border-color: rgb(82, 70, 104);
   --middle-color: #373043;
-  --shadow-light: rgba(0, 0, 0, 0.2);
-  --shadow-medium: rgba(0, 0, 0, 0.4);
+  --shadow-light: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.5);
 }
 
-/* ✨ 全新！藍月夜 (Blue Moon) 主題 ✨ */
+/* ✨ 夜色月輪主題 ✨ */
 :root[data-theme="blue-moon"] {
   /* --- 互動與主要顏色 (焦糖棕) --- */
   --primary-color: #c89967;
@@ -259,11 +287,11 @@
   /* --- 其他顏色 --- */
   --border-color: #5b4f48;
   --middle-color: #1b2841;
-  --shadow-light: rgba(0, 0, 0, 0.2);
-  --shadow-medium: rgba(0, 0, 0, 0.4);
+  --shadow-light: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.5);
 }
 
-/* ✨ 塵墜滝下 (moriarty) 主題 ✨ */
+/* ✨ 塵墜滝下主題 ✨ */
 :root[data-theme="moriarty"] {
 /* --- 互動與主要顏色 --- */
 --primary-color: rgb(58, 58, 82);
@@ -272,7 +300,7 @@
 
 /* --- 背景顏色 --- */
 --background-color: #8d9fc9;
---surface-color: rgb(175, 196, 224);;
+--surface-color: rgb(173, 192, 227);
 --gradient-bg: #8d9fc9;
 
 /* --- 使用者聊天泡泡 --- */
@@ -289,8 +317,8 @@
 /* --- 其他顏色 --- */
 --border-color: #676da3;
 --middle-color: #515686;
---shadow-light: rgba(81, 68, 97, 0.1);
---shadow-medium: rgba(81, 68, 97, 0.2);
+  --shadow-light: rgba(0, 0, 0, 0.3);
+  --shadow-medium: rgba(0, 0, 0, 0.5);
 }
 
 /* 引號內文字的專屬樣式 */
@@ -795,6 +823,12 @@ body {
   overflow-y: auto; /* 當內容超過最大高度時，顯示捲軸 */
 }
 
+.message-input::placeholder,
+.setting-input::placeholder,
+.setting-textarea::placeholder {
+  color: var(--text-muted);
+}
+
 .send-button {
   background: var(--primary-color);
   color: var(--surface-color);
@@ -1055,7 +1089,7 @@ body {
 
 .test-btn {
   background: var(--text-muted);
-  color: white;
+  color: var(--text-secondary);
   border: none;
   padding: 12px 16px;
   border-radius: 8px;
@@ -1542,7 +1576,7 @@ body {
 }
 
 .modal-content {
-  background: var(--background-color);
+  background: var(--surface-color);
   padding: 22px;
   border-radius: 16px;
   box-shadow: 0 10px 30px var(--shadow-medium);
@@ -1552,6 +1586,10 @@ body {
   display: flex;
   flex-direction: column;
   animation: slideInUp 0.3s ease-out;
+}
+.setting-description{
+ font-size: 0.8em !important;
+ margin: 16px;
 }
 
 @keyframes slideInUp {
@@ -1639,9 +1677,9 @@ body {
   padding: 10px;
   border: 1px solid var(--border-color);
   border-radius: 6px;
-  background-color: var(--surface-color);
+  background-color: var(--background-color);
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.88em !important;
 }
 .modal-body textarea {
   resize: vertical;
@@ -1835,6 +1873,7 @@ body {
   border-radius: 12px;
   transition: all 0.2s ease;
   padding: 8px;
+  margin: 2px;
 }
 
 .character-list-item.active {
@@ -1848,6 +1887,7 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  justify-content: flex-end;
   cursor: pointer;
   padding: 8px;
   border-radius: 8px;
@@ -1892,6 +1932,7 @@ body {
 .active-check-icon {
   color: var(--primary-color);
   margin-left: auto;
+  padding-right: 25px;
 }
 
 .edit-character-btn {
@@ -1905,7 +1946,8 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  margin-left: 8px;
+  margin-left: 16px;
+  margin-right: 8px;
   transition: all 0.2s ease;
 }
 
@@ -2209,7 +2251,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--border-color);
+  background-color: var(--text-muted);
   transition: .4s;
   border-radius: 22px;
 }
@@ -2221,7 +2263,7 @@ body {
   width: 16px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--text-muted);
   transition: .4s;
   border-radius: 50%;
 }
@@ -2662,6 +2704,8 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 2px;
+  margin-bottom: 2px;
   transition: background-color 0.2s ease;
 }
 
@@ -2737,11 +2781,11 @@ select:focus {
 
   /* ✨ 核心修改：直接設定 SVG 圖示本身的顏色 ✨ */
   /* color 屬性會被 SVG 的 fill="currentColor" 或 stroke="currentColor" 繼承 */
-  color: #ff69b4; /* 金黃色，您可以換成您喜歡的任何顏色，例如粉紅色 #ff69b4 */
+  color: var(--quote-text-color); /*您可以換成您喜歡的任何顏色，例如粉紅色 #ff69b4 */
   
   /* 為了讓圖示更清晰，我們可以加一點點描邊或陰影 */
   /* 方案A: 描邊 (效果較明顯) */
-  -webkit-text-stroke: 1px white; /* 針對 Webkit 瀏覽器 (Chrome, Safari) */
+  -webkit-text-stroke: 1px var(--text-primary); /* 針對 Webkit 瀏覽器 (Chrome, Safari) */
   paint-order: stroke fill; /* 讓描邊在填充色的底下，效果更好 */
 
   /* 方案B: 文字陰影 (效果較柔和) - 如果您使用方案A，可以註解掉這行 */
@@ -2790,9 +2834,9 @@ select:focus {
 }
 
 .wb-delete-btn:hover {
-  background-color: #ef4444;
-  border-color: #ef4444;
-  color: white;
+  background-color: var(--quote-text-color);
+  border-color: var(--quote-text-color);
+  color: var(--text-primary);
 }
 
 .wb-entry-inputs {
@@ -2864,15 +2908,14 @@ select:focus {
   bottom: 10px; /* 原本是 45px，現在調低 */
   
   /* 系統訊息的刪除按鈕用不同顏色 */
-  background: #ff4a4a;
-  border-color: #c90000;
-  color: #ffffff;
+  background: var(--quote-text-color);
+  color: var(--text-primary);
 }
 
 /* 🔥 新增：系統訊息刪除按鈕的 hover 效果 */
 .system-message .delete-message-btn:hover {
-  background: #c90000;
-  color: white;
+  background: var(--quote-text-color);
+  color: var(--text-primary);
 }
 
 /* 🔥 新增：確保系統訊息的刪除按鈕位置正確 */
@@ -2977,20 +3020,25 @@ select:focus {
 /* =================================== */
 
 /* 當進入截圖模式時，讓訊息顯示為可點擊的手指圖示 */
+/* 當滑鼠移到可選擇的訊息上時，稍微放大 */
 .message.screenshot-mode {
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
-/* 當滑鼠移到可選擇的訊息上時，稍微放大 */
 .message.screenshot-mode:hover {
   transform: scale(1.02);
 }
 
+
 /* 被選中的訊息樣式，顯示一個漂亮的發光外框 */
 .message.selected {
   border-radius: 12px; /* 加上圓角，讓外框更好看 */
-  box-shadow: 0 0 0 3px var(--primary-color);
+  border: 3px solid var(--text-primary);
+}
+
+.message.selected:hover {
+  transform: none;
 }
 
 /* 截圖模式下的底部工具列 */
@@ -2998,7 +3046,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px;
+  padding: 10px;
   width: 100%;
 }
 
@@ -3112,22 +3160,6 @@ select:focus {
 .chat-info-details {
   display: flex;
   flex-direction: column;
-}
-
-/* =================================== */
-/*  身份切換器 Modal - 項目高亮樣式   */
-/* =================================== */
-
-/* 當 User Profile 被選中時，讓整個項目有一個明顯的外框 */
-.character-list-item.active {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color);
-}
-
-/* 用來顯示勾勾圖示的容器 */
-.active-check-icon {
-  color: var(--primary-color);
-  margin-left: auto; /* 讓勾勾自動靠到最右邊 */
 }
 
 /* =================================== */
@@ -3265,9 +3297,14 @@ select:focus {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
-  background-color: var(--background-color);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.module-list-item:hover {
+  background-color: var(--background-color);
 }
 
 .module-name {
@@ -3317,7 +3354,7 @@ select:focus {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: var(--middle-color);
+  background-color: var(--background-color);
   -webkit-transition: .4s;
   transition: .4s;
 }
@@ -3329,13 +3366,13 @@ select:focus {
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: rgba(255, 255, 255, 0.75);
   -webkit-transition: .4s;
   transition: .4s;
 }
 
 input:checked + .slider {
-  background-color: var(--primary-color);
+  background-color: var(--quote-text-color);
 }
 
 input:disabled + .slider {
@@ -3545,7 +3582,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 1.1em;
+  font-size: 0.95em !important;
   padding: 4px;
   border-radius: 4px;
 }
@@ -3600,7 +3637,6 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 .wb-entry-editor-detailed .setting-select,
 .wb-entry-editor-detailed .slider-value-input {
-  font-size: 0.9em;
   padding: 6px 8px;
 }
 
@@ -3895,7 +3931,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden; /* 確保圓角效果 */
-  position: relative; 
+  position: relative;
 }
 
 /* --- 新的標頭樣式 --- */
@@ -3947,18 +3983,20 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .form-group-st select,
 .form-group-st textarea {
   width: 100%;
+  font-size: 0.8em !important;
 }
 .form-group-st .slider-value-input {
   padding: 6px 8px; /* 縮小數字輸入框的 padding */
 }
 .form-group-st .setting-select {
   padding: 6px 8px;
+  font-size: 0.8em !important;
 }
 
 /* --- 格線佈局 --- */
 .wb-entry-grid-main {
   display: grid;
-  grid-template-columns: 2.5fr 1fr 1fr 1fr; /* 讓插入位置更寬 */
+  grid-template-columns: 1fr 0.5fr 0.5fr 0.5fr; /* 讓插入位置更寬 */
   gap: 10px;
 }
 .wb-entry-grid-keywords {
@@ -3999,7 +4037,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding-top: 12px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
 }
 .wb-section-st .wb-section-title {
   display: block;
@@ -4010,8 +4048,9 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .wb-toggles-grid-st {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
+  gap: 8px;
+  align-items: flex-end;
+  flex-direction: row;
 }
 .wb-toggles-grid-st label {
   font-size: 14px;
@@ -4039,26 +4078,43 @@ input[type="range"]:hover::-webkit-slider-thumb {
 /* 彈出的選單本體 */
 .wb-mode-menu-floating {
   /* 核心：讓選單脫離正常排版，可以自由浮動 */
-  position: absolute; 
+  position: absolute;
   
   /* 核心：賦予極高的層級，確保它蓋在所有東西上面 */
   z-index: 20; 
 
   /* 根據按鈕位置來定位自己 */
-  top: 38px;  /* 從頂部向下 38px (大概在標題列下方) */
-  left: 42px; /* 從左邊向右 42px (大概在模式按鈕的正下方) */
+  top: 48px;  /* 從頂部向下 38px (大概在標題列下方) */
+  left: 28px; /* 從左邊向右 42px (大概在模式按鈕的正下方) */
   
   /* 選單的外觀設定 */
-  background-color: var(--surface-color-2);
+  background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* 加上陰影更有立體感 */
   padding: 4px;
 
   /* 內部排列方式 */
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.world-book-entries-detailed::-webkit-scrollbar {
+    width: 12px; /* 垂直滾動條寬度 */
+}
+
+.world-book-entries-detailed::-webkit-scrollbar-track {
+    background: var(--background-color); /* 滾動條軌道背景色 */
+    border-radius: 4px;
+}
+
+.world-book-entries-detailed::-webkit-scrollbar-thumb {
+    background: var(--quote-text-color); /* 滑桿顏色 */
+    border-radius: 6px;
+}
+
+.world-book-entries-detailed::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-color); /* 滑鼠懸停時的顏色 */
 }
 
 /* 選單中的每一個選項按鈕 */

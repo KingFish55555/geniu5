@@ -2,10 +2,10 @@ import ReactMarkdown from 'react-markdown';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Send, Settings, ArrowLeft, Key, Globe, Check, X,
-  User, Palette, FileText, Save, Trash2,
+  User, AppWindow, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
-  MoveRightIcon, Pin, Star, ChevronDown, ChevronUp, Coffee, Grape, Sparkles, CloudMoon, Edit2, MessageSquarePlus, Waves
+  MoveRightIcon, Pin, Star, Palette, ChevronDown, ChevronUp, Coffee, Dessert, Cherry, CloudMoon, Edit2, MessageSquarePlus, Waves, TreePine
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -182,7 +182,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
   const handleRegexRuleChange = (index, field, value) => { const updatedRules = [...embeddedRegex]; updatedRules[index] = { ...updatedRules[index], [field]: value }; setEmbeddedRegex(updatedRules); };
   const handleToggleRegexRule = (index) => { const updatedRules = [...embeddedRegex]; updatedRules[index] = { ...updatedRules[index], enabled: !updatedRules[index].enabled }; setEmbeddedRegex(updatedRules); };
   const handleDeleteRegexRule = (index) => { const updatedRules = embeddedRegex.filter((_, i) => i !== index); setEmbeddedRegex(updatedRules); };
-  const handleAvatarUpload = (event) => { const file = event.target.files[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { alert('⚠️ 圖片檔案不能超過 5MB'); return; } const reader = new FileReader(); reader.onload = async (e) => { const originalBase64 = e.target.result; try { const compressedBase64 = await compressImage(originalBase64); setAvatar({ type: 'image', data: compressedBase64 }); } catch (error) { console.error("角色頭像壓縮失敗:", error); setAvatar({ type: 'image', data: originalBase64 }); } }; reader.readAsDataURL(file); event.target.value = ''; };
+  const handleAvatarUpload = (event) => { const file = event.target.files[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { alert('⚠️ 圖片檔案不能超過 5MB - App.js:185'); return; } const reader = new FileReader(); reader.onload = async (e) => { const originalBase64 = e.target.result; try { const compressedBase64 = await compressImage(originalBase64); setAvatar({ type: 'image', data: compressedBase64 }); } catch (error) { console.error("角色頭像壓縮失敗:", error); setAvatar({ type: 'image', data: originalBase64 }); } }; reader.readAsDataURL(file); event.target.value = ''; };
   const handleAddGreeting = () => { setAlternateGreetings([...alternateGreetings, '']); };
   const handleGreetingChange = (index, value) => { const updatedGreetings = [...alternateGreetings]; updatedGreetings[index] = value; setAlternateGreetings(updatedGreetings); };
   const handleRemoveGreeting = (index) => { const updatedGreetings = alternateGreetings.filter((_, i) => i !== index); setAlternateGreetings(updatedGreetings); };
@@ -999,9 +999,10 @@ const ThemeSwitcherModal = ({ currentTheme, onSelect, onClose }) => {
     { id: '蟲餡包綠', name: '蟲餡包綠', Icon: CaterpillarIcon },
     { id: '牛奶可可', name: '牛奶可可', Icon: Coffee },
     { id: 'old-books', name: '懷舊書頁', Icon: BookOpen },
-    { id: 'old-blue', name: '舊時光藍', Icon: Palette },
-    { id: 'hyacinth-mauve', name: '淺風信子', Icon: Grape },
-    { id: 'dark-hyacinth', name: '深風信子', Icon: Sparkles },
+    { id: 'old-blue', name: '舊時光藍', Icon: AppWindow },
+    { id: 'hyacinth-mauve', name: '芋泥奶凍', Icon: Dessert },
+    { id: 'misty forest', name: '靜霧森語', Icon: TreePine },
+    { id: 'dark-hyacinth', name: '深林莓果', Icon: Cherry },
     { id: 'blue-moon', name: '夜色月輪', Icon: CloudMoon },
     { id: 'moriarty', name: '塵墜滝下', Icon: Waves },
   ];
@@ -1100,7 +1101,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
         const compressedBase64 = await compressImage(originalBase64);
         setAvatar({ type: 'image', data: compressedBase64 });
       } catch (error) {
-        console.error("使用者頭像壓縮失敗: - App.js:1408", error);
+        console.error("使用者頭像壓縮失敗: - App.js:1104", error);
         setAvatar({ type: 'image', data: originalBase64 });
       }
     };
@@ -1419,9 +1420,10 @@ const ThemeSelector = ({ currentTheme, onSetTheme, onToggle }) => {
     { id: 'forest', name: '蟲餡包綠', Icon: CaterpillarIcon },
     { id: 'cocoa', name: '牛奶可可', Icon: Coffee },
     { id: 'old-books', name: '懷舊書頁', Icon: BookOpen },
-    { id: 'old-blue', name: '舊時光藍', Icon: Palette },
-    { id: 'hyacinth-mauve', name: '淺風信子', Icon: Grape },
-    { id: 'dark-hyacinth', name: '深風信子', Icon: Sparkles },
+    { id: 'old-blue', name: '舊時光藍', Icon: AppWindow },
+    { id: 'hyacinth-mauve', name: '芋泥奶凍', Icon: Dessert },
+    { id: 'misty forest', name: '靜霧森語', Icon: TreePine },
+    { id: 'dark-hyacinth', name: '深林莓果', Icon: Cherry },
     { id: 'blue-moon', name: '夜色月輪', Icon: CloudMoon },
     { id: 'moriarty', name: '塵墜滝下', Icon: Waves },
 // ✨ 在這裡加入新主題
@@ -1756,12 +1758,11 @@ const SettingsPage = ({
               <div className="card-title">
                 {/* 借用一個圖示 */}
                 <FileText size={20} /> 
-                <span>正規表示式</span>
+                <span>全域正規表示式</span>
               </div>
               <span className="expand-arrow">{expandedSection === 'regex' ? '▲' : '▼'}</span>
             </button>
-            
-            {expandedSection === 'regex' && (
+{expandedSection === 'regex' && (
               <div className="card-content">
                 <div className="setting-group">
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
@@ -1855,8 +1856,9 @@ const SettingsPage = ({
                       { id: '牛奶可可', name: '牛奶可可' },
                       { id: 'old-books', name: '懷舊書頁' },
                       { id: 'old-blue', name: '舊時光藍' },
-                      { id: 'hyacinth-mauve', name: '淺風信子' },
-                      { id: 'dark-hyacinth', name: '深風信子' },
+                      { id: 'hyacinth-mauve', name: '芋泥奶凍' },
+                      { id: 'misty forest', name: '靜霧森語' },
+                      { id: 'dark-hyacinth', name: '深林莓果' },
                       { id: 'blue-moon', name: '夜色月輪' },
                       { id: 'moriarty', name: '塵墜滝下' }
                     ]
@@ -1970,7 +1972,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.54</p>
+                  <p>版本：0.5.541</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2289,7 +2291,7 @@ const ChatApp = () => {
 useEffect(() => {
   const loadData = async () => {
     try {
-      console.log("正在從 IndexedDB 載入資料... - App.js:2693");
+      console.log("正在從 IndexedDB 載入資料... - App.js:2294");
 
       // 1. 先嘗試從 IndexedDB 讀取所有資料
       const [
@@ -2372,7 +2374,7 @@ useEffect(() => {
       }
       setIsDataLoaded(true);
     } catch (error) {
-      console.error('從 IndexedDB 載入資料失敗: - App.js:2773', error);
+      console.error('從 IndexedDB 載入資料失敗: - App.js:2377', error);
     }
   };
 
@@ -2383,7 +2385,7 @@ useEffect(() => {
   useEffect(() => {
       // 加上這個判斷，是為了避免在程式剛啟動、資料還沒載入時就存入一筆空資料
       if (Object.keys(chatHistories).length > 0) {
-          console.log("偵測到聊天記錄變更，正在存入 IndexedDB... - App.js:2784");
+          console.log("偵測到聊天記錄變更，正在存入 IndexedDB... - App.js:2388");
           db.kvStore.put({ key: 'chatHistories', value: chatHistories });
       }
   }, [chatHistories]); // 這個管家只監控 chatHistories
@@ -2391,7 +2393,7 @@ useEffect(() => {
   // ✨✨✨ 全新！聊天室元數據 (備註/作者備註) 的存檔管家 ✨✨✨
   useEffect(() => {
       if (Object.keys(chatMetadatas).length > 0) {
-          console.log("偵測到聊天室元數據變更，正在存入 IndexedDB... - App.js:2792");
+          console.log("偵測到聊天室元數據變更，正在存入 IndexedDB... - App.js:2396");
           db.kvStore.put({ key: 'chatMetadatas', value: chatMetadatas });
       }
   }, [chatMetadatas]); // 這個管家只監控 chatMetadatas
@@ -2399,7 +2401,7 @@ useEffect(() => {
   // ✨✨✨ 全新！長期記憶的存檔管家 ✨✨✨
   useEffect(() => {
       if (Object.keys(longTermMemories).length > 0) {
-          console.log("偵測到長期記憶變更，正在存入 IndexedDB... - App.js:2800");
+          console.log("偵測到長期記憶變更，正在存入 IndexedDB... - App.js:2404");
           db.kvStore.put({ key: 'longTermMemories', value: longTermMemories });
       }
   }, [longTermMemories]); // 這個管家只監控 longTermMemories
@@ -2408,20 +2410,20 @@ useEffect(() => {
   useEffect(() => {
     // 避免在程式剛啟動、資料還沒載入完成時，就用一個空陣列覆蓋掉資料庫
     if (!isDataLoaded) return; 
-    console.log("偵測到 OOC 指令變更，正在存入 IndexedDB... - App.js:2809");
+    console.log("偵測到 OOC 指令變更，正在存入 IndexedDB... - App.js:2413");
     db.kvStore.put({ key: 'oocCommands', value: oocCommands });
   }, [oocCommands, isDataLoaded]);
 
   // ✨ 全新！正規表示式規則的存檔管家 ✨
   useEffect(() => {
     if (!isDataLoaded) return;
-    console.log("偵測到正規表示式規則變更，正在存入 IndexedDB... - App.js:2816");
+    console.log("偵測到正規表示式規則變更，正在存入 IndexedDB... - App.js:2420");
     db.kvStore.put({ key: 'regexRules', value: regexRules });
   }, [regexRules, isDataLoaded]);
 
   useEffect(() => {
     if (!isDataLoaded) return;
-    console.log("偵測到世界書變更，正在存入 IndexedDB...");
+    console.log("偵測到世界書變更，正在存入 IndexedDB... - App.js:2426");
     db.kvStore.put({ key: 'worldBooks', value: worldBooks });
   }, [worldBooks, isDataLoaded]);
 
@@ -2622,7 +2624,7 @@ useEffect(() => {
         link.click();
 
       } catch (error) {
-        console.error('截圖生成失敗: - App.js:3017', error);
+        console.error('截圖生成失敗: - App.js:2627', error);
         alert('抱歉，生成截圖時發生錯誤，請查看主控台以獲取詳細資訊。');
       } finally {
         document.body.removeChild(screenshotContainer);
@@ -2664,7 +2666,7 @@ const handleUpdateConfiguration = useCallback(async () => {
     return;
   }
 
-  console.log(`正在更新現有配置 ID: ${loadedConfigId} - App.js:3059`);
+  console.log(`正在更新現有配置 ID: ${loadedConfigId} - App.js:2669`);
   const configToUpdate = {
     id: loadedConfigId, // 使用已存在的 ID
     name: configName,   // 使用輸入框中當前的名稱
@@ -2685,7 +2687,7 @@ const handleUpdateConfiguration = useCallback(async () => {
     setLoadedConfigName(configName);
     alert(`✅ 已更新配置：「${configName}」`);
   } catch (error) {
-    console.error("更新 API 配置失敗: - App.js:3080", error);
+    console.error("更新 API 配置失敗: - App.js:2690", error);
     alert('❌ 更新 API 配置失敗！');
   }
 }, [
@@ -2707,7 +2709,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     return;
   }
   
-  console.log("正在另存為新配置... - App.js:3102");
+  console.log("正在另存為新配置... - App.js:2712");
   const newId = Date.now();
   const newConfig = {
     id: newId, // 使用全新的 ID
@@ -2730,7 +2732,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     
     alert(`✅ 已另存為新配置：「${configName}」`);
   } catch (error) {
-    console.error("另存新配置失敗: - App.js:3125", error);
+    console.error("另存新配置失敗: - App.js:2735", error);
     alert('❌ 另存新配置失敗！');
   }
 }, [
@@ -2771,7 +2773,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         setApiConfigs(updatedConfigs);
         alert('🗑️ 配置已刪除');
       } catch (error) {
-        console.error("刪除 API 配置失敗: - App.js:3166", error);
+        console.error("刪除 API 配置失敗: - App.js:2776", error);
         alert('❌ 刪除 API 配置失敗！');
       }
     }
@@ -2787,7 +2789,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       setPrompts(updatedPrompts);
       alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
     } catch (error) {
-      console.error("儲存提示詞失敗: - App.js:3182", error);
+      console.error("儲存提示詞失敗: - App.js:2792", error);
       alert('❌ 儲存提示詞失敗！');
     }
   }, [prompts]);
@@ -2800,7 +2802,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       if (currentPrompt?.id === promptId) setCurrentPrompt(null);
       alert('🗑️ 提示詞已刪除');
     } catch (error) {
-      console.error("刪除提示詞失敗: - App.js:3195", error);
+      console.error("刪除提示詞失敗: - App.js:2805", error);
       alert('❌ 刪除提示詞失敗！');
     }
   }, [prompts, currentPrompt]);
@@ -2821,7 +2823,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert('✅ 所有內建提示詞已成功還原！');
       } catch (error)
       {
-        console.error("還原提示詞失敗: - App.js:3216", error);
+        console.error("還原提示詞失敗: - App.js:2826", error);
         alert('❌ 還原提示詞失敗！');
       }
     }
@@ -2883,7 +2885,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         URL.revokeObjectURL(link.href);
 
       } catch (error) {
-        console.error("生成角色卡失敗: - App.js:3278", error);
+        console.error("生成角色卡失敗: - App.js:2888", error);
         alert('❌ 生成 PNG 角色卡失敗，請檢查主控台中的錯誤訊息。');
       }
       return; // 匯出後，結束函式，不做儲存操作
@@ -2903,7 +2905,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
       
       } catch (error) {
-        console.error("儲存角色失敗: - App.js:3298", error);
+        console.error("儲存角色失敗: - App.js:2908", error);
         alert('❌ 儲存角色失敗！');
       }
     }
@@ -2927,7 +2929,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       closePreview();
 
     } catch (error) {
-      console.error("刪除角色失敗: - App.js:3322", error);
+      console.error("刪除角色失敗: - App.js:2932", error);
       alert('❌ 刪除角色失敗！');
     }
   }, [characters, currentCharacter, chatHistories]);
@@ -2950,7 +2952,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     try {
       await db.characters.put(updatedCharacter);
     } catch (error) {
-      console.error("更新角色收藏狀態失敗: - App.js:3345", error);
+      console.error("更新角色收藏狀態失敗: - App.js:2955", error);
       // 如果儲存失敗，可以選擇是否要還原畫面狀態
     }
   }, [characters]);  
@@ -3054,7 +3056,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         successCount++;
 
       } catch (error) {
-        console.error(`匯入檔案 ${file.name} 失敗:`, error);
+        console.error(`匯入檔案 ${file.name} 失敗: - App.js:3059`, error);
         failureCount++;
       }
     }
@@ -3150,7 +3152,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     try {
       await db.kvStore.put({ key: 'worldBooks', value: updatedBooks });
     } catch (error) {
-      console.error("新增世界書後寫入 DB 失敗:", error);
+      console.error("新增世界書後寫入 DB 失敗: - App.js:3155", error);
     }
   }, [worldBooks]); // 依賴項保持不變
 
@@ -3166,7 +3168,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         });
         
         db.kvStore.put({ key: 'worldBooks', value: updatedBooks }).catch(error => {
-          console.error("儲存世界書後寫入 DB 失敗:", error);
+          console.error("儲存世界書後寫入 DB 失敗: - App.js:3171", error);
         });
         
         return updatedBooks;
@@ -3214,7 +3216,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
 
       // 驗證是否為有效的世界書格式
       if (!data.entries || typeof data.entries !== 'object') {
-        console.warn(`檔案 ${file.name} 格式不正確，已跳過。`);
+        console.warn(`檔案 ${file.name} 格式不正確，已跳過。 - App.js:3219`);
         continue;
       }
 
@@ -3259,7 +3261,7 @@ if (Array.isArray(data.entries)) {
       importedBooks.push(newBook);
       
     } catch (error) {
-      console.error(`匯入世界書 ${file.name} 失敗:`, error);
+      console.error(`匯入世界書 ${file.name} 失敗: - App.js:3264`, error);
       alert(`匯入檔案 "${file.name}" 時發生錯誤：${error.message}`);
     }
   }
@@ -3273,7 +3275,7 @@ if (Array.isArray(data.entries)) {
       await db.kvStore.put({ key: 'worldBooks', value: finalBooks });
       alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
     } catch (error) {
-      console.error("匯入世界書後寫入 DB 失敗:", error);
+      console.error("匯入世界書後寫入 DB 失敗: - App.js:3278", error);
       alert('⚠️ 匯入成功但儲存時發生錯誤，請重新啟動應用。');
     }
   }
@@ -3512,7 +3514,7 @@ if (Array.isArray(data.entries)) {
     // 2. 遍歷所有金鑰，逐一測試
     for (let i = 0; i < allKeys.length; i++) {
       const currentKey = allKeys[i];
-      console.log(`正在測試金鑰 #${i + 1}...`);
+      console.log(`正在測試金鑰 #${i + 1}... - App.js:3517`);
       try {
         const provider = apiProviders[apiProvider];
         // (這裡的測試邏輯和您原本的一樣，只是用了 currentKey)
@@ -3543,10 +3545,10 @@ if (Array.isArray(data.entries)) {
           isConnectionSuccessful = true;
           break; // 成功後就跳出 for 迴圈
         } else {
-           console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status}`);
+           console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status} - App.js:3548`);
         }
       } catch (error) {
-        console.error(`金鑰 #${i + 1} 發生錯誤:`, error);
+        console.error(`金鑰 #${i + 1} 發生錯誤: - App.js:3551`, error);
       }
     }
   
@@ -3587,7 +3589,7 @@ if (Array.isArray(data.entries)) {
     let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
     let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
    if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; let fullChatHistoryString = currentMessages.map(msg => msg.contents[msg.activeContentIndex]).join('\n'); if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } currentMessages.forEach(msg => { messages.push({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.contents[msg.activeContentIndex] }); }); if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
-    console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
+    console.log(`【${apiProvider}】最終發送的請求: - App.js:3592`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
@@ -3618,7 +3620,7 @@ if (Array.isArray(data.entries)) {
         
         return summary;
       } catch (error) {
-        console.error("記憶更新失敗: - App.js:4018", error);
+        console.error("記憶更新失敗: - App.js:3623", error);
         if (!isSilent) alert(`記憶更新失敗: ${error.message}`);
         return null;
       }
@@ -3694,12 +3696,12 @@ if (Array.isArray(data.entries)) {
       }));
       
       if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
-        console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶... - App.js:4094`);
+        console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶... - App.js:3699`);
         await triggerMemoryUpdate(true); 
-        console.log("背景記憶更新完成！ - App.js:4096");
+        console.log("背景記憶更新完成！ - App.js:3701");
       }
     } catch (error) {
-      console.error("訊息發送失敗: - App.js:4099", error);
+      console.error("訊息發送失敗: - App.js:3704", error);
       alert(`訊息發送失敗：\n\n${error.message}`);
 
       setChatHistories(prev => ({
@@ -3716,7 +3718,7 @@ if (Array.isArray(data.entries)) {
       if (allKeys.length > 1) {
         setCurrentApiKeyIndex(prevIndex => {
           const newIndex = (prevIndex + 1) % allKeys.length;
-          console.log(`API 金鑰失敗，已準備切換至下一把金鑰 (索引 ${newIndex}) - App.js:4116`);
+          console.log(`API 金鑰失敗，已準備切換至下一把金鑰 (索引 ${newIndex}) - App.js:3721`);
           return newIndex;
         });
       }
@@ -3763,7 +3765,7 @@ if (Array.isArray(data.entries)) {
         await triggerMemoryUpdate(true); 
       }
     } catch (error) {
-    console.error("續寫失敗: - App.js:4163", error);
+    console.error("續寫失敗: - App.js:3768", error);
     // 直接彈出警告視窗，不新增系統訊息
     alert(`續寫失敗：\n\n${error.message}`);
 
@@ -4295,7 +4297,7 @@ const formatStDate = (date, type = 'send_date') => {
     }
 
     try {
-      console.log("正在準備匯出所有資料... - App.js:4695");
+      console.log("正在準備匯出所有資料... - App.js:4300");
       
       // 從 IndexedDB 中一次性讀取所有需要的資料
       const [
@@ -4352,7 +4354,7 @@ const formatStDate = (date, type = 'send_date') => {
       alert('✅ 所有資料已成功匯出！請妥善保管您的備份檔案。');
 
     } catch (error) {
-      console.error("全站資料匯出失敗: - App.js:4752", error);
+      console.error("全站資料匯出失敗: - App.js:4357", error);
       alert(`❌ 匯出失敗：${error.message}`);
     }
   }, []); // 這個函式沒有依賴項，所以是空陣列
@@ -4387,7 +4389,7 @@ const formatStDate = (date, type = 'send_date') => {
             return; // 如果使用者取消，就立刻終止
         }
 
-        console.log("正在清空現有資料並寫入新資料... - App.js:4787");
+        console.log("正在清空現有資料並寫入新資料... - App.js:4392");
 
         // 使用資料庫交易，一次性完成所有寫入操作
         await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
@@ -4415,7 +4417,7 @@ const formatStDate = (date, type = 'send_date') => {
         }, 500);
 
       } catch (error) {
-        console.error("全站資料匯入失敗: - App.js:4815", error);
+        console.error("全站資料匯入失敗: - App.js:4420", error);
         alert(`❌ 匯入失敗：${error.message}`);
       } finally {
         if (event.target) {
@@ -4435,7 +4437,7 @@ const formatStDate = (date, type = 'send_date') => {
         '這個動作【無法復原】！'
     )) {
       try {
-        console.log("正在清除所有 IndexedDB 資料...");
+        console.log("正在清除所有 IndexedDB 資料... - App.js:4440");
 
         // ✨ 3. 核心修正：使用資料庫交易來清空所有資料表
         await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
@@ -4454,7 +4456,7 @@ const formatStDate = (date, type = 'send_date') => {
         window.location.reload();
 
       } catch (error) {
-        console.error("清除所有資料失敗:", error);
+        console.error("清除所有資料失敗: - App.js:4459", error);
         alert(`❌ 清除資料時發生錯誤：${error.message}`);
       }
     }
@@ -4795,7 +4797,7 @@ const compressImage = (base64Str, options = {}) => {
     };
 
     img.onerror = (error) => {
-      console.error("圖片載入失敗，無法壓縮: - App.js:5145", error);
+      console.error("圖片載入失敗，無法壓縮: - App.js:4800", error);
       resolve(base64Str); 
     };
   });
@@ -4896,7 +4898,7 @@ const utf8ToBase64 = (str) => {
     const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
     return btoa(binaryString);
   } catch (error) {
-    console.error("UTF8 to Base64 conversion failed: - App.js:5246", error);
+    console.error("UTF8 to Base64 conversion failed: - App.js:4901", error);
     // 提供一個備用方案，雖然在現代瀏覽器中很少需要
     return btoa(unescape(encodeURIComponent(str)));
   }
@@ -4909,7 +4911,7 @@ const base64ToUtf8 = (base64) => {
     const bytes = Uint8Array.from(binaryString, char => char.charCodeAt(0));
     return new TextDecoder().decode(bytes);
   } catch (error) {
-    console.error("Base64 to UTF8 conversion failed: - App.js:5259", error);
+    console.error("Base64 to UTF8 conversion failed: - App.js:4914", error);
     // 提供一個備用方案
     return decodeURIComponent(escape(atob(base64)));
   }
@@ -4998,7 +5000,7 @@ async function createPngWithCharaChunk(imageDataSource, characterData) {
     }
 
   } catch (error) {
-    console.error("在生成角色卡前處理圖片時發生錯誤: - App.js:5348", error);
+    console.error("在生成角色卡前處理圖片時發生錯誤: - App.js:5003", error);
     throw new Error(`無法準備圖片以生成角色卡。請確認圖片有效。錯誤: ${error.message}`);
   }
 
