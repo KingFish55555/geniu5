@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Save, Trash2, Upload, ChevronDown, Download, Settings, Edit2 } from 'lucide-react';
+import { FileText, Plus, Save, Trash2, Upload, ChevronDown, Download, Settings, Edit2, FileInput, FileOutput } from 'lucide-react';
 import ModuleEditorModal from './ModuleEditorModal';
 
 const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, deletePrompt, restoreDefaultPrompts, onOpenSwitcher }) => {
@@ -225,10 +225,10 @@ const PromptsPage = ({ prompts, currentPrompt, setCurrentPrompt, savePrompt, del
                     <Settings size={16} /> 還原預設
                 </button>
                 <label htmlFor="import-prompt-json" className="action-button-base">
-                    <Upload size={16} /> 匯入
+                    <FileInput size={16} /> 匯入
                 </label>
                 <button onClick={handleExportPreset} disabled={!currentPrompt}>
-                    <Download size={16} /> 匯出
+                    <FileOutput size={16} /> 匯出
                 </button>
                 </div>
                 <input 

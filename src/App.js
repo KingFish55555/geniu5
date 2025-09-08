@@ -5,6 +5,7 @@ import {
   User, AppWindow, FileText, Save, Trash2,
   Download, Upload, Users, MessageCircle, Moon, Sun,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
+  FileInput, FileOutput,
   MoveRightIcon, Pin, Star, Palette, ChevronDown, ChevronUp, Coffee, Dessert, Cherry, CloudMoon, Edit2, MessageSquarePlus, Waves, TreePine
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
@@ -195,7 +196,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
         <div className="modal-header"><h3>{character ? '編輯角色' : '創建新角色'}</h3><button onClick={onClose} className="close-btn"><X size={20} /></button></div>
         <div className="modal-body">
             {/* ... 其他欄位如頭像、名稱、備註、描述等保持不變 ... */}
-            <div className="form-group avatar-form-group"> <label>角色頭像</label> <div className="avatar-editor"> <div className="avatar-preview-large"> {avatar.type === 'image' ? ( <img src={avatar.data} alt="頭像" className="avatar-image" /> ) : ( <UserCircle size={48} /> )} </div> <div className="avatar-actions"> <label htmlFor="char-avatar-upload" className="action-button-base"> <Upload size={16} /> 上傳圖片 </label> {character && ( <label onClick={() => onSave(null, true)} className="action-button-base"> <Download size={16} /> 匯出.png卡 </label> )} </div> {character && ( <button onClick={handleDelete} className="delete-character-icon-btn"> <Trash2 size={16} /> </button> )} <input type="file" id="char-avatar-upload" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} /> </div> </div>
+            <div className="form-group avatar-form-group"> <label>角色頭像</label> <div className="avatar-editor"> <div className="avatar-preview-large"> {avatar.type === 'image' ? ( <img src={avatar.data} alt="頭像" className="avatar-image" /> ) : ( <UserCircle size={48} /> )} </div> <div className="avatar-actions"> <label htmlFor="char-avatar-upload" className="action-button-base"> <FileInput size={16} /> 上傳圖片 </label> {character && ( <label onClick={() => onSave(null, true)} className="action-button-base"> <FileOutput size={16} /> 匯出.png卡 </label> )} </div> {character && ( <button onClick={handleDelete} className="delete-character-icon-btn"> <Trash2 size={16} /> </button> )} <input type="file" id="char-avatar-upload" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} /> </div> </div>
             <div className="form-group"> <label>角色名稱</label> <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：夏洛克．福爾摩斯" /> </div>
             <div className="form-group"> <label>創作者備註</label> <textarea value={creatorNotes} onChange={(e) => setCreatorNotes(e.target.value)} rows="2" /> </div>
             <div className="form-group"> <label>角色描述</label> <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows="6" placeholder="在這裡輸入角色的所有設定..." /> </div>
@@ -210,7 +211,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
             </div>
             
             {/* ... 其他部分如區域 Regex、開場白等保持不變 ... */}
-            <div className="form-group world-book-section"> <div className="form-label-group"> <label className="world-book-label" style={{ marginBottom: '0' }}> <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span> </label> <div style={{ display: 'flex', gap: '8px' }}> <label htmlFor="import-local-regex" className="add-greeting-btn" style={{padding: '4px'}}> <Upload size={14} /> </label> <button onClick={handleExportLocalRegex} className="add-greeting-btn" style={{padding: '4px'}}> <Download size={14} /> </button> <button onClick={handleAddRegexRule} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> </div> <input type="file" id="import-local-regex" accept=".json" onChange={handleImportLocalRegex} style={{ display: 'none' }} /> <div className="world-book-entries"> {embeddedRegex.map((rule, index) => ( <div key={index} className="world-book-entry wb-entry-editor"> <div className="wb-entry-actions"> <label className="wb-entry-toggle"> <input type="checkbox" checked={rule.enabled} onChange={() => handleToggleRegexRule(index)} /> <span className="slider"></span> </label> <button onClick={() => handleDeleteRegexRule(index)} className="wb-delete-btn"> <Trash2 size={14} /> </button> </div> <div className="wb-entry-inputs"> <textarea placeholder="尋找 (Find)" rows="2" value={rule.find} onChange={(e) => handleRegexRuleChange(index, 'find', e.target.value)} /> <textarea placeholder="替換為 (Replace)" rows="2" value={rule.replace} onChange={(e) => handleRegexRuleChange(index, 'replace', e.target.value)} /> </div> </div> ))} </div> </div>
+            <div className="form-group world-book-section"> <div className="form-label-group"> <label className="world-book-label" style={{ marginBottom: '0' }}> <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span> </label> <div style={{ display: 'flex', gap: '8px' }}> <label htmlFor="import-local-regex" className="add-greeting-btn" style={{padding: '4px'}}> <FileInput size={14} /> </label> <button onClick={handleExportLocalRegex} className="add-greeting-btn" style={{padding: '4px'}}> <FileOutput size={14} /> </button> <button onClick={handleAddRegexRule} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> </div> <input type="file" id="import-local-regex" accept=".json" onChange={handleImportLocalRegex} style={{ display: 'none' }} /> <div className="world-book-entries"> {embeddedRegex.map((rule, index) => ( <div key={index} className="world-book-entry wb-entry-editor"> <div className="wb-entry-actions"> <label className="wb-entry-toggle"> <input type="checkbox" checked={rule.enabled} onChange={() => handleToggleRegexRule(index)} /> <span className="slider"></span> </label> <button onClick={() => handleDeleteRegexRule(index)} className="wb-delete-btn"> <Trash2 size={14} /> </button> </div> <div className="wb-entry-inputs"> <textarea placeholder="尋找 (Find)" rows="2" value={rule.find} onChange={(e) => handleRegexRuleChange(index, 'find', e.target.value)} /> <textarea placeholder="替換為 (Replace)" rows="2" value={rule.replace} onChange={(e) => handleRegexRuleChange(index, 'replace', e.target.value)} /> </div> </div> ))} </div> </div>
             <div className="form-group"> <label>主要開場白</label> <textarea value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} rows="4" placeholder="輸入角色的第一句話..." /> </div>
             <div className="form-group alternate-greetings-group"> <div className="form-label-group"> <label>備用開場白</label> <button onClick={handleAddGreeting} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> {alternateGreetings.map((greeting, index) => ( <div key={index} className="greeting-input-group"> <textarea value={greeting} onChange={(e) => handleGreetingChange(index, e.target.value)} rows="2" placeholder={`備用開場白 #${index + 1}`} /> <button onClick={() => handleRemoveGreeting(index)} className="remove-greeting-btn"> <Trash2 size={16} /> </button> </div> ))} </div>
         </div>
@@ -394,7 +395,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
               <Plus size={16} /> 創建新角色
             </button>
             <label htmlFor="import-character-json" className="import-button">
-              <Upload size={16} /> 匯入角色 (.png / .json)
+              <FileInput size={16} /> 匯入角色 (.png / .json)
             </label>
             <input type="file" id="import-character-json" accept=".json,.jsonc,.png" onChange={onImport} style={{ display: 'none' }} multiple />
           </div>
@@ -430,7 +431,7 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
             {showFloatMenu && (
               <div className="floating-options-container">
                 <label htmlFor="import-character-float" className="floating-add-button mini">
-                  <Upload size={24} />
+                  <FileInput size={24} />
                 </label>
                 <input type="file" id="import-character-float" accept=".json,.jsonc,.png" onChange={(e) => { onImport(e); setShowFloatMenu(false); }} style={{ display: 'none' }} multiple />
                 <button onClick={() => { onAdd(); setShowFloatMenu(false); }} className="floating-add-button mini">
@@ -1129,7 +1130,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
               </div>
               <div className="avatar-actions">
                 <label htmlFor="user-avatar-upload" className="action-button-base">
-                  <Upload size={16} /> 上傳圖片
+                  <FileInput size={16} /> 上傳圖片
                 </label>
                  <input
                   type="file"
@@ -1378,8 +1379,8 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
                 <button className="input-menu-item" onClick={() => { onOpenOocSelector(); setIsInputMenuOpen(false); }}> <MessageSquarePlus size={20} /> <span>OOC 指令</span> </button>
                 <button className="input-menu-item" onClick={() => { setIsMemoryModalOpen(true); setIsInputMenuOpen(false); }}> <BookOpen size={20} /> <span>長期記憶</span> </button>
                 <button className="input-menu-item" onClick={() => { setIsAuthorsNoteModalOpen(true); setIsInputMenuOpen(false); }}> <Settings size={20} /> <span>Author's Note</span> </button>
-                <button className="input-menu-item" onClick={() => { exportChat(); setIsInputMenuOpen(false); }}> <Download size={20} /> <span>匯出聊天 (.jsonl)</span> </button>
-                <button className="input-menu-item" onClick={() => { document.getElementById('st-import-input').click(); setIsInputMenuOpen(false); }}> <Upload size={20} /> <span>匯入聊天 (.jsonl)</span> </button>
+                <button className="input-menu-item" onClick={() => { exportChat(); setIsInputMenuOpen(false); }}> <FileOutput size={20} /> <span>匯出聊天 (.jsonl)</span> </button>
+                <button className="input-menu-item" onClick={() => { document.getElementById('st-import-input').click(); setIsInputMenuOpen(false); }}> <FileInput size={20} /> <span>匯入聊天 (.jsonl)</span> </button>
                 <button className="input-menu-item" onClick={handleToggleScreenshotMode}> <Camera size={20} /> <span>訊息截圖</span> </button>
               </div>
             )}
@@ -1774,10 +1775,10 @@ const SettingsPage = ({
                   {/* ▼▼▼ 【✨ 在這裡加入匯入/匯出按鈕 ✨】 ▼▼▼ */}
                   <div className="prompt-actions-grid" style={{ marginTop: '12px', marginBottom: '12px' }}>
                     <label htmlFor="import-global-regex" className="action-button-base">
-                      <Upload size={16} /> 匯入規則
+                      <FileInput size={16} /> 匯入規則
                     </label>
                     <button onClick={onExportRegex}>
-                      <Download size={16} /> 匯出規則
+                      <FileOutput size={16} /> 匯出規則
                     </button>
                   </div>
                   <input
@@ -1922,7 +1923,7 @@ const SettingsPage = ({
                   <div className="data-buttons">
                     {/* ✨ 修改按鈕文字和功能 ✨ */}
                     <button onClick={exportChatHistory} className="data-btn export">
-                      <Download size={16} />
+                      <FileOutput size={16} />
                       匯出全站資料 (.json)
                     </button>
                   </div>
@@ -1939,7 +1940,7 @@ const SettingsPage = ({
                       style={{ display: 'none' }}
                     />
                     <label htmlFor="import-chat" className="data-btn import">
-                      <Upload size={16} />
+                      <FileInput size={16} />
                       匯入全站資料 (.json)
                     </label>
                   </div>
@@ -1972,7 +1973,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.541</p>
+                  <p>版本：0.5.542</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">

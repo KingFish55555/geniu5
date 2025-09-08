@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Globe, Plus, Trash2, Edit2, X, Save, ChevronDown, Upload, Download, Link as LinkIcon } from 'lucide-react';
+import { Globe, Plus, Trash2, Edit2, X, Save, ChevronDown, FileInput, FileOutput, Link as LinkIcon } from 'lucide-react';
 
 // ==================== 共用：SillyTavern 世界書條目欄位映射函數 ====================
 export const mapWorldBookEntryFields = (entry) => {
@@ -521,15 +521,15 @@ const WorldBookPage = ({ worldBooks, onSave, onDelete, onAdd, onImport, onExport
     <div className="page-content">
       <div className="content-area character-list-page">
         {worldBooks.length === 0 ? (
-          <div className="empty-state"> <div className="empty-icon"><Globe size={48} /></div> <h3>還沒有世界書</h3><p>建立你的第一本世界書來豐富你的故事背景吧！</p> <div className="empty-state-buttons"> <button onClick={onAdd} className="import-button"><Plus size={16} /> 創建新世界書</button> <label htmlFor="import-worldbook" className="import-button"><Upload size={16} /> 匯入世界書 (.json)</label> </div> </div>
+          <div className="empty-state"> <div className="empty-icon"><Globe size={48} /></div> <h3>還沒有世界書</h3><p>建立你的第一本世界書來豐富你的故事背景吧！</p> <div className="empty-state-buttons"> <button onClick={onAdd} className="import-button"><Plus size={16} /> 創建新世界書</button> <label htmlFor="import-worldbook" className="import-button"><FileInput size={16} /> 匯入世界書 (.json)</label> </div> </div>
         ) : (
           <>
-            <div className="prompt-actions-grid" style={{marginTop: 0}}> <button onClick={onAdd}><Plus size={16} /> 創建新世界書</button> <label htmlFor="import-worldbook"><Upload size={16} /> 匯入世界書 (.json)</label> </div>
+            <div className="prompt-actions-grid" style={{marginTop: 0}}> <button onClick={onAdd}><Plus size={16} /> 創建新世界書</button> <label htmlFor="import-worldbook"><FileInput size={16} /> 匯入世界書 (.json)</label> </div>
             <div className="character-list" style={{marginTop: '16px'}}>
               {worldBooks.map((book) => (
                 <div key={book.id} className="character-list-item">
                   <div className="character-select-area" onClick={() => handleEdit(book)}> <div className="character-avatar-large" style={{ borderRadius: '8px' }}><Globe size={32} /></div> <div className="character-info"><h4>{book.name}</h4><p>{Object.keys(book.entries || {}).length} 條目</p></div> </div>
-                  <button className="edit-character-btn" onClick={() => onExport(book.id)}><Download size={16} /></button>
+                  <button className="edit-character-btn" onClick={() => onExport(book.id)}><FileOutput size={16} /></button>
                   <button className="edit-character-btn" onClick={() => handleEdit(book)}><Edit2 size={16} /></button>
                   <button className="edit-character-btn delete-icon-btn" onClick={() => handleDelete(book.id)}><Trash2 size={16} /></button>
                 </div>

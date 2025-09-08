@@ -665,8 +665,8 @@ body {
 /* Messages Area */
 .messages-area {
   flex: 1;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow-x: hidden; /* 隱藏水平滾動條 */
+  overflow-y: auto;   /* 保留垂直滾動 */
   padding: 20px 13px; /*第一個是上下，第二個是左右*/
   background: var(--surface-color);
 }
