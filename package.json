@@ -1,6 +1,6 @@
 {
   "name": "geniu5",
-  "version": "0.5.542",
+  "version": "0.5.543",
   "homepage": "https://KingFish55555.github.io/geniu5",
   "private": true,
   "dependencies": {
@@ -9,6 +9,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "dexie": "^4.2.0",
+    "gpt-tokenizer": "^3.0.1",
     "html2canvas": "^1.4.1",
     "lucide-react": "^0.540.0",
     "react": "^19.1.1",

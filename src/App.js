@@ -1973,7 +1973,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.542</p>
+                  <p>版本：0.5.543</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3589,7 +3589,64 @@ if (Array.isArray(data.entries)) {
     if (currentCharacter.description) { currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile); } if (currentCharacter.personality) { currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile); }
     let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
     let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
-   if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; let fullChatHistoryString = currentMessages.map(msg => msg.contents[msg.activeContentIndex]).join('\n'); if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } currentMessages.forEach(msg => { messages.push({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.contents[msg.activeContentIndex] }); }); if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
+   if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; // ▼▼▼ 在這裡也加入一樣的截斷邏輯 ▼▼▼
+    const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
+    let currentTokens = Math.ceil((preambleString.length / 2));
+    const truncatedMessagesContent = [];
+
+    for (let i = currentMessages.length - 1; i >= 0; i--) {
+        const msg = currentMessages[i];
+        const msgContent = msg.contents[msg.activeContentIndex];
+        const msgTokens = Math.ceil(msgContent.length / 2);
+
+        if (currentTokens + msgTokens > contextLimit) {
+            break;
+        }
+
+        truncatedMessagesContent.unshift(msgContent); // Gemini 只需要純文字內容
+        currentTokens += msgTokens;
+    }
+
+    let fullChatHistoryString = truncatedMessagesContent.join('\n');
+    if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
+    } else { const messages = []; if (preambleString.trim()) { 
+      messages.push({ role: 'system', content: preambleString.trim() }); 
+    } 
+// ==================== ✨ 全新核心修改 ✨ ====================
+      // 1. 取得模型的上下文長度限制，並設定一個安全邊際值 (例如保留 4096 tokens 給輸出)
+      const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
+
+      // 2. 估算目前所有非對話內容 (系統提示詞、角色卡等) 的 token 數
+      let currentTokens = Math.ceil((preambleString.length / 2));
+
+      // 3. 建立一個新的陣列來存放要發送的對話
+      const truncatedMessages = [];
+
+      // 4. 從【最後一則訊息】開始，反向遍歷歷史紀錄
+      for (let i = currentMessages.length - 1; i >= 0; i--) {
+        const msg = currentMessages[i];
+        const msgContent = msg.contents[msg.activeContentIndex];
+        const msgTokens = Math.ceil(msgContent.length / 2);
+
+        // 5. 檢查加入這則訊息後，是否會超過我們的安全上限
+        if (currentTokens + msgTokens > contextLimit) {
+          // 如果超過了，就停止加入更多的舊訊息
+          break;
+        }
+
+        // 6. 如果沒超過，就把這則訊息加到新陣列的【最前面】(因為我們是反向遍歷)
+        truncatedMessages.unshift({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msgContent
+        });
+
+        // 7. 更新目前的 token 計數
+        currentTokens += msgTokens;
+      }
+      
+      // 8. 將整理好的、不會超長的對話歷史加到 messages 陣列中
+      messages.push(...truncatedMessages);
+      if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
     console.log(`【${apiProvider}】最終發送的請求: - App.js:3592`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
