@@ -121,9 +121,9 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
     </div>
   );
 };
-
 // 角色編輯器組件 (彈出式視窗)
 const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) => {
+  // State definitions remain the same
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [firstMessage, setFirstMessage] = useState('');
@@ -131,30 +131,75 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
   const [creatorNotes, setCreatorNotes] = useState('');
   const [embeddedRegex, setEmbeddedRegex] = useState([]);
-
-  // 使用單一字串來儲存被選中的「主要知識書」的 ID
   const [mainLorebookId, setMainLorebookId] = useState('');
 
+  // ✨ 核心修正 1：引入 useRef 作為我們的「旗標」
+  const isInitialMount = useRef(true);
+
+  // 從 LocalStorage 讀取草稿 (這部分邏輯不變)
   useEffect(() => {
+    try {
+      const draftString = localStorage.getItem('character_editor_draft');
+      if (!draftString) throw new Error("No draft found.");
+      
+      const draft = JSON.parse(draftString);
+      const draftId = draft.id;
+      const draftData = draft.data;
+
+      if ((!character && draftId === null) || (character && draftId === character.id)) {
+        console.log("發現並載入匹配的草稿...", draftData);
+        setName(draftData.name || '');
+        setDescription(draftData.description || '');
+        setFirstMessage(draftData.firstMessage || '');
+        setAlternateGreetings(draftData.alternateGreetings || []);
+        setAvatar(draftData.avatar || { type: 'icon', data: 'UserCircle' });
+        setMainLorebookId(draftData.mainLorebookId || '');
+        setCreatorNotes(draftData.creatorNotes || '');
+        setEmbeddedRegex(draftData.embeddedRegex || []);
+        return;
+      }
+    } catch (error) {
+      // No draft found or matched, proceed to default loading.
+    }
+
     if (character) {
       setName(character.name || '');
       setDescription(character.description || '');
       setFirstMessage(character.firstMessage || '');
       setAlternateGreetings(character.alternateGreetings || []);
       setAvatar(character.avatar || { type: 'icon', data: 'UserCircle' });
-      // 讀取角色資料中新的 `mainLorebookId` 欄位
       setMainLorebookId(character.mainLorebookId || '');
       setCreatorNotes(character.creatorNotes || '');
       setEmbeddedRegex(character.embeddedRegex ? structuredClone(character.embeddedRegex) : []);
     } else {
-      // 創建新角色時，清空所有欄位
       setName(''); setDescription(''); setFirstMessage(''); setAlternateGreetings([]);
-      setAvatar({ type: 'icon', data: 'UserCircle' });
-      setMainLorebookId(''); // 新角色預設不選
+      setAvatar({ type: 'icon', data: 'UserCircle' }); setMainLorebookId('');
       setCreatorNotes(''); setEmbeddedRegex([]);
     }
-  }, [character]);
+  }, []);
 
+  // ✨ 核心修正 2：在寫入草稿前，檢查「旗標」
+  useEffect(() => {
+    // 如果這是第一次掛載，我們就設置旗標並直接返回，不做任何事
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    // 從第二次渲染開始，這個 effect 才會真正執行寫入操作
+    const draftData = {
+      name, description, firstMessage, alternateGreetings,
+      avatar, mainLorebookId, creatorNotes, embeddedRegex
+    };
+    const draftToStore = {
+      id: character ? character.id : null,
+      data: draftData
+    };
+    localStorage.setItem('character_editor_draft', JSON.stringify(draftToStore));
+
+  }, [character, name, description, firstMessage, alternateGreetings, avatar, mainLorebookId, creatorNotes, embeddedRegex]);
+
+  // handleSave 和其他函式保持不變
   const handleSave = () => {
     if (!name.trim()) {
       alert('請為您的角色命名！');
@@ -165,19 +210,14 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
       name, description, firstMessage,
       alternateGreetings: alternateGreetings.filter(g => g.trim() !== ''),
       avatar,
-      // 儲存時，使用新的 `mainLorebookId` 欄位
       mainLorebookId: mainLorebookId,
       creatorNotes,
       embeddedRegex: embeddedRegex,
     };
     onSave(characterData);
   };
-
-  const handleMainLorebookChange = (event) => {
-    setMainLorebookId(event.target.value);
-  };
-
-  // --- 為了確保您方便複製貼上，我將所有函式都包含進來 ---
+  
+  const handleMainLorebookChange = (event) => { setMainLorebookId(event.target.value); };
   const handleDelete = () => { if (character && window.confirm(`⚠️ 確定要刪除角色「${character.name}」嗎？...`) && window.confirm(`🚨最後一次確認🚨\n\n按下「確定」後，角色「${character.name}」和所有對話將被永久銷毀。\n此操作將會連同【所有相關的聊天記錄】一併永久刪除！\n\n確定要這麼做嗎？`)) { onDelete(character.id); } };
   const handleAddRegexRule = () => { setEmbeddedRegex([...embeddedRegex, { find: '', replace: '', enabled: true }]); };
   const handleRegexRuleChange = (index, field, value) => { const updatedRules = [...embeddedRegex]; updatedRules[index] = { ...updatedRules[index], [field]: value }; setEmbeddedRegex(updatedRules); };
@@ -190,17 +230,16 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
   const handleExportLocalRegex = useCallback(() => { if (embeddedRegex.length === 0) { alert('此角色沒有可匯出的區域規則。'); return; } const jsonString = JSON.stringify(embeddedRegex, null, 2); const blob = new Blob([jsonString], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.download = `${name || 'character'}_local_regex.json`; link.href = url; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); }, [embeddedRegex, name]);
   const handleImportLocalRegex = useCallback((event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { const data = JSON.parse(e.target.result); let newRules = []; if (Array.isArray(data)) { newRules = data; } else if (data.scriptName && data.findRegex) { const findRegexStr = data.findRegex; let findPattern = findRegexStr; if (findRegexStr.startsWith('/') && findRegexStr.lastIndexOf('/') > 0) { findPattern = findRegexStr.substring(1, findRegexStr.lastIndexOf('/')); } newRules.push({ find: findPattern, replace: data.replaceString || '', enabled: !data.disabled, }); } else { throw new Error('不支援的檔案格式。'); } if (window.confirm(`即將匯入 ${newRules.length} 條規則到此角色。確定嗎？`)) { setEmbeddedRegex(prev => [...prev, ...newRules]); } } catch (error) { alert(`❌ 匯入失敗：${error.message}`); } finally { if (event.target) event.target.value = ''; } }; reader.readAsText(file); }, []);
 
+  // JSX return remains the same
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header"><h3>{character ? '編輯角色' : '創建新角色'}</h3><button onClick={onClose} className="close-btn"><X size={20} /></button></div>
         <div className="modal-body">
-            {/* ... 其他欄位如頭像、名稱、備註、描述等保持不變 ... */}
             <div className="form-group avatar-form-group"> <label>角色頭像</label> <div className="avatar-editor"> <div className="avatar-preview-large"> {avatar.type === 'image' ? ( <img src={avatar.data} alt="頭像" className="avatar-image" /> ) : ( <UserCircle size={48} /> )} </div> <div className="avatar-actions"> <label htmlFor="char-avatar-upload" className="action-button-base"> <FileInput size={16} /> 上傳圖片 </label> {character && ( <label onClick={() => onSave(null, true)} className="action-button-base"> <FileOutput size={16} /> 匯出.png卡 </label> )} </div> {character && ( <button onClick={handleDelete} className="delete-character-icon-btn"> <Trash2 size={16} /> </button> )} <input type="file" id="char-avatar-upload" accept="image/*" onChange={handleAvatarUpload} style={{ display: 'none' }} /> </div> </div>
             <div className="form-group"> <label>角色名稱</label> <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：夏洛克．福爾摩斯" /> </div>
             <div className="form-group"> <label>創作者備註</label> <textarea value={creatorNotes} onChange={(e) => setCreatorNotes(e.target.value)} rows="2" /> </div>
             <div className="form-group"> <label>角色描述</label> <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows="6" placeholder="在這裡輸入角色的所有設定..." /> </div>
-
             <div className="form-group world-book-section">
                 <label className="world-book-label"><Globe size={16} /><span>主要知識書</span></label>
                 <p className="setting-description">選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。</p>
@@ -209,8 +248,6 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
                     {worldBooks.map(book => (<option key={book.id} value={book.id}>{book.name}</option>))}
                 </select>
             </div>
-            
-            {/* ... 其他部分如區域 Regex、開場白等保持不變 ... */}
             <div className="form-group world-book-section"> <div className="form-label-group"> <label className="world-book-label" style={{ marginBottom: '0' }}> <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span> </label> <div style={{ display: 'flex', gap: '8px' }}> <label htmlFor="import-local-regex" className="add-greeting-btn" style={{padding: '4px'}}> <FileInput size={14} /> </label> <button onClick={handleExportLocalRegex} className="add-greeting-btn" style={{padding: '4px'}}> <FileOutput size={14} /> </button> <button onClick={handleAddRegexRule} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> </div> <input type="file" id="import-local-regex" accept=".json" onChange={handleImportLocalRegex} style={{ display: 'none' }} /> <div className="world-book-entries"> {embeddedRegex.map((rule, index) => ( <div key={index} className="world-book-entry wb-entry-editor"> <div className="wb-entry-actions"> <label className="wb-entry-toggle"> <input type="checkbox" checked={rule.enabled} onChange={() => handleToggleRegexRule(index)} /> <span className="slider"></span> </label> <button onClick={() => handleDeleteRegexRule(index)} className="wb-delete-btn"> <Trash2 size={14} /> </button> </div> <div className="wb-entry-inputs"> <textarea placeholder="尋找 (Find)" rows="2" value={rule.find} onChange={(e) => handleRegexRuleChange(index, 'find', e.target.value)} /> <textarea placeholder="替換為 (Replace)" rows="2" value={rule.replace} onChange={(e) => handleRegexRuleChange(index, 'replace', e.target.value)} /> </div> </div> ))} </div> </div>
             <div className="form-group"> <label>主要開場白</label> <textarea value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} rows="4" placeholder="輸入角色的第一句話..." /> </div>
             <div className="form-group alternate-greetings-group"> <div className="form-label-group"> <label>備用開場白</label> <button onClick={handleAddGreeting} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> {alternateGreetings.map((greeting, index) => ( <div key={index} className="greeting-input-group"> <textarea value={greeting} onChange={(e) => handleGreetingChange(index, e.target.value)} rows="2" placeholder={`備用開場白 #${index + 1}`} /> <button onClick={() => handleRemoveGreeting(index)} className="remove-greeting-btn"> <Trash2 size={16} /> </button> </div> ))} </div>
@@ -1059,32 +1096,74 @@ const ThemeSwitcherModal = ({ currentTheme, onSelect, onClose }) => {
 
 // ==================== 全新！使用者個人檔案編輯器 Modal ====================
 const UserProfileEditor = ({ profile, onSave, onClose }) => {
+  // State definitions remain the same
   const [name, setName] = useState('');
-  const [notes, setNotes] = useState(''); // +++ 新增一行 state 來管理備註 +++
+  const [notes, setNotes] = useState('');
   const [description, setDescription] = useState('');
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
 
+  // ✨ 1. 引入 useRef 作為「首次渲染」的旗標
+  const isInitialMount = useRef(true);
+
+  // ✨ 2. 從 LocalStorage 讀取草稿 (僅在組件掛載時執行)
   useEffect(() => {
+    try {
+      const draftString = localStorage.getItem('user_profile_editor_draft');
+      if (!draftString) throw new Error("No draft found.");
+      
+      const draft = JSON.parse(draftString);
+      const draftId = draft.id;
+      const draftData = draft.data;
+
+      // 判斷是否應該載入這個草稿
+      if ((!profile && draftId === null) || (profile && draftId === profile.id)) {
+        console.log("發現並載入匹配的使用者個人檔案草稿...", draftData);
+        setName(draftData.name || '');
+        setNotes(draftData.notes || '');
+        setDescription(draftData.description || '');
+        setAvatar(draftData.avatar || { type: 'icon', data: 'UserCircle' });
+        return; // 成功載入草稿，結束函式
+      }
+    } catch (error) {
+      // 找不到草稿或草稿不匹配，這是正常情況，繼續執行預設載入邏輯
+    }
+
+    // 如果沒有成功載入草稿，就執行預設的載入邏輯
     if (profile) {
       setName(profile.name || '');
-      setNotes(profile.notes || ''); // +++ 讀取個人檔案中的備註 +++
+      setNotes(profile.notes || '');
       setDescription(profile.description || '');
       setAvatar(profile.avatar || { type: 'icon', data: 'UserCircle' });
     } else {
-      // 新增模式，清空欄位
       setName('');
-      setNotes(''); // +++ 創建新檔案時，清空備註 +++
+      setNotes('');
       setDescription('');
       setAvatar({ type: 'icon', data: 'UserCircle' });
     }
-  }, [profile]);
+  }, []); // 空陣列 [] 確保只在掛載時執行一次
+
+  // ✨ 3. 即時將變更寫入 LocalStorage
+  useEffect(() => {
+    // 如果是第一次掛載，我們就設置旗標並直接返回，避免用空值覆蓋草稿
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const draftData = { name, notes, description, avatar };
+    const draftToStore = {
+      id: profile ? profile.id : null, // 記下我們正在為哪個個人檔案寫草稿
+      data: draftData
+    };
+    localStorage.setItem('user_profile_editor_draft', JSON.stringify(draftToStore));
+  }, [profile, name, notes, description, avatar]);
+
 
   const handleSave = () => {
     if (!name.trim()) {
       alert('請為您的個人檔案命名！');
       return;
     }
-    // +++ 儲存時把備註 (notes) 也一起儲存進去 +++
     onSave({ name, notes, description, avatar });
   };
 
@@ -1110,6 +1189,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
     event.target.value = '';
   };
 
+  // JSX return remains the same
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -1151,8 +1231,6 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
               placeholder="例如：華生"
             />
           </div>
-
-          {/* +++ 在這裡插入新的輸入框 +++ */}
           <div className="form-group">
             <label>備註</label>
             <input
@@ -1162,8 +1240,6 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
               placeholder="例如：醫生"
             />
           </div>
-          {/* +++ 新增結束 +++ */}
-
           <div className="form-group">
             <label>你的角色描述 (AI 會參考這份資料)</label>
             <textarea
@@ -1994,6 +2070,8 @@ const SettingsPage = ({
       </div>
     );
 };
+
+
   
 // =================================================================================
 // ✨✨✨ 全新！基於 SillyTavern 官方 Default.json 的內建提示詞 ✨✨✨
@@ -2108,6 +2186,34 @@ const BUILT_IN_PROMPTS = [
     ]
   }
 ];
+
+// =================================================================================
+// ✨✨✨ 全新！新角色草稿暫存區 ✨✨✨
+// =================================================================================
+let newCharacterDraft = {
+  name: '',
+  description: '',
+  creatorNotes: '',
+  firstMessage: '',
+  alternateGreetings: [],
+  avatar: { type: 'icon', data: 'UserCircle' },
+  mainLorebookId: '',
+  embeddedRegex: [],
+};
+
+// 用於在成功儲存後清除草稿
+const clearNewCharacterDraft = () => {
+  newCharacterDraft = {
+    name: '',
+    description: '',
+    creatorNotes: '',
+    firstMessage: '',
+    alternateGreetings: [],
+    avatar: { type: 'icon', data: 'UserCircle' },
+    mainLorebookId: '',
+    embeddedRegex: [],
+  };
+};
 
 const ChatApp = () => {
   // ✨ 全新的時間格式化輔助函式 ✨
@@ -2374,16 +2480,47 @@ useEffect(() => {
         }
       }
       
-      const lastUsedApi = JSON.parse(localStorage.getItem('app_last_used_api'));
+      // ==================== ✨ 全新 API 載入邏輯 ✨ ====================
       const savedKeysByProvider = JSON.parse(localStorage.getItem('app_api_keys_by_provider'));
       if (savedKeysByProvider) {
         setApiKeysByProvider(savedKeysByProvider);
       }
-      if (lastUsedApi) {
-        setApiProvider(lastUsedApi.provider || 'openai');
-        setApiKey(savedKeysByProvider?.[lastUsedApi.provider] || '');
-        setApiModel(lastUsedApi.model || (apiProviders[lastUsedApi.provider]?.models[0] || 'gpt-3.5-turbo'));
-        if (lastUsedApi.apiKey) setIsApiConnected(true); // 這裡的 apiKey 只是為了判斷上次是否連接過
+      
+      const activeConfigId = localStorage.getItem('app_active_api_config_id');
+      let configLoaded = false;
+
+      // 優先策略：嘗試載入使用者選定的預設配置
+      if (activeConfigId && savedApiConfigs && savedApiConfigs.length > 0) {
+        const configToLoad = savedApiConfigs.find(c => c.id == activeConfigId);
+        if (configToLoad) {
+          console.log(`正在載入預設 API 配置：「${configToLoad.name}」`);
+          setLoadedConfigId(configToLoad.id);
+          setApiProvider(configToLoad.provider);
+          const loadedKeys = configToLoad.keysByProvider || {};
+          setApiKeysByProvider(loadedKeys);
+          setApiKey(loadedKeys[configToLoad.provider] || '');
+          setApiModel(configToLoad.model);
+          setLoadedConfigName(configToLoad.name);
+          setConfigName(configToLoad.name);
+          setCurrentApiKeyIndex(0);
+          if (loadedKeys[configToLoad.provider]) {
+             // 默默設定為已連線狀態，使用者可以手動再測試
+             setIsApiConnected(true);
+          }
+          configLoaded = true;
+        }
+      }
+
+      // 備用策略：如果沒有預設配置，則使用舊的「最後一次使用」邏輯
+      if (!configLoaded) {
+        console.log("未找到預設配置，回退至載入上次使用的 API 設定。");
+        const lastUsedApi = JSON.parse(localStorage.getItem('app_last_used_api'));
+        if (lastUsedApi) {
+          setApiProvider(lastUsedApi.provider || 'openai');
+          setApiKey(savedKeysByProvider?.[lastUsedApi.provider] || '');
+          setApiModel(lastUsedApi.model || (apiProviders[lastUsedApi.provider]?.models[0] || 'gpt-3.5-turbo'));
+          if (lastUsedApi.apiKey) setIsApiConnected(true);
+        }
       }
       setIsDataLoaded(true);
     } catch (error) {
@@ -2707,6 +2844,8 @@ const handleUpdateConfiguration = useCallback(async () => {
     setApiConfigs(updatedConfigs);
     
     setLoadedConfigName(configName);
+    // ✨ 核心新增：確保更新後的API配置仍然是預設
+    localStorage.setItem('app_active_api_config_id', loadedConfigId);
     alert(`✅ 已更新配置：「${configName}」`);
   } catch (error) {
     console.error("更新 API 配置失敗: - App.js:2690", error);
@@ -2751,6 +2890,8 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     // 另存後，新的配置就變成了 "當前載入的配置"
     setLoadedConfigId(newId); 
     setLoadedConfigName(configName);
+    // ✨ 核心新增：將新儲存的API配置設為預設
+    localStorage.setItem('app_active_api_config_id', newId);
     
     alert(`✅ 已另存為新配置：「${configName}」`);
   } catch (error) {
@@ -2782,6 +2923,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     setLoadedConfigName(configToLoad.name); 
     setConfigName(configToLoad.name);
     setCurrentApiKeyIndex(0);
+    localStorage.setItem('app_active_api_config_id', configToLoad.id);
     alert(`✅ 已載入配置：「${configToLoad.name}」`);
   }
 }, [apiConfigs]); // 依賴項不變
@@ -2913,16 +3055,19 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       return; // 匯出後，結束函式，不做儲存操作
     }
 
-    // ✨ 如果是正常的儲存請求 (舊有邏輯保持不變) ✨
     if (characterData) {
       try {
-        await db.characters.put(characterData); // 告訴資料庫儲存這本書
+        await db.characters.put(characterData);
         
         const existingIndex = characters.findIndex(c => c.id === characterData.id);
         let updatedCharacters = existingIndex > -1
           ? characters.map(c => c.id === characterData.id ? characterData : c)
           : [...characters, characterData];
         setCharacters(updatedCharacters);
+        
+        // ✨ 核心修正：儲存成功後，立刻清除 localStorage 中的草稿
+        localStorage.removeItem('character_editor_draft');
+
         closeEditor();
         alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
       
@@ -2931,7 +3076,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert('❌ 儲存角色失敗！');
       }
     }
-  }, [characters, editingCharacter]); // ✨ 加入新的依賴項 editingCharacter
+  }, [characters, editingCharacter]); // 依賴項保持不變
 
   const deleteCharacter = useCallback(async (characterId) => {
     try {
@@ -2946,6 +3091,9 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       const updatedCharacters = characters.filter(c => c.id !== characterId);
       setCharacters(updatedCharacters);
       if (currentCharacter?.id === characterId) setCurrentCharacter(null);
+
+      // ✨ 核心修正：刪除成功後，也清除 localStorage 中的草稿
+      localStorage.removeItem('character_editor_draft');
       alert('🗑️......角色已離開');
       closeEditor();
       closePreview();
@@ -3119,27 +3267,26 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   // 儲存個人檔案 (核心邏輯)
   const handleSaveUserProfile = useCallback(async (profileData) => {
     let updatedProfiles;
-    // 檢查是更新還是新增
     if (editingUserProfileId) {
-      // 更新：用 map 找到對應 ID 的那一筆，然後替換掉
       updatedProfiles = userProfiles.map(p => 
         p.id === editingUserProfileId ? { ...p, ...profileData } : p
       );
     } else {
-      // 新增：在列表後面加上新的一筆
       const newProfile = { id: `user_${Date.now()}`, ...profileData };
       updatedProfiles = [...userProfiles, newProfile];
     }
     
-    // 更新畫面並存入資料庫
     setUserProfiles(updatedProfiles);
     await db.kvStore.put({ key: 'userProfiles', value: updatedProfiles });
     
-    closeUserProfileEditor(); // 關閉編輯視窗
+    // ✨ 核心新增：儲存成功後，清除草稿
+    localStorage.removeItem('user_profile_editor_draft');
+
+    closeUserProfileEditor();
     alert('✅ 個人檔案已儲存！');
   }, [userProfiles, editingUserProfileId]);
 
-  // 刪除個人檔案
+
   const handleDeleteUserProfile = useCallback(async (profileId) => {
     if (userProfiles.length <= 1) {
       alert('❌ 至少需要保留一個個人檔案。');
@@ -3150,6 +3297,9 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       const updatedProfiles = userProfiles.filter(p => p.id !== profileId);
       setUserProfiles(updatedProfiles);
       await db.kvStore.put({ key: 'userProfiles', value: updatedProfiles });
+      
+      // ✨ 核心新增：刪除成功後，也清除草稿
+      localStorage.removeItem('user_profile_editor_draft');
     
       alert('🗑️ 個人檔案已刪除。');
     }
