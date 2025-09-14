@@ -2341,6 +2341,23 @@ useEffect(() => {
       setPrompts(savedPrompts && savedPrompts.length > 0 ? savedPrompts : BUILT_IN_PROMPTS);
       if (savedPrompts.length === 0) await db.prompts.bulkPut(BUILT_IN_PROMPTS);
       setApiConfigs(savedApiConfigs || []);
+      const allAvailablePrompts = (savedPrompts && savedPrompts.length > 0) ? savedPrompts : BUILT_IN_PROMPTS;
+      const lastUsedPromptId = localStorage.getItem('app_last_used_prompt_id');
+
+      if (lastUsedPromptId) {
+        const lastUsedPrompt = allAvailablePrompts.find(p => p.id === lastUsedPromptId);
+        if (lastUsedPrompt) {
+          // 如果找到了上次用的提示詞，就直接設定它
+          setCurrentPrompt(lastUsedPrompt);
+          console.log(`成功載入上次使用的提示詞: ${lastUsedPrompt.name}`);
+        } else {
+          // 如果找不到 (可能被刪了)，就預設選擇列表中的第一個
+          setCurrentPrompt(allAvailablePrompts[0] || null);
+        }
+      } else {
+        // 如果是第一次使用，沒有任何紀錄，也預設選擇第一個
+        setCurrentPrompt(allAvailablePrompts[0] || null);
+      }
       setChatHistories(savedHistories || {});
       setChatMetadatas(savedMetadatas || {});
       setLongTermMemories(savedMemories || {});
@@ -2381,6 +2398,15 @@ useEffect(() => {
 
   loadData();
 }, []); // 這個 effect 只在啟動時執行一次，所以依賴項是空的
+      
+  // ✨ 全新！提示詞選擇的專屬存檔管家 ✨
+  useEffect(() => {
+    // 確保 currentPrompt 有值，且資料已從 DB 載入完成，避免啟動時存入 null
+    if (currentPrompt && isDataLoaded) {
+      console.log(`偵測到提示詞變更，正在儲存 ID: ${currentPrompt.id} 到 localStorage...`);
+      localStorage.setItem('app_last_used_prompt_id', currentPrompt.id);
+    }
+  }, [currentPrompt, isDataLoaded]); // 這個管家會監控 currentPrompt 和 isDataLoaded 的變化
 
   // ✨✨✨ 全新！聊天記錄的專屬存檔管家 ✨✨✨  <--- 就是這一段！
   useEffect(() => {
