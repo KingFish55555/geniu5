@@ -1996,21 +1996,21 @@ const SettingsPage = ({
 };
   
 // =================================================================================
-// ✨✨✨ 全新！基於 SillyTavern 佔位符的內建提示詞 ✨✨✨
+// ✨✨✨ 全新！基於 SillyTavern 官方 Default.json 的內建提示詞 ✨✨✨
 // =================================================================================
 const BUILT_IN_PROMPTS = [
   {
-    id: 'st-default-preset-v1',
-    name: '預設提示詞 (SillyTavern 風格)',
+    id: 'st-official-default-v1',
+    name: '預設提示詞 (SillyTavern 官方風格)',
+    // ✨ 依照您的要求進行修改
     temperature: 1,
-    maxTokens: 800,
-    contextLength: 32000,
+    maxTokens: 1000,
+    contextLength: 30000,
     modules: [
       {
         id: 'main',
         name: 'Main Prompt',
-        // ✨ 修改：移除 {{char}} 和 {{user}}，它們會由下面的專門模組處理
-        content: "Write the next reply in a fictional chat.",
+        content: "Write {{char}}'s next reply in a fictional chat between {{char}} and {{user}}.",
         enabled: true,
         locked: false, readOnly: false, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2026,8 +2026,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'personaDescription',
         name: 'Persona Description',
-        // ✨ 修改：使用 {{user}} 佔位符
-        content: '{{user}}', 
+        // 我們使用 {{persona}} 來載入完整的使用者描述
+        content: '{{persona}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2035,8 +2035,8 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'charDescription',
         name: 'Char Description',
-        // ✨ 修改：使用 {{char}} 佔位符來載入角色描述
-        content: '{{char}}',
+        // 我們使用 {{description}} 來載入完整的角色描述
+        content: '{{description}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
         triggers: { enabled: false, text: '' }, position: { type: 'relative', depth: 4 }
@@ -2044,7 +2044,6 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'charPersonality',
         name: 'Char Personality',
-        // ✨ 修改：使用 {{personality}} 佔位符來載入個性
         content: '{{personality}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2053,7 +2052,6 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'scenario',
         name: 'Scenario',
-        // ✨ 修改：使用 {{scenario}} 佔位符來載入場景
         content: '{{scenario}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2086,7 +2084,6 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'dialogueExamples',
         name: 'Chat Examples',
-        // ✨ 修改：使用 {{example_dialogue}} 佔位符來載入對話範例
         content: '{{example_dialogue}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2095,7 +2092,6 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'chatHistory',
         name: 'Chat History',
-        // ✨ 修改：使用 {{chat_history}} 佔位符
         content: '{{chat_history}}',
         enabled: true,
         locked: false, readOnly: true, role: 'system',
@@ -2104,7 +2100,6 @@ const BUILT_IN_PROMPTS = [
       {
         id: 'jailbreak',
         name: 'Post-History Instructions',
-        // ✨ 修改：使用對應的佔位符
         content: '{{post_history_instructions}}',
         enabled: true,
         locked: false, readOnly: false, role: 'system',
@@ -3591,7 +3586,7 @@ if (Array.isArray(data.entries)) {
   // ✨✨✨ 用這個新版本【覆蓋】舊的 sendToAI ✨✨✨
   const sendToAI = useCallback(async (userInput, currentMessages) => {
     // ... (此函式前面解析 API、掃描來源的部分保持不變) ...
-    const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`); const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null; const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null; const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`; const contextScanSources = { personaDescription: userDescription, characterDescription: currentCharacter.description || '', characterPersonality: currentCharacter.personality || '', scenario: currentCharacter.scenario || '', creatorNotes: currentCharacter.creatorNotes || '', chatHistory: [...currentMessages, { contents: [userInput || ''], activeContentIndex: 0 }].slice(-5).map(msg => msg.contents[msg.activeContentIndex]).join('\n'), };
+    const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`); const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null; const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null; const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`; const contextScanSources = { personaDescription: userDescription, characterDescription: currentCharacter.description || '', characterPersonality: currentCharacter.personality || '', scenario: currentCharacter.scenario || '', creatorNotes: currentCharacter.creatorNotes || '', chatHistory: currentMessages.slice(-5).map(msg => msg.contents[msg.activeContentIndex]).join('\n'), };
     
     const triggeredEntries = [];
 
@@ -3611,7 +3606,7 @@ if (Array.isArray(data.entries)) {
 
     const finalAuthorsNote = [ worldInfoByPosition.top_an, activeAuthorsNote, worldInfoByPosition.bottom_an ].filter(Boolean).join('\n');
     const finalCharDescription = [ worldInfoByPosition.before_char, currentCharacter.description || '', worldInfoByPosition.after_char ].filter(Boolean).join('\n');
-    const placeholderMap = { '{{char}}': finalCharDescription, '{{user}}': userDescription, '{{description}}': finalCharDescription, '{{persona}}': userDescription, '{{personality}}': currentCharacter.personality || '', '{{Personality}}': currentCharacter.personality || '', '{{scenario}}': currentCharacter.scenario || '', '{{mes_example}}': currentCharacter.mes_example || '', '{{example_dialogue}}': currentCharacter.mes_example || '', '{{memory}}': activeMemory || '', '{{summary}}': activeMemory || '', '{{authors_note}}': finalAuthorsNote, '{{system_prompt}}': currentCharacter.system_prompt || '', '{{post_history_instructions}}': currentCharacter.post_history_instructions || '', '{{depth_prompt}}': currentCharacter.depth_prompt || '', '{{group}}': currentCharacter.name, '{{input}}': userInput || '', };
+    const placeholderMap = { '{{char}}': currentCharacter.name || 'Character', '{{user}}': currentUserProfile.name || 'User', '{{description}}': finalCharDescription, '{{persona}}': userDescription, '{{personality}}': currentCharacter.personality || '', '{{Personality}}': currentCharacter.personality || '', '{{scenario}}': currentCharacter.scenario || '', '{{mes_example}}': currentCharacter.mes_example || '', '{{example_dialogue}}': currentCharacter.mes_example || '', '{{memory}}': activeMemory || '', '{{summary}}': activeMemory || '', '{{authors_note}}': finalAuthorsNote, '{{system_prompt}}': currentCharacter.system_prompt || '', '{{post_history_instructions}}': currentCharacter.post_history_instructions || '', '{{depth_prompt}}': currentCharacter.depth_prompt || '', '{{group}}': currentCharacter.name, '{{input}}': userInput || '', };
     if (currentCharacter.description) { currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile); } if (currentCharacter.personality) { currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile); }
     let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
     let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
@@ -3634,7 +3629,7 @@ if (Array.isArray(data.entries)) {
     }
 
     let fullChatHistoryString = truncatedMessagesContent.join('\n');
-    if (userInput && userInput.trim()) { if (fullChatHistoryString) fullChatHistoryString += '\n'; fullChatHistoryString += userInput; } const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
+    const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
     } else { const messages = []; if (preambleString.trim()) { 
       messages.push({ role: 'system', content: preambleString.trim() }); 
     } 
@@ -3672,7 +3667,7 @@ if (Array.isArray(data.entries)) {
       
       // 8. 將整理好的、不會超長的對話歷史加到 messages 陣列中
       messages.push(...truncatedMessages);
-      if (userInput && userInput.trim()) { messages.push({ role: 'user', content: userInput }); } requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
+      requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
     console.log(`【${apiProvider}】最終發送的請求: - App.js:3592`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
