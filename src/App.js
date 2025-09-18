@@ -2943,7 +2943,8 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     }
   }, [apiConfigs]);
 
-  const savePrompt = useCallback(async (promptData) => {
+  // ✨ 新增一個 silent 參數，預設為 false
+  const savePrompt = useCallback(async (promptData, silent = false) => { 
     try {
       await db.prompts.put(promptData);
       const existingIndex = prompts.findIndex(p => p.id === promptData.id);
@@ -2951,10 +2952,17 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         ? prompts.map(p => p.id === promptData.id ? promptData : p)
         : [...prompts, promptData];
       setPrompts(updatedPrompts);
-      alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
+      
+      // ✨ 只有在不是 silent 模式時才顯示提示
+      if (!silent) {
+        alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
+      }
     } catch (error) {
-      console.error("儲存提示詞失敗: - App.js:2792", error);
-      alert('❌ 儲存提示詞失敗！');
+      console.error("儲存提示詞失敗:", error);
+      // ✨ 在 silent 模式下，錯誤也只在 console 提示
+      if (!silent) {
+        alert('❌ 儲存提示詞失敗！');
+      }
     }
   }, [prompts]);
 
@@ -2992,6 +3000,76 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       }
     }
   }, [prompts]);
+
+  // =================================================================================
+// ✨✨✨ 全新！提示詞模組管理函式 ✨✨✨
+// =================================================================================
+
+  const handleAddPromptModule = useCallback(() => {
+    if (!currentPrompt) {
+      alert('請先選擇一個提示詞預設集才能新增模組。');
+      return null; // ✨ 返回 null 表示失敗
+    }
+
+    // ✨ 參照 ST 格式，加入 position 和 order 預設值
+    const newModule = {
+      id: `module_${Date.now()}`,
+      name: '新模組',
+      content: '',
+      enabled: true,
+      locked: false,
+      readOnly: false,
+      role: 'system',
+      // ✨ 新增的欄位
+      order: 100,
+      position: {
+        type: 'relative', // 'relative' (在提示詞管理中) 或 'absolute' (在聊天中)
+        depth: 4 
+      }
+    };
+
+    const updatedPrompt = {
+      ...currentPrompt,
+      modules: [...(currentPrompt.modules || []), newModule],
+    };
+
+    savePrompt(updatedPrompt, true); // ✨ 使用 silent 儲存
+    setCurrentPrompt(updatedPrompt);
+    
+    // ✨ 核心修改：返回新建的模組物件
+    return newModule; 
+  }, [currentPrompt, savePrompt]);
+
+  const handleDeletePromptModule = useCallback((moduleId) => {
+    if (!currentPrompt) return;
+
+    // 找到要刪除的模組，以便在確認視窗中顯示名稱
+    const moduleToDelete = currentPrompt.modules.find(m => m.id === moduleId);
+    if (!moduleToDelete) return;
+
+    // 彈出防呆確認視窗
+    if (window.confirm(`您確定要永久刪除模- 「${moduleToDelete.name}」嗎？`)) {
+      const updatedModules = currentPrompt.modules.filter(m => m.id !== moduleId);
+      const updatedPrompt = { ...currentPrompt, modules: updatedModules };
+
+      savePrompt(updatedPrompt);
+      // ✨ 同樣，立即更新當前狀態
+      setCurrentPrompt(updatedPrompt);
+
+      alert('🗑️ 模組已刪除。');
+    }
+  }, [currentPrompt, savePrompt]);
+
+  const handleModuleOrderChange = useCallback((reorderedModules) => {
+    if (!currentPrompt) return;
+
+    const updatedPrompt = { ...currentPrompt, modules: reorderedModules };
+    
+    // 安靜地儲存順序變更
+    savePrompt(updatedPrompt, true); 
+    setCurrentPrompt(updatedPrompt);
+
+  }, [currentPrompt, savePrompt]);
 
   const openEditorForNew = () => {
     setEditingCharacter(null);
@@ -4893,6 +4971,9 @@ const formatStDate = (date, type = 'send_date') => {
               deletePrompt={deletePrompt}
               restoreDefaultPrompts={restoreDefaultPrompts}
               onOpenSwitcher={() => setIsPromptSwitcherOpen(true)}
+              onAddModule={handleAddPromptModule}
+              onDeleteModule={handleDeletePromptModule}
+              onModuleOrderChange={handleModuleOrderChange}
             />
           )}
           {currentPage === 'settings' && (

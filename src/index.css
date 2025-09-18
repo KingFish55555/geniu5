@@ -4140,3 +4140,108 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .wb-mode-option-floating:hover {
   background-color: var(--primary-color-faded);
 }
+
+/* =================================== */
+/* ✨ Markdown 引用區塊 (Blockquote) 樣式 ✨ */
+/* =================================== */
+
+.messages-area blockquote {
+  /* 左側的引用線 */
+  border-left: 4px solid var(--quote-text-color); 
+  
+  /* 讓文字和引用線之間有點距離 */
+  padding-left: 1rem; 
+  
+  /* 整體向內縮排 */
+  margin-left: 0.5rem; 
+  
+  /* 讓引用文字的顏色稍微淡一點，更有區隔感 */
+  color: var(--text-muted); 
+  
+  /* 你也可以加上淡淡的背景色來強化效果 (可選) */
+  background-color: var(--surface-hover-color); 
+  border-radius: 4px; 
+  padding-top: 0.5rem; 
+  padding-bottom: 0.5rem; 
+}
+
+/* 如果引用區塊裡面還有段落，確保它們之間沒有多餘的邊界 */
+.messages-area blockquote p {
+  margin-bottom: 0;
+}
+
+/* For LocalRegexEditorModal.js */
+.st-regex-editor {
+  background-color: var(--surface-raised-color);
+  border: 1px solid var(--border-color);
+  padding-top: 12px;
+  margin-bottom: 12px;
+}
+
+.st-regex-options-inline {
+  display: flex;
+  gap: 16px;
+  padding: 8px 8px 12px 8px;
+  border-top: 1px solid var(--border-color);
+  margin-top: 8px;
+}
+
+.option-group-inline .option-group-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+
+.checkbox-grid-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checkbox-grid-inline .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* regex輸入框 */
+.regex-with-flags { display: flex; align-items: stretch; }
+.regex-find-input { flex-grow: 1; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.regex-flags-container { display: flex; align-items: center; background-color: var(--surface-raised-color); border: 1px solid var(--border-color); border-left: none; padding: 0 8px; border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+.regex-flags-input { width: 50px; background-color: transparent; border: none; padding: 0; color: var(--primary-color); font-weight: bold; }
+
+.module-list-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* ... 其他樣式 ... */
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+}
+
+.module-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+/* 拖曳時的視覺提示 */
+.module-list-item.drag-over-top {
+  border-top: 2px solid var(--primary-color);
+}
+.module-list-item.drag-over-bottom {
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.module-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 創建一個四欄等寬的網格 */
+  gap: 12px; /* 項目之間的間距 */
+  margin-bottom: 16px;
+}
