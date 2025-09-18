@@ -4245,3 +4245,117 @@ input[type="range"]:hover::-webkit-slider-thumb {
   gap: 12px; /* 項目之間的間距 */
   margin-bottom: 16px;
 }
+
+/* For RegexEditorModal.js */
+.regex-with-flags {
+  display: flex;
+  align-items: stretch;
+}
+.regex-find-input {
+  flex-grow: 1;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+.regex-flags-container {
+  display: flex;
+  align-items: center;
+  background-color: var(--input-bg-color);
+  border: 1px solid var(--border-color);
+  border-left: none;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+  padding: 0 8px;
+}
+.regex-flags-input {
+  width: 50px;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: 0 4px;
+  color: var(--primary-color);
+  font-family: monospace;
+}
+
+.st-regex-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+.option-group-title {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+.checkbox-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.st-regex-editor .wb-entry-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; /* Adds space between form groups */
+}
+.st-regex-options-inline {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px;
+  background-color: var(--surface-hover-color);
+  border-radius: 6px;
+  margin: 0 8px;
+}
+.option-group-inline {
+  text-align: center;
+}
+.option-group-inline .option-group-title {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.checkbox-grid-inline {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.st-regex-input {
+  width: 100%;
+  padding: 8px;
+  background-color: var(--input-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: monospace;
+}
+.st-regex-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+.st-grid-group.full-span {
+  grid-column: 1 / -1;
+}
+.checkbox-grid-st {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.st-regex-find-preview {
+  font-family: monospace;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -122,7 +122,7 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
   );
 };
 // 角色編輯器組件 (彈出式視窗)
-const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) => {
+const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onOpenLocalRegexEditor }) => {
   // State definitions remain the same
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -240,16 +240,38 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks }) =
             <div className="form-group"> <label>角色名稱</label> <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="例如：夏洛克．福爾摩斯" /> </div>
             <div className="form-group"> <label>創作者備註</label> <textarea value={creatorNotes} onChange={(e) => setCreatorNotes(e.target.value)} rows="2" /> </div>
             <div className="form-group"> <label>角色描述</label> <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows="6" placeholder="在這裡輸入角色的所有設定..." /> </div>
-            <div className="form-group world-book-section">
-                <label className="world-book-label"><Globe size={16} /><span>主要知識書</span></label>
-                <p className="setting-description">選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。</p>
-                <select className="setting-select" value={mainLorebookId} onChange={handleMainLorebookChange}>
-                    <option value="">--- None ---</option>
-                    {worldBooks.map(book => (<option key={book.id} value={book.id}>{book.name}</option>))}
-                </select>
+                
+                  
+              <div className="form-group world-book-section">
+                <div className="form-label-group">
+                    <label className="world-book-label" style={{ marginBottom: '0' }}>
+                        <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span>
+                    </label>
+                    {/* ✨ 核心修正 2：確保 onOpenLocalRegexEditor 接收 null 來代表新增 */}
+                    <button onClick={() => onOpenLocalRegexEditor(null)} className="add-greeting-btn">
+                        <Plus size={14} /> 新增規則
+                    </button>
+                </div>
+                {/* 顯示規則列表 */}
+                <div className="character-list" style={{maxHeight: '200px', overflowY: 'auto', marginTop: '8px'}}>
+                  {(embeddedRegex || []).map((rule, index) => (
+                      <div key={index} className="character-list-item">
+                          <div className="character-select-area" style={{opacity: !rule.enabled ? 0.5 : 1}}>
+                              <div className="character-info">
+                                  {/* ✨ 核心修正 1：使用 'notes' 和 'find' 來顯示 */}
+                                  <h4>{rule.notes || '(未命名規則)'}</h4>
+                                  <p className="st-regex-find-preview">/{rule.find}/{rule.flags || 'g'}</p>
+                              </div>
+                          </div>
+                          <button className="edit-character-btn" onClick={() => onOpenLocalRegexEditor(index)}>
+                              <Edit2 size={16} />
+                          </button>
+                      </div>
+                  ))}
+                </div>
             </div>
-            <div className="form-group world-book-section"> <div className="form-label-group"> <label className="world-book-label" style={{ marginBottom: '0' }}> <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span> </label> <div style={{ display: 'flex', gap: '8px' }}> <label htmlFor="import-local-regex" className="add-greeting-btn" style={{padding: '4px'}}> <FileInput size={14} /> </label> <button onClick={handleExportLocalRegex} className="add-greeting-btn" style={{padding: '4px'}}> <FileOutput size={14} /> </button> <button onClick={handleAddRegexRule} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> </div> <input type="file" id="import-local-regex" accept=".json" onChange={handleImportLocalRegex} style={{ display: 'none' }} /> <div className="world-book-entries"> {embeddedRegex.map((rule, index) => ( <div key={index} className="world-book-entry wb-entry-editor"> <div className="wb-entry-actions"> <label className="wb-entry-toggle"> <input type="checkbox" checked={rule.enabled} onChange={() => handleToggleRegexRule(index)} /> <span className="slider"></span> </label> <button onClick={() => handleDeleteRegexRule(index)} className="wb-delete-btn"> <Trash2 size={14} /> </button> </div> <div className="wb-entry-inputs"> <textarea placeholder="尋找 (Find)" rows="2" value={rule.find} onChange={(e) => handleRegexRuleChange(index, 'find', e.target.value)} /> <textarea placeholder="替換為 (Replace)" rows="2" value={rule.replace} onChange={(e) => handleRegexRuleChange(index, 'replace', e.target.value)} /> </div> </div> ))} </div> </div>
-            <div className="form-group"> <label>主要開場白</label> <textarea value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} rows="4" placeholder="輸入角色的第一句話..." /> </div>
+
+              <div className="form-group"> <label>主要開場白</label> <textarea value={firstMessage} onChange={(e) => setFirstMessage(e.target.value)} rows="4" placeholder="輸入角色的第一句話..." /> </div>
             <div className="form-group alternate-greetings-group"> <div className="form-label-group"> <label>備用開場白</label> <button onClick={handleAddGreeting} className="add-greeting-btn"> <Plus size={14} /> 新增 </button> </div> {alternateGreetings.map((greeting, index) => ( <div key={index} className="greeting-input-group"> <textarea value={greeting} onChange={(e) => handleGreetingChange(index, e.target.value)} rows="2" placeholder={`備用開場白 #${index + 1}`} /> <button onClick={() => handleRemoveGreeting(index)} className="remove-greeting-btn"> <Trash2 size={16} /> </button> </div> ))} </div>
         </div>
         <div className="modal-footer"><button onClick={handleSave} className="footer-btn save-btn"><Save size={16} />{character ? '儲存變更' : '儲存新角色'}</button></div>
@@ -1391,7 +1413,52 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
     return worldBooks.find(book => book.id === currentCharacter.mainLorebookId);
   }, [worldBooks, currentCharacter]);
 
-  const applyAllRegex = useCallback((text, char) => { if (!text) return ''; let processedText = text; const enabledGlobalRules = regexRules?.filter(rule => rule.enabled) || []; for (const rule of enabledGlobalRules) { try { processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace); } catch (error) { console.error(`無效的全域 Regex 規則: "${rule.find}"`, error); } } const enabledLocalRules = char?.embeddedRegex?.filter(rule => rule.enabled) || []; for (const rule of enabledLocalRules) { try { processedText = processedText.replace(new RegExp(rule.find, 'gs'), rule.replace); } catch (error) { console.error(`無效的區域 Regex 規則 (角色: ${char.name}): "${rule.find}"`, error); } } return processedText; }, [regexRules]);
+    
+// =================================================================================
+// ✨✨✨ Ultimate Version! applyAllRegex v4 (Full ST Compatibility & New Format) ✨✨✨
+// =================================================================================
+  const applyAllRegex = useCallback((text, char, sender, contextType = 'chat') => {
+    if (!text) return '';
+    let processedText = text;
+    
+    // ✨ 修正：確保 filter 邏輯正確，使用 enabled 屬性
+    const enabledGlobalRules = regexRules?.filter(r => r.enabled) || [];
+    const enabledLocalRules = char?.embeddedRegex?.filter(r => r.enabled) || [];
+
+    const allRules = [...enabledLocalRules, ...enabledGlobalRules];
+
+    for (const rule of allRules) {
+      // --- 判斷是否執行 ---
+      const isUser = sender === 'user';
+      const placement = rule.placement || [];
+      
+      let shouldApply = false;
+      if (contextType === 'chat') {
+          if (placement.includes(2)) { // Both
+              shouldApply = true;
+          } else {
+              if (isUser && placement.includes(0)) shouldApply = true; // User input
+              if (!isUser && placement.includes(1)) shouldApply = true; // AI output
+          }
+      }
+      
+      if (!shouldApply) continue;
+      
+      // --- 執行替換 ---
+      try {
+        // ✨✨✨ 核心升級：直接使用 rule.find 和 rule.flags ✨✨✨
+        const regex = new RegExp(rule.find, rule.flags || 'g');
+        processedText = processedText.replace(regex, rule.replace);
+
+      } catch (error) {
+        console.error(`無效的 Regex 規則 (備註: ${rule.notes}): "${rule.find}"`, error);
+      }
+    }
+    return processedText;
+  }, [regexRules]);
+
+  // ✨ 同時，我們也需要更新 ChatPage 中呼叫它的地方 ✨
+  // (這一步需要在 ChatPage 元件的 return JSX 中修改)
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, messagesEndRef]);
   useEffect(() => { const textarea = textareaRef.current; if (textarea) { textarea.style.height = 'auto'; textarea.style.height = `${textarea.scrollHeight}px`; } }, [inputMessage]);
   const handleSend = () => { if (inputMessage.trim()) { sendMessage(); } else { continueGeneration(); } };
@@ -1433,7 +1500,11 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
       </div>
   
       <div className="messages-area">
-        {messages.length > 0 && messages.map((message, index) => { const originalText = message.contents[message.activeContentIndex]; const processedTextForMessage = applyAllRegex(originalText, currentCharacter); return ( <ChatMessage key={message.id} msg={message} processedText={processedTextForMessage} currentUserProfile={currentUserProfile} character={currentCharacter} activeChatId={activeChatId} setEditingMessage={setEditingMessage} handleDeleteMessage={handleDeleteMessage} showActionsMessageId={showActionsMessageId} setShowActionsMessageId={setShowActionsMessageId} handleRegenerate={handleRegenerate} onChangeVersion={onChangeVersion} isScreenshotMode={isScreenshotMode} isSelected={selectedMessageIds.includes(message.id)} onSelectMessage={handleSelectMessage} isLastMessage={index === messages.length - 1} /> ); })}
+        {messages.length > 0 && messages.map((message, index) => { 
+    const originalText = message.contents[message.activeContentIndex]; 
+    // ✨ 傳入 message.sender
+    const processedTextForMessage = applyAllRegex(originalText, currentCharacter, message.sender); 
+    return ( <ChatMessage key={message.id} msg={message} processedText={processedTextForMessage} currentUserProfile={currentUserProfile} character={currentCharacter} activeChatId={activeChatId} setEditingMessage={setEditingMessage} handleDeleteMessage={handleDeleteMessage} showActionsMessageId={showActionsMessageId} setShowActionsMessageId={setShowActionsMessageId} handleRegenerate={handleRegenerate} onChangeVersion={onChangeVersion} isScreenshotMode={isScreenshotMode} isSelected={selectedMessageIds.includes(message.id)} onSelectMessage={handleSelectMessage} isLastMessage={index === messages.length - 1} /> ); })}
         {isLoading && ( <div className="loading-message"> <div className="loading-dots"><span></span><span></span><span></span></div> <p>{currentCharacter.name} 正在輸入中...</p> </div> )}
         <div ref={messagesEndRef} />
       </div>
@@ -2049,7 +2120,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.543</p>
+                  <p>版本：0.5.544</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2241,8 +2312,9 @@ const ChatApp = () => {
   const [isOocCommandEditorOpen, setIsOocCommandEditorOpen] = useState(false); // ✨ 2. 設定頁的編輯器開關
   const [editingOocCommand, setEditingOocCommand] = useState(null); // ✨ 3. 正在編輯的指令
   const [isOocCommandSelectorOpen, setIsOocCommandSelectorOpen] = useState(false); // ✨ 4. 聊天室的選擇器開關
-  const [isRegexEditorOpen, setIsRegexEditorOpen] = useState(false); // ✨ 新增這一行
-  const [editingRegexRule, setEditingRegexRule] = useState(null); // ✨ 新增這一行
+  const [isRegexEditorOpen, setIsRegexEditorOpen] = useState(false);
+  const [editingRegexRule, setEditingRegexRule] = useState(null);
+  const [editingLocalRegex, setEditingLocalRegex] = useState({charId: null, ruleIndex: null});// ✨ 新增 state 來管理區域規則的編輯
 
   // ✨✨✨ 全新！使用者個人檔案管理 State ✨✨✨
   const [userProfiles, setUserProfiles] = useState([]); // 儲存所有使用者個人檔案的列表
@@ -2268,6 +2340,7 @@ const ChatApp = () => {
   // ==================== UI 彈出視窗與選單狀態 ====================
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingCharacter, setEditingCharacter] = useState(null);
+  const [isLocalRegexEditorOpen, setIsLocalRegexEditorOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [previewingCharacter, setPreviewingCharacter] = useState(null);
   const [editingMessage, setEditingMessage] = useState(null);
@@ -3001,6 +3074,53 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     }
   }, [prompts]);
 
+// ✨ 全新的，打開區域規則編輯器的函式 (兼容新增與編輯)
+  const handleOpenLocalRegexEditor = (ruleIndex) => {
+    if (!editingCharacter) return;
+    
+    // 如果 ruleIndex 是 null，代表是新增，我們傳入一個空物件
+    // 否則，我們從陣列中取出對應的規則來編輯
+    const ruleToEdit = ruleIndex !== null ? editingCharacter.embeddedRegex[ruleIndex] : { isNew: true };
+
+    setEditingRegexRule(ruleToEdit); // 複用全域編輯器的 state
+    
+    // 我們不再需要 editingLocalRegex 這個 state 了，可以直接判斷 ruleToEdit.isNew
+    setIsRegexEditorOpen(true); // 打開同一個編輯器 Modal
+  };
+
+  // ✨ 全新的，儲存區域規則的函式 (兼容新增與編輯)
+  const handleSaveLocalRegexRule = (updatedRuleData) => {
+    if (!editingCharacter) return;
+
+    const currentRules = [...(editingCharacter.embeddedRegex || [])];
+    
+    // 檢查我們正在編輯的規則是否帶有 isNew 標記
+    if (editingRegexRule?.isNew) {
+      // 新增規則
+      // 移除 isNew 標記，並加上 id 和 enabled 預設值
+      const { isNew, ...newRule } = updatedRuleData;
+      currentRules.push({ 
+        ...newRule, 
+        id: `local_${generateUniqueId()}`, 
+        enabled: true 
+      });
+    } else {
+      // 編輯現有規則
+      // 找到原始規則在陣列中的索引
+      const ruleIndex = currentRules.findIndex(r => r.id === editingRegexRule.id);
+      if (ruleIndex > -1) {
+        currentRules[ruleIndex] = { ...currentRules[ruleIndex], ...updatedRuleData };
+      }
+    }
+    
+    // 直接更新正在編輯的角色物件
+    const updatedChar = { ...editingCharacter, embeddedRegex: currentRules };
+    setEditingCharacter(updatedChar);
+
+    setIsRegexEditorOpen(false); // 關閉 Modal
+    setEditingRegexRule(null);   // 清理狀態
+  };
+
   // =================================================================================
 // ✨✨✨ 全新！提示詞模組管理函式 ✨✨✨
 // =================================================================================
@@ -3205,8 +3325,52 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     }
   }, [characters]);  
   
+// =================================================================================
+// ✨✨✨ 全新！更強大的角色卡 Regex 解析引擎 (V3 - 支援完整欄位) ✨✨✨
+// =================================================================================
+const parseRegexFromCard = (cardData) => {
+  let rawRegexArray = [];
+
+  // 1. 檢查所有已知的 Regex 儲存路徑
+  if (cardData.extensions?.regex && Array.isArray(cardData.extensions.regex)) {
+    rawRegexArray = cardData.extensions.regex;
+  } else if (cardData.extensions?.regex_scripts && Array.isArray(cardData.extensions.regex_scripts)) {
+    rawRegexArray = cardData.extensions.regex_scripts;
+  } else if (cardData.regex && Array.isArray(cardData.regex)) {
+    rawRegexArray = cardData.regex;
+  }
+
+  if (rawRegexArray.length === 0) return [];
+
+  // 2. 將讀取到的原始資料，"翻譯" 成我們應用程式內部統一且完整的格式
+  const translatedRegex = rawRegexArray.map(rule => {
+    // 從 findRegex 欄位中分離出 pattern 和 flags
+    let find = rule.findRegex || rule.find || '';
+    let flags = rule.flags || 'g'; // 預設 flag
+    if (find.startsWith('/') && find.lastIndexOf('/') > 0) {
+      const lastSlash = find.lastIndexOf('/');
+      flags = find.substring(lastSlash + 1);
+      find = find.substring(1, lastSlash);
+    }
     
-// ==================== ✨ 全新升級版 v3！能自動匯入並關聯世界書 ✨ ====================
+    return {
+      id: generateUniqueId(),
+      find: find,
+      flags: flags,
+      replace: rule.replaceString || rule.replace || '',
+      notes: rule.scriptName || rule.notes || '從卡片匯入的規則',
+      enabled: rule.disabled === undefined ? true : !rule.disabled,
+      // ✨ 新增欄位 ✨
+      runOnEdit: rule.runOnEdit || false,
+      promptOnly: rule.promptOnly || false,
+      placement: rule.placement || [1], // 預設 AI 輸出
+    };
+  }).filter(rule => rule.find);
+
+  return translatedRegex;
+};
+
+// ==================== ✨ 全新升級版 v4！能自動匯入並關聯世界書，且兼容多種 Regex 格式 ✨ ====================
   const handleImportCharacter = useCallback(async (event) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -3242,69 +3406,64 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
           creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '',
           avatar: characterAvatar,
           fav: cardData.fav || false,
-          embeddedRegex: cardData.extensions?.regex || [],
+          
+          // ✨✨✨ 核心修改！我們用新的解析引擎來處理 Regex ✨✨✨
+          embeddedRegex: parseRegexFromCard(cardData),
+
           mainLorebookId: '',
         };
         
         if (cardData.character_book && (
-  (Array.isArray(cardData.character_book.entries) && cardData.character_book.entries.length > 0) ||
-  (!Array.isArray(cardData.character_book.entries) && Object.keys(cardData.character_book.entries || {}).length > 0)
-)) {
+          (Array.isArray(cardData.character_book.entries) && cardData.character_book.entries.length > 0) ||
+          (!Array.isArray(cardData.character_book.entries) && Object.keys(cardData.character_book.entries || {}).length > 0)
+        )) {
           const incomingBookEntries = cardData.character_book.entries;
-
-            
-            // ✨ 處理陣列或物件格式的 entries
-            let sanitizedEntries = {};
-            
-           if (Array.isArray(incomingBookEntries)) {
-  // 角色卡格式：陣列轉物件，重新分配連續的 uid
-  let currentUid = 0;
-  incomingBookEntries.forEach((entry, index) => {
-    if (entry && typeof entry === 'object') {
-      const mappedEntry = mapWorldBookEntryFields(entry);
-      mappedEntry.uid = currentUid;  // ✅ 使用連續的 uid
-      mappedEntry.displayIndex = currentUid;  // ✅ 同步更新 displayIndex
-      sanitizedEntries[String(currentUid)] = mappedEntry;
-      currentUid++;
-    }
-  });
-} else {
-  // 獨立世界書格式：物件，確保 uid 連續
-  let currentUid = 0;
-  Object.keys(incomingBookEntries).forEach(key => {
-    const entry = incomingBookEntries[key];
-    if (entry && typeof entry === 'object') {
-      const mappedEntry = mapWorldBookEntryFields(entry);
-      mappedEntry.uid = currentUid;  // ✅ 重新分配連續 uid
-      mappedEntry.displayIndex = currentUid;  // ✅ 同步更新 displayIndex
-      sanitizedEntries[String(currentUid)] = mappedEntry;
-      currentUid++;
-    }
-  });
-}
-        
-            const incomingBookFingerprint = JSON.stringify(sanitizedEntries);
-
-            if (existingBookFingerprints.has(incomingBookFingerprint)) {
-                const existingBookId = existingBookFingerprints.get(incomingBookFingerprint);
-                newCharacter.mainLorebookId = existingBookId;
-            } else {
-                const newBook = {
-                    id: `wb_imp_${generateUniqueId()}`,
-                    name: cardData.character_book.name || `${newCharacter.name}的角色書`,
-                    entries: sanitizedEntries, // ✨ 使用我們清理和驗證過的 entries
-                };
-                newlyCreatedWorldBooks.push(newBook);
-                newCharacter.mainLorebookId = newBook.id;
-                existingBookFingerprints.set(incomingBookFingerprint, newBook.id);
-            }
+          let sanitizedEntries = {};
+          if (Array.isArray(incomingBookEntries)) {
+            let currentUid = 0;
+            incomingBookEntries.forEach((entry, index) => {
+              if (entry && typeof entry === 'object') {
+                const mappedEntry = mapWorldBookEntryFields(entry);
+                mappedEntry.uid = currentUid;
+                mappedEntry.displayIndex = currentUid;
+                sanitizedEntries[String(currentUid)] = mappedEntry;
+                currentUid++;
+              }
+            });
+          } else {
+            let currentUid = 0;
+            Object.keys(incomingBookEntries).forEach(key => {
+              const entry = incomingBookEntries[key];
+              if (entry && typeof entry === 'object') {
+                const mappedEntry = mapWorldBookEntryFields(entry);
+                mappedEntry.uid = currentUid;
+                mappedEntry.displayIndex = currentUid;
+                sanitizedEntries[String(currentUid)] = mappedEntry;
+                currentUid++;
+              }
+            });
+          }
+          const incomingBookFingerprint = JSON.stringify(sanitizedEntries);
+          if (existingBookFingerprints.has(incomingBookFingerprint)) {
+            const existingBookId = existingBookFingerprints.get(incomingBookFingerprint);
+            newCharacter.mainLorebookId = existingBookId;
+          } else {
+            const newBook = {
+              id: `wb_imp_${generateUniqueId()}`,
+              name: cardData.character_book.name || `${newCharacter.name}的角色書`,
+              entries: sanitizedEntries,
+            };
+            newlyCreatedWorldBooks.push(newBook);
+            newCharacter.mainLorebookId = newBook.id;
+            existingBookFingerprints.set(incomingBookFingerprint, newBook.id);
+          }
         }
 
         newlyImportedCharacters.push(newCharacter);
         successCount++;
 
       } catch (error) {
-        console.error(`匯入檔案 ${file.name} 失敗: - App.js:3059`, error);
+        console.error(`匯入檔案 ${file.name} 失敗:`, error);
         failureCount++;
       }
     }
@@ -3319,7 +3478,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     alert(summaryMessage);
     if (event.target) event.target.value = '';
     
-}, [characters, worldBooks]); // ✨ 7. 記得加入 worldBooks 作為依賴項
+}, [characters, worldBooks]);
 
   // =================================================================================
   // ✨✨✨ 全新！使用者個人檔案管理函式 ✨✨✨
@@ -5034,6 +5193,7 @@ const formatStDate = (date, type = 'send_date') => {
           onClose={closeEditor}
           onDelete={deleteCharacter}
           worldBooks={worldBooks}
+          onOpenLocalRegexEditor={handleOpenLocalRegexEditor}
         />
       )}
 
@@ -5155,9 +5315,15 @@ const formatStDate = (date, type = 'send_date') => {
       {/* ✨ 在這裡新增 RegexEditorModal 的渲染邏輯 ✨ */}
       {isRegexEditorOpen && (
         <RegexEditorModal
-          rule={editingRegexRule?.isNew ? null : editingRegexRule}
-          onSave={handleSaveRegexRule}
-          onClose={() => setIsRegexEditorOpen(false)}
+          // 根據我們是從哪裡打開的，決定傳入全域規則還是區域規則
+          rule={editingLocalRegex.charId ? editingRegexRule : editingRegexRule}
+          // 根據來源，決定儲存到哪裡
+          onSave={editingLocalRegex.charId ? handleSaveLocalRegexRule : handleSaveRegexRule}
+          onClose={() => {
+            setIsRegexEditorOpen(false);
+            setEditingLocalRegex({charId: null, ruleIndex: null}); // 清理狀態
+          }}
+          isGlobal={!editingLocalRegex.charId} // 告訴編輯器是不是全域模式
         />
       )}
     </>
