@@ -243,6 +243,12 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
                 
                   
               <div className="form-group world-book-section">
+                <label className="world-book-label"><Globe size={16} /><span>主要知識書</span></label>
+                <p className="setting-description">選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。</p>
+                <select className="setting-select" value={mainLorebookId} onChange={handleMainLorebookChange}>
+                    <option value="">--- None ---</option>
+                    {worldBooks.map(book => (<option key={book.id} value={book.id}>{book.name}</option>))}
+                </select>
                 <div className="form-label-group">
                     <label className="world-book-label" style={{ marginBottom: '0' }}>
                         <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span>
