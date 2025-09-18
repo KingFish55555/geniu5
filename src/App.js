@@ -3733,92 +3733,190 @@ if (Array.isArray(data.entries)) {
     setApiTestLoading(false);
   }, [apiKey, apiProvider, apiModel, apiProviders]);
 
-  // ✨✨✨ 用這個新版本【覆蓋】舊的 sendToAI ✨✨✨
-  const sendToAI = useCallback(async (userInput, currentMessages) => {
-    // ... (此函式前面解析 API、掃描來源的部分保持不變) ...
-    const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`); const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null; const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null; const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`; const contextScanSources = { personaDescription: userDescription, characterDescription: currentCharacter.description || '', characterPersonality: currentCharacter.personality || '', scenario: currentCharacter.scenario || '', creatorNotes: currentCharacter.creatorNotes || '', chatHistory: currentMessages.slice(-5).map(msg => msg.contents[msg.activeContentIndex]).join('\n'), };
-    
-    const triggeredEntries = [];
-
-    // ▼▼▼ 【✨✨✨ 最終核心修改點 ✨✨✨】 ▼▼▼
-    // 1. 取得角色的「主要知識書」ID
-    const mainBookId = currentCharacter.mainLorebookId;
-    // 2. 從當前聊天 metadata 中取得「聊天知識書」ID 列表
-    const auxiliaryBookIds = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || [];
-    // 3. 將兩者合併，並用 Set 去除重複，再過濾掉空值
-    const allActiveBookIds = [...new Set([mainBookId, ...auxiliaryBookIds].filter(Boolean))];
-    // ▲▲▲ 【✨✨✨ 修改結束 ✨✨✨】 ▲▲▲
-    
-    const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
-    for (const book of activeBooks) { for (const entry of Object.values(book.entries || {})) { if (entry.disable) continue; let scanText = contextScanSources.chatHistory; if(entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription; if(entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription; if(entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality; if(entry.matchScenario) scanText += '\n' + contextScanSources.scenario; if(entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes; const keywords = entry.key || []; const foundKeyword = keywords.length === 0 || keywords.some(k => scanText.includes(k)); if (foundKeyword || entry.constant) { triggeredEntries.push(entry); } } }
-    triggeredEntries.sort((a, b) => (a.order || 100) - (b.order || 100));
-    const worldInfoByPosition = { before_char: triggeredEntries.filter(e => e.position === 0).map(e => e.content).join('\n'), after_char: triggeredEntries.filter(e => e.position === 1).map(e => e.content).join('\n'), top_an: triggeredEntries.filter(e => e.position === 2).map(e => e.content).join('\n'), bottom_an: triggeredEntries.filter(e => e.position === 3).map(e => e.content).join('\n'), };
-
-    const finalAuthorsNote = [ worldInfoByPosition.top_an, activeAuthorsNote, worldInfoByPosition.bottom_an ].filter(Boolean).join('\n');
-    const finalCharDescription = [ worldInfoByPosition.before_char, currentCharacter.description || '', worldInfoByPosition.after_char ].filter(Boolean).join('\n');
-    const placeholderMap = { '{{char}}': currentCharacter.name || 'Character', '{{user}}': currentUserProfile.name || 'User', '{{description}}': finalCharDescription, '{{persona}}': userDescription, '{{personality}}': currentCharacter.personality || '', '{{Personality}}': currentCharacter.personality || '', '{{scenario}}': currentCharacter.scenario || '', '{{mes_example}}': currentCharacter.mes_example || '', '{{example_dialogue}}': currentCharacter.mes_example || '', '{{memory}}': activeMemory || '', '{{summary}}': activeMemory || '', '{{authors_note}}': finalAuthorsNote, '{{system_prompt}}': currentCharacter.system_prompt || '', '{{post_history_instructions}}': currentCharacter.post_history_instructions || '', '{{depth_prompt}}': currentCharacter.depth_prompt || '', '{{group}}': currentCharacter.name, '{{input}}': userInput || '', };
-    if (currentCharacter.description) { currentCharacter.description = applyPlaceholders(currentCharacter.description, currentCharacter, currentUserProfile); } if (currentCharacter.personality) { currentCharacter.personality = applyPlaceholders(currentCharacter.personality, currentCharacter, currentUserProfile); }
-    let requestBody; try { const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
-    let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
-   if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`; // ▼▼▼ 在這裡也加入一樣的截斷邏輯 ▼▼▼
-    const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
-    let currentTokens = Math.ceil((preambleString.length / 2));
-    const truncatedMessagesContent = [];
-
-    for (let i = currentMessages.length - 1; i >= 0; i--) {
-        const msg = currentMessages[i];
-        const msgContent = msg.contents[msg.activeContentIndex];
-        const msgTokens = Math.ceil(msgContent.length / 2);
-
-        if (currentTokens + msgTokens > contextLimit) {
-            break;
-        }
-
-        truncatedMessagesContent.unshift(msgContent); // Gemini 只需要純文字內容
-        currentTokens += msgTokens;
+// =================================================================================
+// ✨✨✨ 全新！世界書處理引擎 (SillyTavern 邏輯復刻) ✨✨✨
+// =================================================================================
+const processWorldBookEntries = (activeBooks, contextScanSources) => {
+  console.log("世界書處理引擎啟動...");
+  let allEntries = [];
+  activeBooks.forEach(book => {
+    // 確保 entries 是一個物件，然後取得它的 values
+    if (book.entries && typeof book.entries === 'object') {
+        allEntries.push(...Object.values(book.entries));
     }
+  });
 
-    let fullChatHistoryString = truncatedMessagesContent.join('\n');
-    const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
-    } else { const messages = []; if (preambleString.trim()) { 
-      messages.push({ role: 'system', content: preambleString.trim() }); 
-    } 
-// ==================== ✨ 全新核心修改 ✨ ====================
-      // 1. 取得模型的上下文長度限制，並設定一個安全邊際值 (例如保留 4096 tokens 給輸出)
-      const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
+  if (allEntries.length === 0) {
+    console.log("沒有啟用任何世界書條目，處理結束。");
+    return []; // 如果沒有任何條目，直接返回
+  }
+  console.log(`總共掃描 ${allEntries.length} 個條目...`);
 
-      // 2. 估算目前所有非對話內容 (系統提示詞、角色卡等) 的 token 數
-      let currentTokens = Math.ceil((preambleString.length / 2));
+  // --- 階段一：掃描與觸發 ---
+  const triggeredEntries = allEntries.filter(entry => {
+    if (entry.disable) return false;
+    if (entry.constant) return true; // 常駐條目直接觸發
 
-      // 3. 建立一個新的陣列來存放要發送的對話
-      const truncatedMessages = [];
+    // 組合需要掃描的文本
+    let scanText = contextScanSources.chatHistory;
+    if (entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription;
+    if (entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription;
+    if (entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality;
+    if (entry.matchScenario) scanText += '\n' + contextScanSources.scenario;
+    if (entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes;
 
-      // 4. 從【最後一則訊息】開始，反向遍歷歷史紀錄
-      for (let i = currentMessages.length - 1; i >= 0; i--) {
-        const msg = currentMessages[i];
-        const msgContent = msg.contents[msg.activeContentIndex];
-        const msgTokens = Math.ceil(msgContent.length / 2);
+    const primaryKeys = entry.key || [];
+    if (primaryKeys.length === 0) return false; // 沒有關鍵字且不是常駐，則不觸發
 
-        // 5. 檢查加入這則訊息後，是否會超過我們的安全上限
-        if (currentTokens + msgTokens > contextLimit) {
-          // 如果超過了，就停止加入更多的舊訊息
-          break;
-        }
+    // 關鍵字邏輯判斷
+    let primaryMatch = false;
+    const logic = entry.selectiveLogic || 0;
+    
+    switch (logic) {
+      case 0: // 包含任一 (OR)
+        primaryMatch = primaryKeys.some(k => scanText.includes(k));
+        break;
+      case 3: // 包含全部 (AND)
+        primaryMatch = primaryKeys.every(k => scanText.includes(k));
+        break;
+      case 2: // 完全不含 (NOR)
+        primaryMatch = !primaryKeys.some(k => scanText.includes(k));
+        break;
+      case 1: // 未完全包含
+        primaryMatch = !primaryKeys.every(k => scanText.includes(k)) && primaryKeys.some(k => scanText.includes(k));
+        break;
+      default:
+        primaryMatch = primaryKeys.some(k => scanText.includes(k));
+    }
+    
+    // (未來可在此處添加次要關鍵字邏輯)
 
-        // 6. 如果沒超過，就把這則訊息加到新陣列的【最前面】(因為我們是反向遍歷)
-        truncatedMessages.unshift({
-          role: msg.sender === 'user' ? 'user' : 'assistant',
-          content: msgContent
-        });
+    return primaryMatch;
+  });
 
-        // 7. 更新目前的 token 計數
-        currentTokens += msgTokens;
-      }
+  console.log(`階段一 (觸發)：有 ${triggeredEntries.length} 個條目被觸發`);
+
+  // --- 階段二：過濾 (機率) ---
+  const filteredByProbability = triggeredEntries.filter(entry => {
+    if (entry.useProbability && entry.probability < 100) {
+      return (Math.random() * 100) < (entry.probability || 100);
+    }
+    return true; // 如果不使用機率或機率為100，則直接通過
+  });
+
+  console.log(`階段二 (機率過濾)：剩下 ${filteredByProbability.length} 個條目`);
+  // 注意：一個完整的實作還需要處理 Cooldown 和 Sticky，這需要一個持久化的狀態管理器，此處暫時簡化。
+
+  // --- 階段三：排序 ---
+  // 直接對機率過濾後的結果進行排序
+  const sortedEntries = filteredByProbability.sort((a, b) => (a.order || 100) - (b.order || 100));
+  
+  // 注意：一個完整的實作還需要處理內容預算 (Budgeting) 和分組競賽 (Group Competition)，此處暫時簡化。
+  
+  console.log("世界書處理完成，最終將插入的條目:", sortedEntries.map(e => e.comment || '無標題條目'));
+  return sortedEntries;
+};
+
+// ✨✨✨ 順序修正版！sendToAI v3.1 ✨✨✨
+  const sendToAI = useCallback(async (userInput, currentMessages) => {
+    try { // ✨ 最佳實踐：將整個函式包在 try...catch 中以便捕獲所有錯誤
+      const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
       
-      // 8. 將整理好的、不會超長的對話歷史加到 messages 陣列中
-      messages.push(...truncatedMessages);
-      requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
-    console.log(`【${apiProvider}】最終發送的請求: - App.js:3592`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } } catch (error) { console.error(`處理或發送請求時發生錯誤:`, error); throw error; }
+      // ✅ ==================== 世界書處理核心流程開始 ==================== ✅
+      
+      // 1. 準備所有用於掃描的上下文來源
+      const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
+      const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
+      const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`;
+      const contextScanSources = {
+        personaDescription: userDescription,
+        characterDescription: currentCharacter.description || '',
+        characterPersonality: currentCharacter.personality || '',
+        scenario: currentCharacter.scenario || '',
+        creatorNotes: currentCharacter.creatorNotes || '',
+        // 為了效能，只掃描最近的20則對話
+        chatHistory: currentMessages.slice(-20).map(msg => msg.contents[msg.activeContentIndex]).join('\n'),
+      };
+
+      // 2. 找出所有當前啟用的世界書 (主要書 + 輔助書)
+      const mainBookId = currentCharacter.mainLorebookId;
+      const auxiliaryBookIds = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || [];
+      // 使用 Set 來自動去除重複的 ID
+      const allActiveBookIds = [...new Set([mainBookId, ...auxiliaryBookIds].filter(Boolean))]; 
+      const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
+
+      // 3. 呼叫「世界書處理引擎」，取得最終要插入的條目列表
+      const triggeredEntries = processWorldBookEntries(activeBooks, contextScanSources);
+      
+      // 4. 根據條目的插入位置(position)，將內容分類
+      const worldInfoByPosition = {
+        '0': triggeredEntries.filter(e => (e.position ?? 1) == 0).map(e => e.content).join('\n'), // before_char
+        '1': triggeredEntries.filter(e => (e.position ?? 1) == 1).map(e => e.content).join('\n'), // after_char
+        '2': triggeredEntries.filter(e => (e.position ?? 1) == 2).map(e => e.content).join('\n'), // top_an
+        '3': triggeredEntries.filter(e => (e.position ?? 1) == 3).map(e => e.content).join('\n'), // bottom_an
+        '5': triggeredEntries.filter(e => (e.position ?? 1) == 5).map(e => e.content).join('\n'), // before_example
+        '6': triggeredEntries.filter(e => (e.position ?? 1) == 6).map(e => e.content).join('\n'), // after_example
+        // position 4 (@D) 較為複雜，暫時簡化處理
+      };
+
+      // 5. 根據分類結果，重新組合最終的提示詞內容
+      const finalAuthorsNote = [worldInfoByPosition['2'], activeAuthorsNote, worldInfoByPosition['3']].filter(Boolean).join('\n\n');
+      const finalCharDescription = [worldInfoByPosition['0'], currentCharacter.description || '', worldInfoByPosition['1']].filter(Boolean).join('\n\n');
+      const finalExampleDialogue = [worldInfoByPosition['5'], currentCharacter.mes_example || '', worldInfoByPosition['6']].filter(Boolean).join('\n\n');
+
+      // ✅ ==================== 世界書處理核心流程結束 ==================== ✅
+      
+      // 6. 準備 placeholderMap，使用我們剛剛組合好的 `final` 內容
+      const placeholderMap = {
+        '{{char}}': currentCharacter.name || 'Character',
+        '{{user}}': currentUserProfile.name || 'User',
+        '{{description}}': finalCharDescription,
+        '{{persona}}': userDescription,
+        '{{personality}}': currentCharacter.personality || '',
+        '{{scenario}}': currentCharacter.scenario || '',
+        '{{example_dialogue}}': finalExampleDialogue, // ✨ 使用新的組合內容
+        '{{memory}}': activeMemory || '',
+        '{{authors_note}}': finalAuthorsNote, // ✨ 使用新的組合內容
+        '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
+      };
+
+      // --- 後續的 API 請求、錯誤處理等邏輯完全保持不變 ---
+      let requestBody; 
+      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
+      let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
+     if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+      const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
+      let currentTokens = Math.ceil((preambleString.length / 2));
+      const truncatedMessagesContent = [];
+      for (let i = currentMessages.length - 1; i >= 0; i--) {
+          const msg = currentMessages[i];
+          const msgContent = msg.contents[msg.activeContentIndex];
+          const msgTokens = Math.ceil(msgContent.length / 2);
+          if (currentTokens + msgTokens > contextLimit) { break; }
+          truncatedMessagesContent.unshift(msgContent);
+          currentTokens += msgTokens;
+      }
+      let fullChatHistoryString = truncatedMessagesContent.join('\n');
+      const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
+      } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } 
+        const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
+        let currentTokens = Math.ceil((preambleString.length / 2));
+        const truncatedMessages = [];
+        for (let i = currentMessages.length - 1; i >= 0; i--) {
+          const msg = currentMessages[i];
+          const msgContent = msg.contents[msg.activeContentIndex];
+          const msgTokens = Math.ceil(msgContent.length / 2);
+          if (currentTokens + msgTokens > contextLimit) { break; }
+          truncatedMessages.unshift({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msgContent });
+          currentTokens += msgTokens;
+        }
+        messages.push(...truncatedMessages);
+        requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
+      console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } 
+    } catch (error) { 
+      console.error(`處理或發送請求時發生錯誤:`, error); 
+      throw error; // 將錯誤向上拋出，讓 sendMessage 函式可以捕獲到
+    }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
 
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
