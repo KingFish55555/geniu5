@@ -4125,7 +4125,10 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
 
       // --- 後續的 API 請求、錯誤處理等邏輯完全保持不變 ---
       let requestBody; 
-      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { preambleString += moduleContent + '\n\n'; } }
+      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { 
+          // ✨ 核心修改 1: 在組合系統提示詞前，過濾掉隱藏文字
+          preambleString += removeHiddenText(moduleContent) + '\n\n'; 
+      } }
       let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
      if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
       const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
@@ -4136,7 +4139,8 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
           const msgContent = msg.contents[msg.activeContentIndex];
           const msgTokens = Math.ceil(msgContent.length / 2);
           if (currentTokens + msgTokens > contextLimit) { break; }
-          truncatedMessagesContent.unshift(msgContent);
+          // ✨ 核心修改 2: 在組合對話歷史前，過濾掉隱藏文字
+          truncatedMessagesContent.unshift(removeHiddenText(msgContent));
           currentTokens += msgTokens;
       }
       let fullChatHistoryString = truncatedMessagesContent.join('\n');
@@ -4150,7 +4154,8 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
           const msgContent = msg.contents[msg.activeContentIndex];
           const msgTokens = Math.ceil(msgContent.length / 2);
           if (currentTokens + msgTokens > contextLimit) { break; }
-          truncatedMessages.unshift({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msgContent });
+          // ✨ 核心修改 2 (同樣的邏輯): 在組合對話歷史前，過濾掉隱藏文字
+          truncatedMessages.unshift({ role: msg.sender === 'user' ? 'user' : 'assistant', content: removeHiddenText(msgContent) });
           currentTokens += msgTokens;
         }
         messages.push(...truncatedMessages);
@@ -4161,7 +4166,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       throw error; // 將錯誤向上拋出，讓 sendMessage 函式可以捕獲到
     }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
-
+  
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
         if (!isSilent) alert('請先選擇一個對話。');
@@ -5468,6 +5473,16 @@ const highlightQuotedText = (text) => {
   };
   
   return processText(text);
+};
+
+// ==================== 全新！移除隱藏文字註解的函式 ====================
+const removeHiddenText = (text) => {
+  if (!text) return '';
+  // 這個正規表示式會尋找所有 {{! 開頭、}} 結尾的區塊
+  // ? 讓比對變成「非貪婪模式」，避免從第一個 {{! 比對到最後一個 }}
+  // s 旗標讓 . 可以匹配換行符，支援多行註解
+  const regex = /\{\{!(.*?)\}\}/gs;
+  return text.replace(regex, '');
 };
 
 // ==================== 全新！可靠的 UTF-8 <=> Base64 轉換輔助函式 ====================
