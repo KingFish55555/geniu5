@@ -4060,14 +4060,14 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   return sortedEntries;
 };
 
-// ✨✨✨ 順序修正版！sendToAI v3.1 ✨✨✨
+// =================================================================================
+// ✨✨✨ 最終版！sendToAI v4.0 (具備精確日誌記錄功能) ✨✨✨
+// =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
-    try { // ✨ 最佳實踐：將整個函式包在 try...catch 中以便捕獲所有錯誤
+    try {
       const provider = apiProviders[apiProvider]; if (!provider) throw new Error(`API provider "${apiProvider}" not found.`); const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean); if (allKeys.length === 0) throw new Error('尚未設定 API 金鑰。'); const currentKey = allKeys[currentApiKeyIndex]; if (!currentKey) throw new Error(`金鑰 #${currentApiKeyIndex + 1} 無效或不存在。`);
       
-      // ✅ ==================== 世界書處理核心流程開始 ==================== ✅
-      
-      // 1. 準備所有用於掃描的上下文來源
+      // ✅ ==================== 1. 資料準備階段 (與之前相同) ==================== ✅
       const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
       const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
       const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`;
@@ -4077,21 +4077,14 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         characterPersonality: currentCharacter.personality || '',
         scenario: currentCharacter.scenario || '',
         creatorNotes: currentCharacter.creatorNotes || '',
-        // 為了效能，只掃描最近的20則對話
         chatHistory: currentMessages.slice(-20).map(msg => msg.contents[msg.activeContentIndex]).join('\n'),
       };
-
-      // 2. 找出所有當前啟用的世界書 (主要書 + 輔助書)
       const mainBookId = currentCharacter.mainLorebookId;
       const auxiliaryBookIds = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || [];
-      // 使用 Set 來自動去除重複的 ID
       const allActiveBookIds = [...new Set([mainBookId, ...auxiliaryBookIds].filter(Boolean))]; 
       const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
-
-      // 3. 呼叫「世界書處理引擎」，取得最終要插入的條目列表
       const triggeredEntries = processWorldBookEntries(activeBooks, contextScanSources);
       
-      // 4. 根據條目的插入位置(position)，將內容分類
       const worldInfoByPosition = {
         '0': triggeredEntries.filter(e => (e.position ?? 1) == 0).map(e => e.content).join('\n'), // before_char
         '1': triggeredEntries.filter(e => (e.position ?? 1) == 1).map(e => e.content).join('\n'), // after_char
@@ -4099,74 +4092,184 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         '3': triggeredEntries.filter(e => (e.position ?? 1) == 3).map(e => e.content).join('\n'), // bottom_an
         '5': triggeredEntries.filter(e => (e.position ?? 1) == 5).map(e => e.content).join('\n'), // before_example
         '6': triggeredEntries.filter(e => (e.position ?? 1) == 6).map(e => e.content).join('\n'), // after_example
-        // position 4 (@D) 較為複雜，暫時簡化處理
       };
 
-      // 5. 根據分類結果，重新組合最終的提示詞內容
       const finalAuthorsNote = [worldInfoByPosition['2'], activeAuthorsNote, worldInfoByPosition['3']].filter(Boolean).join('\n\n');
-      const finalCharDescription = [worldInfoByPosition['0'], currentCharacter.description || '', worldInfoByPosition['1']].filter(Boolean).join('\n\n');
-      const finalExampleDialogue = [worldInfoByPosition['5'], currentCharacter.mes_example || '', worldInfoByPosition['6']].filter(Boolean).join('\n\n');
-
-      // ✅ ==================== 世界書處理核心流程結束 ==================== ✅
       
-      // 6. 準備 placeholderMap，使用我們剛剛組合好的 `final` 內容
+      // ✨ 核心修改 1: 我們不再合併 char description，而是將世界書內容分離，以便獨立插入
+      // 這是為了讓日誌更清晰，world info before/after 會變成獨立的 system message
       const placeholderMap = {
         '{{char}}': currentCharacter.name || 'Character',
         '{{user}}': currentUserProfile.name || 'User',
-        '{{description}}': finalCharDescription,
+        '{{description}}': currentCharacter.description || '', // ✨ 只使用原始描述
         '{{persona}}': userDescription,
         '{{personality}}': currentCharacter.personality || '',
         '{{scenario}}': currentCharacter.scenario || '',
-        '{{example_dialogue}}': finalExampleDialogue, // ✨ 使用新的組合內容
+        '{{example_dialogue}}': currentCharacter.mes_example || '', // ✨ 只使用原始範例
         '{{memory}}': activeMemory || '',
-        '{{authors_note}}': finalAuthorsNote, // ✨ 使用新的組合內容
+        '{{authors_note}}': finalAuthorsNote,
         '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
+        // ✨ 新增專門的 placeholder 給世界書內容，讓模組可以控制它們的位置
+        '{{world_info_before_char}}': worldInfoByPosition['0'],
+        '{{world_info_after_char}}': worldInfoByPosition['1'],
+        '{{world_info_before_example}}': worldInfoByPosition['5'],
+        '{{world_info_after_example}}': worldInfoByPosition['6'],
       };
 
-      // --- 後續的 API 請求、錯誤處理等邏輯完全保持不變 ---
-      let requestBody; 
-      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || []; let preambleString = ''; let chatHistoryModuleFound = false; for (const module of enabledModules) { let moduleContent = module.content || ''; if (moduleContent.includes('{{chat_history}}')) { chatHistoryModuleFound = true; preambleString += moduleContent.split('{{chat_history}}')[0]; break; } for (const [placeholder, value] of Object.entries(placeholderMap)) { if (placeholder === '{{chat_history}}') continue; const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi'); moduleContent = moduleContent.replace(regex, value || ''); } if (moduleContent.trim()) { 
-          // ✨ 核心修改 1: 在組合系統提示詞前，過濾掉隱藏文字
-          preambleString += removeHiddenText(moduleContent) + '\n\n'; 
-      } }
-      let endpoint = provider.endpoint; const headers = provider.headers(currentKey); const maxOutputTokens = currentPrompt?.maxTokens || 4000; const temperature = currentPrompt?.temperature || 1.2;
-     if (provider.isGemini) { endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+      // ✅ ==================== 2. 全新！結構化訊息陣列組合階段 ==================== ✅
+      
+      // ✨ 核心修改 2: 我們的主要目標是建立這個陣列，而不是一個大字串
+      const finalApiMessages = [];
+      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
+
+      // ✨ 我們先把需要插入的對話歷史準備好
       const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
-      let currentTokens = Math.ceil((preambleString.length / 2));
-      const truncatedMessagesContent = [];
+      let currentTokens = 0; // Token 計算將在下面迴圈中進行
+      const truncatedMessages = [];
       for (let i = currentMessages.length - 1; i >= 0; i--) {
-          const msg = currentMessages[i];
-          const msgContent = msg.contents[msg.activeContentIndex];
-          const msgTokens = Math.ceil(msgContent.length / 2);
-          if (currentTokens + msgTokens > contextLimit) { break; }
-          // ✨ 核心修改 2: 在組合對話歷史前，過濾掉隱藏文字
-          truncatedMessagesContent.unshift(removeHiddenText(msgContent));
-          currentTokens += msgTokens;
+        const msg = currentMessages[i];
+        const msgContent = removeHiddenText(msg.contents[msg.activeContentIndex]);
+        const msgTokens = Math.ceil(msgContent.length / 2);
+        if (currentTokens + msgTokens > contextLimit) { break; }
+        truncatedMessages.unshift({ 
+          role: msg.sender === 'user' ? 'user' : 'assistant', 
+          content: msgContent 
+        });
+        currentTokens += msgTokens;
       }
-      let fullChatHistoryString = truncatedMessagesContent.join('\n');
-      const finalPreamble = preambleString + fullChatHistoryString; requestBody = { contents: [{ role: 'user', parts: [{ text: finalPreamble }] }], generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, }, safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ] }; 
-      } else { const messages = []; if (preambleString.trim()) { messages.push({ role: 'system', content: preambleString.trim() }); } 
-        const contextLimit = (currentPrompt?.contextLength || 8000) - (currentPrompt?.maxTokens || 4000);
-        let currentTokens = Math.ceil((preambleString.length / 2));
-        const truncatedMessages = [];
-        for (let i = currentMessages.length - 1; i >= 0; i--) {
-          const msg = currentMessages[i];
-          const msgContent = msg.contents[msg.activeContentIndex];
-          const msgTokens = Math.ceil(msgContent.length / 2);
-          if (currentTokens + msgTokens > contextLimit) { break; }
-          // ✨ 核心修改 2 (同樣的邏輯): 在組合對話歷史前，過濾掉隱藏文字
-          truncatedMessages.unshift({ role: msg.sender === 'user' ? 'user' : 'assistant', content: removeHiddenText(msgContent) });
-          currentTokens += msgTokens;
+
+      // ✨ 核心修改 3: 遍歷提示詞模組，逐一建立訊息物件
+      for (const module of enabledModules) {
+        let moduleContent = module.content || '';
+
+        // 如果模組內容是 {{chat_history}}，就插入我們準備好的對話歷史
+        if (moduleContent.trim() === '{{chat_history}}') {
+          finalApiMessages.push(...truncatedMessages);
+          continue; // 插入後處理下一個模組
         }
-        messages.push(...truncatedMessages);
-        requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature }; }
-      console.log(`【${apiProvider}】最終發送的請求:`, JSON.stringify(requestBody, null, 2)); const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorText = await response.text(); throw new Error(`API 請求失敗 (${response.status})：${errorText}`); } const data = await response.json(); let aiText = null; if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; else aiText = data.choices?.[0]?.message?.content; if (data.promptFeedback && data.promptFeedback.blockReason) { throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); } if (aiText && aiText.trim() !== '') { return aiText; } else { throw new Error('AI 回應為空或格式不正確'); } 
+
+        // 否則，正常替換 placeholder
+        for (const [placeholder, value] of Object.entries(placeholderMap)) {
+          // 避免在非 chat_history 模組中意外替換
+          if (placeholder === '{{chat_history}}') continue; 
+          const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
+          moduleContent = moduleContent.replace(regex, value || '');
+        }
+        
+        // 清理隱藏文字
+        const cleanedContent = removeHiddenText(moduleContent).trim();
+
+        // 如果處理後還有內容，就把它變成一個訊息物件加進陣列
+        if (cleanedContent) {
+          finalApiMessages.push({
+            role: module.role || 'system',
+            content: cleanedContent
+          });
+        }
+      }
+
+      // ✅ ==================== 3. 您期待已久的精確日誌！ ==================== ✅
+      // ✨ 核心修改 4: 在這裡印出我們精心組合的、結構化的最終訊息陣列
+      console.log("【最終發送請求預覽 (結構化)】:", JSON.stringify(finalApiMessages, null, 4));
+
+
+      // ✅ ==================== 4. API 請求格式化與發送階段 ==================== ✅
+      let requestBody;
+      const headers = provider.headers(currentKey);
+      let endpoint = provider.endpoint;
+      const maxOutputTokens = currentPrompt?.maxTokens || 4000;
+      const temperature = currentPrompt?.temperature || 1.2;
+      
+      if (provider.isGemini) {
+        // ✨ 對於 Gemini，我們需要將結構化陣列「扁平化」成它需要的格式
+        endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
+        
+        // Gemini 的 history 格式比較特殊，我們將 system message 合併到第一個 user message 中
+        let geminiPreamble = '';
+        const geminiHistory = [];
+        let isFirstUserMessage = true;
+
+        for (const msg of finalApiMessages) {
+            if (msg.role === 'system') {
+                geminiPreamble += msg.content + '\n\n';
+            } else {
+                if (isFirstUserMessage && msg.role === 'user') {
+                    geminiHistory.push({ role: 'user', parts: [{ text: geminiPreamble + msg.content }] });
+                    isFirstUserMessage = false;
+                } else {
+                    geminiHistory.push({ role: msg.role === 'assistant' ? 'model' : 'user', parts: [{ text: msg.content }] });
+                }
+            }
+        }
+        
+        requestBody = { 
+          contents: geminiHistory, 
+          generationConfig: { temperature, maxOutputTokens, topP: currentPrompt?.top_p ?? 0.9, topK: currentPrompt?.top_k ?? 150, },
+          safetySettings: [ { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' }, { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }, ]
+        }; 
+      } else {
+        // ✨ 對於 OpenAI/Claude 等，我們的陣列格式已經是完美的了
+        requestBody = { model: apiModel, messages: finalApiMessages, max_tokens: maxOutputTokens, temperature };
+      }
+      
+      // ✨ 額外加一個日誌，顯示真正發送到網路上的 Body 內容
+      console.log(`【${apiProvider}】最終發送的請求 Body:`, JSON.stringify(requestBody, null, 2));
+      
+      // --- 後續的 fetch 和錯誤處理邏輯保持不變 ---
+      const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); 
+      // ▼▼▼ 【✨✨✨ 全新的、更智能的錯誤處理區塊就在這裡！ ✨✨✨】 ▼▼▼
+      if (!response.ok) {
+        // 步驟 1: 先取得原始的錯誤回應主體 (body)
+        const errorBody = await response.text();
+        let detailedMessage = '無法從 API 回應中解析出具體的錯誤訊息。'; // 準備一個預設的錯誤訊息
+
+        // 步驟 2: 嘗試將這個 body 解析為 JSON 物件
+        try {
+          const errorJson = JSON.parse(errorBody);
+          
+          // 步驟 3: 根據常見的 API 錯誤格式，提取有用的資訊
+          const errorDetails = errorJson.error || errorJson; // 有些 API 會把細節包在 "error" 物件裡
+          
+          const message = errorDetails.message || '沒有提供具體的錯誤訊息。';
+          const code = errorDetails.code ? ` (代碼: ${errorDetails.code})` : '';
+          const type = errorDetails.type ? ` (類型: ${errorDetails.type})` : '';
+
+          // 組合出更詳細的訊息
+          detailedMessage = `${message}${code}${type}`;
+
+        } catch (parseError) {
+          // 如果解析 JSON 失敗 (例如 API 回傳的是 HTML 錯誤頁面)，就直接顯示原始的 body
+          detailedMessage = `API 回應格式錯誤，無法解析。原始回應內容:\n\n${errorBody.substring(0, 500)}`; // 只顯示前 500 個字元避免彈窗過大
+        }
+        
+        // 步驟 4: 組合出最終要給使用者看的、清晰的錯誤訊息
+        const statusText = response.statusText ? ` (${response.statusText})` : '';
+        const finalErrorString = `API 請求失敗，狀態碼: ${response.status}${statusText}\n\n${detailedMessage}`;
+        
+        // 步驟 5: 拋出這個包含詳細資訊的錯誤，外層的 alert() 就會顯示它
+        throw new Error(finalErrorString);
+      }
+      // ▲▲▲ 【✨✨✨ 全新錯誤處理區塊結束 ✨✨✨】 ▲▲▲
+      const data = await response.json(); 
+      let aiText = null; 
+      if (provider.isGemini) aiText = data.candidates?.[0]?.content?.parts?.[0]?.text; 
+      else if (apiProvider === 'claude') aiText = data.content?.[0]?.text; 
+      else aiText = data.choices?.[0]?.message?.content; 
+      if (data.promptFeedback && data.promptFeedback.blockReason) { 
+        throw new Error(`請求被 Gemini 安全系統攔截，原因：${data.promptFeedback.blockReason}`); 
+      } 
+      if (aiText && aiText.trim() !== '') { 
+        return aiText; 
+      } else { 
+        throw new Error('AI 回應為空或格式不正確'); 
+      } 
     } catch (error) { 
       console.error(`處理或發送請求時發生錯誤:`, error); 
-      throw error; // 將錯誤向上拋出，讓 sendMessage 函式可以捕獲到
+      throw error;
     }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
   
+  //*記憶摘要
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
         if (!isSilent) alert('請先選擇一個對話。');
