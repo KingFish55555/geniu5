@@ -4359,3 +4359,63 @@ input[type="range"]:hover::-webkit-slider-thumb {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* =================================== */
+/* ✨ 全新！提示詞模組拖曳樣式 ✨ */
+/* =================================== */
+
+/* 模組列表項目的基本樣式調整 */
+.module-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 增加元件間距 */
+  user-select: none; /* 禁用文字選取，這是解決手機問題的關鍵之一 */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  transition: background-color 0.2s, opacity 0.2s, border-color 0.2s;
+}
+
+.module-list-item:last-child {
+  border-bottom: none;
+}
+
+/* 拖曳握把的樣式 */
+.drag-handle {
+  cursor: grab; /* 在桌機上顯示可抓取的手形圖示 */
+  color: var(--text-muted);
+  touch-action: none; /* 關鍵！告訴瀏覽器不要在這個元素上處理滾動等預設觸控行為 */
+  padding: 4px; /* 增加觸控區域 */
+}
+
+/* 當項目正在被拖曳時的樣式 */
+.module-list-item.dragging {
+  opacity: 0.5;
+  background-color: var(--surface-hover);
+  border: 1px dashed var(--primary-color);
+}
+
+/* 當有項目被拖曳到另一個項目的上方時，在下方顯示一個指示器 */
+.module-list-item.drag-over {
+  border-bottom: 2px solid var(--primary-color);
+}
+
+/* 讓模組名稱佔用剩餘空間 */
+.module-name {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 調整刪除按鈕樣式 */
+.edit-module-btn.delete {
+    color: var(--danger-color);
+    margin-left: auto; /* 將刪除按鈕推到最右邊 */
+}
+.edit-module-btn.delete:hover {
+    background-color: var(--danger-background-hover);
+}
