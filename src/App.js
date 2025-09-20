@@ -1000,7 +1000,7 @@ const AuthorsNoteModal = ({ initialNote, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Author's Note (Author's Note)</h3>
+          <h3>Author's Note (作者備註)</h3>
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body">
@@ -1855,21 +1855,21 @@ const SettingsPage = ({
                 </div>
                 <div className="editor-buttons">
                   <button
-                    onClick={onUpdateConfiguration}
-                    className="save-btn" // 可以繼續使用現有樣式
-                    disabled={!loadedConfigId} // ✨ 核心：只有載入了配置才能更新
-                  >
-                    <Save size={16} />
-                    更新配置
-                  </button>
-                  <button
                     onClick={onSaveAsNewConfiguration}
                     className="save-btn secondary" // 您可以為它新增一個次要樣式
                     disabled={!configName.trim() || !apiKey.trim()}
                   >
                     <Plus size={16} />
-                    另存新配置
+                    建立新配置
                   </button>
+                  <button
+                    onClick={onUpdateConfiguration}
+                    className="save-btn" // 可以繼續使用現有樣式
+                    disabled={!loadedConfigId} // ✨ 核心：只有載入了配置才能更新
+                  >
+                    <Save size={16} />
+                    儲存配置
+                  </button>                  
                 </div>
               </div>
             )}
