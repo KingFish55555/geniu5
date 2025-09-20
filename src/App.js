@@ -3,8 +3,8 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import {
   Send, Settings, ArrowLeft, Key, Globe, Check, X,
   User, AppWindow, FileText, Save, Trash2,
-  Download, Upload, Users, MessageCircle, Moon, Sun,
-  Bot, Database, Info, Camera, UserCircle, Plus, BookOpen,
+  Download, Upload, Users, MessageCircle, Moon, Sun, Cloud,
+  Bot, Database, Info, Camera, UserCircle, Plus, BookOpen, BookMarked, TrainTrack, MessageSquareWarning,
   FileInput, FileOutput,
   MoveRightIcon, Pin, Star, Palette, ChevronDown, ChevronUp, Coffee, Dessert, Cherry, CloudMoon, Edit2, MessageSquarePlus, Waves, TreePine
 } from 'lucide-react';
@@ -18,6 +18,8 @@ import OocCommandEditorModal from './OocCommandEditorModal.js';
 import OocCommandSelectorModal from './OocCommandSelectorModal.js';
 import RegexEditorModal from './RegexEditorModal.js';
 import WorldBookPage, { mapWorldBookEntryFields } from './WorldBookPage.js';
+import GoogleSyncManager from './GoogleSyncManager';
+import DisclaimerModal from './DisclaimerModal';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -791,6 +793,20 @@ const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEdi
           但在正常模式下，我們保留原本的功能。
         */}
         <div className="bubble-wrapper" onClick={isScreenshotMode ? (e) => e.stopPropagation() : handleBubbleClick}>
+
+          {/* ▼▼▼ ✨✨✨ 全新的思考過程渲染邏輯 ✨✨✨ ▼▼▼ */}
+          {msg.thought && !isScreenshotMode && (
+            <details className="ai-thought-details">
+              <summary className="ai-thought-summary">
+                <Bot size={16} />
+                <span>AI 正在思考...</span>
+              </summary>
+              <pre className="ai-thought-content">
+                {msg.thought}
+              </pre>
+            </details>
+          )}
+          {/* ▲▲▲ ✨✨✨ 渲染邏輯結束 ✨✨✨ ▲▲▲ */}
 
           <ReactMarkdown
             rehypePlugins={[rehypeRaw]}
@@ -1663,6 +1679,9 @@ const SettingsPage = ({
     loadedConfigId,
     onUpdateConfiguration,
     onSaveAsNewConfiguration, loadApiConfiguration, deleteApiConfiguration,
+    getBackupData,
+    restoreFromBackupData,
+    onOpenDisclaimer,
 }) => {
     const [isThemeSelectorOpen, setIsThemeSelectorOpen] = useState(false);
     const [expandedSection, setExpandedSection] = useState('null'); // 預設展開使用者區塊
@@ -2051,6 +2070,76 @@ const SettingsPage = ({
               </div>
             )}
           </div>
+          
+          {/* ▼▼▼ ✨ 全新！實用網站分享卡片 ✨ ▼▼▼ */}
+          <div className="setting-card">
+            <button
+              className={`card-header ${expandedSection === 'tools' ? 'expanded' : ''}`}
+              onClick={() => toggleSection('tools')}
+            >
+              <div className="card-title">
+                {/* 我們可以借用一個像工具箱的圖示 */}
+                <BookMarked size={20} /> 
+                <span>實用網站分享</span>
+              </div>
+              <span className="expand-arrow">{expandedSection === 'tools' ? '▲' : '▼'}</span>
+            </button>
+            
+            {expandedSection === 'tools' && (
+              <div className="card-content">
+                {/* 我們可以重用 .about-links 的樣式 */}
+                <div className="about-links">
+                  
+                  {/* 第一個按鈕 */}
+                  <a
+                    href="https://lenlenaris.github.io/ChroniclerEditor/"
+                    target="_blank" // 確保在新分頁開啟
+                    rel="noopener noreferrer" // 增加安全性
+                    className="about-btn" // 重用現有按鈕樣式
+                  >
+                    {/* 這裡可以放一個合適的圖示，例如 Edit2 */}
+                    <Moon size={16} />
+                    角色卡編輯器 - LEN
+                  </a>
+
+                  {/* 第二個按鈕 */}
+                  <a
+                    href="https://rmt120430.github.io/RMTStation_SimpleCreationAssistant/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="about-btn"
+                  >
+                     {/* 這裡可以放另一個圖示，例如 Bot */}
+                    <TrainTrack size={16} />
+                    簡易創作助手 - RMT
+                  </a>
+
+                </div>
+              </div>
+            )}
+          </div>
+          {/* ▲▲▲ ✨ 新卡片結束 ✨ ▲▲▲ */}
+
+          <div className="setting-card">
+                    <button className={`card-header ${expandedSection === 'cloud' ? 'expanded' : ''}`} onClick={() => toggleSection('cloud')}>
+                        <div className="card-title">
+                            <Cloud size={20} />
+                            <span>Google 雲端同步</span>
+                        </div>
+                        <span className="expand-arrow">{expandedSection === 'cloud' ? '▲' : '▼'}</span>
+                    </button>
+                    {expandedSection === 'cloud' && (
+                        <div className="card-content">
+                            <p className="data-management-note">
+                                將您的所有資料（角色、對話、設定等）安全地備份到您的個人 Google 雲端硬碟。
+                            </p>
+                            <GoogleSyncManager 
+                                getBackupData={getBackupData}
+                                restoreFromBackupData={restoreFromBackupData}
+                            />
+                        </div>
+                    )}
+                </div>
           <div className="setting-card">
             <button
               className={`card-header ${expandedSection === 'data' ? 'expanded' : ''}`}
@@ -2126,7 +2215,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.544</p>
+                  <p>版本：0.5.55</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2139,6 +2228,12 @@ const SettingsPage = ({
                     <FileText size={16} />
                     公告 x 說明 x 回饋
                   </a>
+                  {/* ▼▼▼ ✨ 在這裡加上新的按鈕 ✨ ▼▼▼ */}
+                  <button onClick={onOpenDisclaimer} className="about-btn">
+                    <MessageSquareWarning size={16} />
+                    免責聲明
+                  </button>
+                  {/* ▲▲▲ ✨ 新增按鈕結束 ✨ ▲▲▲ */}
                 </div>
               </div>
             )}
@@ -2369,6 +2464,7 @@ const ChatApp = () => {
   // ✨ 1. 在這裡新增一行 state，用來控制身份切換器的開關 ✨
   const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false);
   const [isPromptSwitcherOpen, setIsPromptSwitcherOpen] = useState(false);
+  const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); // ✨ 標記資料是否已從 DB 載入
 
   const [apiProvider, setApiProvider] = useState('openai');
@@ -2443,7 +2539,7 @@ const ChatApp = () => {
         // --- OpenAI ---
         'openai/ChatGPT-4o',
         'openai/GPT-4.1',
-        'x-ai/grok-4-fast',
+        'x-ai/grok-4-fast:free',
       ],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
@@ -2721,7 +2817,6 @@ useEffect(() => {
     if (!isScreenshotMode) return;
 
     setSelectedMessageIds(prevIds => {
-      // 檢查這個 messageId 是不是已經在陣列裡了
       if (prevIds.includes(messageId)) {
         // 如果已經在裡面，就把它過濾掉 (取消選擇)
         return prevIds.filter(id => id !== messageId);
@@ -4356,12 +4451,21 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     try {
       const aiResponse = await sendToAI(userMessage.contents[0], historyWithUserMessage);
 
+      // ▼▼▼ ✨ 核心修改就在這裡 ✨ ▼▼▼
+      const { cleanedText, thought } = filterCoT(aiResponse);
+
+      // 如果提取到了思考過程，就在主控台印出來
+      if (thought) {
+        console.log("【AI 思考過程 (CoT)】:", thought);
+      }
+
       const aiMessage = {
         id: Date.now() + 1,
         sender: 'ai',
-        contents: [aiResponse],
+        contents: [cleanedText],
         activeContentIndex: 0,
         timestamp: getFormattedTimestamp(),
+        thought: thought, // ✨✨✨ 核心修改：將思考過程存進訊息物件！
       };
 
       const finalHistoryArray = [...historyWithUserMessage, aiMessage];
@@ -4417,12 +4521,20 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     try {
       const aiResponse = await sendToAI(null, currentHistory);
       
+      // ▼▼▼ ✨ 核心修改就在這裡 ✨ ▼▼▼
+      const { cleanedText, thought } = filterCoT(aiResponse);
+
+      if (thought) {
+        console.log("【AI 思考過程 (CoT)】:", thought);
+      }
+
       const aiMessage = {
         id: Date.now() + 1,
         sender: 'ai',
-        contents: [aiResponse],
+        contents: [cleanedText],
         activeContentIndex: 0,
         timestamp: getFormattedTimestamp(),
+        thought: thought, // ✨✨✨ 核心修改：將思考過程存進訊息物件！
       };
 
       const finalHistory = [...currentHistory, aiMessage];
@@ -4478,14 +4590,19 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     try {
       const aiResponse = await sendToAI(triggerUserMessage.contents[0], contextForRegeneration);
 
-      if (typeof aiResponse !== 'undefined') {
-        
-        // 關鍵修正：我們先複製一份當前的歷史紀錄，才能對它進行修改。
+      // ▼▼▼ ✨ 核心修改就在這裡 ✨ ▼▼▼
+      const { cleanedText, thought } = filterCoT(aiResponse);
+
+      if (thought) {
+        console.log("【AI 思考過程 (CoT)】:", thought);
+      }
+
+      if (typeof aiResponse !== 'undefined') { // 這裡還是用 aiResponse 判斷，因為 cleanedText 可能是空的
         const newHistoryArray = JSON.parse(JSON.stringify(currentHistory));
-        
         const messageToUpdate = newHistoryArray[newHistoryArray.length - 1];
-        messageToUpdate.contents.push(aiResponse);
+        messageToUpdate.contents.push(cleanedText);
         messageToUpdate.activeContentIndex = messageToUpdate.contents.length - 1;
+        messageToUpdate.thought = thought; // ✨✨✨ 核心修改：重新生成時，也要更新思考過程！
         
         // 建立要儲存的完整物件
         const newHistories = {
@@ -4969,143 +5086,113 @@ const formatStDate = (date, type = 'send_date') => {
     if (event.target) event.target.value = '';
   }, [currentUserProfile, activeChatCharacterId, activeChatId, getFormattedTimestamp]);
 
-  // ==================== 全新！全站資料匯出函式 ====================
-  const handleExportAllData = useCallback(async () => {
-    if (!window.confirm('您確定要匯出所有應用程式資料嗎？\n\n這將會產生一個包含您所有角色、對話和設定的 JSON 檔案。')) {
-      return;
+      
+// ==================== 全新！可回傳資料的全站資料匯出函式 ====================
+const handleExportAllData = useCallback(async (isForCloud = false) => {
+    if (!isForCloud && !window.confirm('您確定要匯出所有應用程式資料嗎？\n\n這將會產生一個包含您所有角色、對話和設定的 JSON 檔案。')) {
+        return null; // 如果是手動匯出且使用者取消，回傳 null
     }
 
     try {
-      console.log("正在準備匯出所有資料... - App.js:4300");
-      
-      // 從 IndexedDB 中一次性讀取所有需要的資料
-      const [
-        charactersToExport,
-        chatHistoriesToExport,
-        chatMetadatasToExport,
-        longTermMemoriesToExport,
-        promptsToExport,
-        oocCommandsToExport,
-        userProfilesToExport,
-        apiConfigsToExport // 我們也順便備份 API 配置，但不包含金鑰
-      ] = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
-        const chars = await db.characters.toArray();
-        const proms = await db.prompts.toArray();
-        const configs = await db.apiConfigs.toArray();
-        const hist = (await db.kvStore.get('chatHistories'))?.value || {};
-        const meta = (await db.kvStore.get('chatMetadatas'))?.value || {};
-        const mem = (await db.kvStore.get('longTermMemories'))?.value || {};
-        const profiles = (await db.kvStore.get('userProfiles'))?.value || [];
-        const ooc = (await db.kvStore.get('oocCommands'))?.value || [];
-        return [chars, hist, meta, mem, proms, ooc, profiles, configs];
-      });
+        console.log("正在準備匯出所有資料...");
+        const dataToExport = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
+            const characters = await db.characters.toArray();
+            const prompts = await db.prompts.toArray();
+            const apiConfigs = await db.apiConfigs.toArray();
+            const chatHistories = (await db.kvStore.get('chatHistories'))?.value || {};
+            const chatMetadatas = (await db.kvStore.get('chatMetadatas'))?.value || {};
+            const longTermMemories = (await db.kvStore.get('longTermMemories'))?.value || {};
+            const userProfiles = (await db.kvStore.get('userProfiles'))?.value || [];
+            const oocCommands = (await db.kvStore.get('oocCommands'))?.value || [];
+            const regexRules = (await db.kvStore.get('regexRules'))?.value || [];
+            const worldBooks = (await db.kvStore.get('worldBooks'))?.value || [];
+            
+            return { characters, prompts, apiConfigs, chatHistories, chatMetadatas, longTermMemories, userProfiles, oocCommands, regexRules, worldBooks };
+        });
 
-      // 建立一個結構化的備份物件
-      const backupData = {
-        version: 'geniu5-backup-v1', // 加上版本號，方便未來升級
-        timestamp: new Date().toISOString(),
-        data: {
-          characters: charactersToExport,
-          chatHistories: chatHistoriesToExport,
-          chatMetadatas: chatMetadatasToExport,
-          longTermMemories: longTermMemoriesToExport,
-          prompts: promptsToExport,
-          oocCommands: oocCommandsToExport,
-          userProfiles: userProfilesToExport,
-          // 為了安全，我們只備份 API 配置的名稱和設定，但不包含敏感的 API 金鑰
-          apiConfigs: apiConfigsToExport.map(c => ({...c, keysByProvider: {}}))
+        const backupData = {
+            version: 'geniu5-backup-v1',
+            timestamp: new Date().toISOString(),
+            data: dataToExport
+        };
+        
+        const jsonString = JSON.stringify(backupData, null, 2);
+
+        if (isForCloud) {
+            return jsonString; // ✨ 如果是為了雲端同步，直接回傳字串
         }
-      };
 
-      // 將物件轉換為 JSON 字串
-      const jsonString = JSON.stringify(backupData, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      link.download = `geniu5_backup_${timestamp}.json`;
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      alert('✅ 所有資料已成功匯出！請妥善保管您的備份檔案。');
+        // 如果是手動下載
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        link.download = `geniu5_backup_${timestamp}.json`;
+        link.href = url;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        alert('✅ 所有資料已成功匯出！');
+        return null; // 手動下載完成後回傳 null
 
     } catch (error) {
-      console.error("全站資料匯出失敗: - App.js:4357", error);
-      alert(`❌ 匯出失敗：${error.message}`);
+        console.error("全站資料匯出失敗:", error);
+        alert(`❌ 匯出失敗：${error.message}`);
+        return null; // 發生錯誤時回傳 null
     }
-  }, []); // 這個函式沒有依賴項，所以是空陣列
+}, []); // 依賴項為空，因為所有資料都從 DB 讀取
 
-  // ==================== 全新！全站資料匯入函式 ====================
-  const handleImportAllData = useCallback((event) => {
-    const file = event.target.files[0];
-    if (!file) {
-      return;
-    }
+  // ==================== 全新！能接收資料物件的全站資料匯入函式 ====================
+const handleImportAllData = useCallback(async (dataSource) => {
+    const processData = async (data) => {
+        if (!data) throw new Error("無效的資料來源。");
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const content = e.target.result;
-        const backupData = JSON.parse(content);
-
-        // 進行基本的格式驗證
-        if (backupData.version !== 'geniu5-backup-v1' || !backupData.data) {
-          throw new Error('檔案格式不正確或不受支援。');
+        if (data.version !== 'geniu5-backup-v1' || !data.data) {
+            throw new Error('檔案格式不正確或不受支援。');
         }
-
-        const data = backupData.data;
-
-        // 【極度重要的警告！】
-        if (!window.confirm(
-            '🚨🚨🚨 最高警告！🚨🚨🚨\n\n' +
-            '您確定要從檔案匯入所有資料嗎？\n\n' +
-            '此操作將會【完全覆蓋】您目前應用程式中的【所有】角色、對話紀錄和設定！\n\n' +
-            '這個動作無法復原！確定要繼續嗎？'
-        )) {
-            return; // 如果使用者取消，就立刻終止
-        }
-
-        console.log("正在清空現有資料並寫入新資料... - App.js:4392");
-
-        // 使用資料庫交易，一次性完成所有寫入操作
-        await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
-            // 1. 清空所有舊資料
+        
+        await db.transaction('rw', db.characters, db.prompts, db.kvStore, async () => {
             await db.characters.clear();
             await db.prompts.clear();
-            // 注意：我們不清空 apiConfigs，因為裡面可能存有使用者的金鑰
             await db.kvStore.clear();
 
-            // 2. 寫入所有新資料
-            await db.characters.bulkPut(data.characters || []);
-            await db.prompts.bulkPut(data.prompts || []);
-            await db.kvStore.put({ key: 'chatHistories', value: data.chatHistories || {} });
-            await db.kvStore.put({ key: 'chatMetadatas', value: data.chatMetadatas || {} });
-            await db.kvStore.put({ key: 'longTermMemories', value: data.longTermMemories || {} });
-            await db.kvStore.put({ key: 'userProfiles', value: data.userProfiles || [] });
-            await db.kvStore.put({ key: 'oocCommands', value: data.oocCommands || [] });
+            await db.characters.bulkPut(data.data.characters || []);
+            await db.prompts.bulkPut(data.data.prompts || []);
+            await db.kvStore.put({ key: 'chatHistories', value: data.data.chatHistories || {} });
+            await db.kvStore.put({ key: 'chatMetadatas', value: data.data.chatMetadatas || {} });
+            await db.kvStore.put({ key: 'longTermMemories', value: data.data.longTermMemories || {} });
+            await db.kvStore.put({ key: 'userProfiles', value: data.data.userProfiles || [] });
+            await db.kvStore.put({ key: 'oocCommands', value: data.data.oocCommands || [] });
+            await db.kvStore.put({ key: 'regexRules', value: data.data.regexRules || [] });
+            await db.kvStore.put({ key: 'worldBooks', value: data.data.worldBooks || [] });
         });
-        
-        alert('✅ 資料已成功匯入！應用程式即將重新載入...');
-        
-        // 延遲一小段時間再重整，確保資料庫寫入完成
-        setTimeout(() => {
-            window.location.reload();
-        }, 500);
 
-      } catch (error) {
-        console.error("全站資料匯入失敗: - App.js:4420", error);
-        alert(`❌ 匯入失敗：${error.message}`);
-      } finally {
-        if (event.target) {
-          event.target.value = '';
-        }
-      }
+        alert('✅ 資料已成功匯入！應用程式即將重新載入...');
+        setTimeout(() => window.location.reload(), 500);
     };
-    reader.readAsText(file);
-  }, []); // 這個函式也沒有依賴項
+    
+    try {
+        if (dataSource?.target?.files?.[0]) { // 判斷是否為檔案上傳事件
+            if (!window.confirm('🚨 警告！此操作將會【完全覆蓋】您目前所有的資料！確定要繼續嗎？')) {
+                dataSource.target.value = '';
+                return;
+            }
+            const file = dataSource.target.files[0];
+            const content = await file.text();
+            const backupData = JSON.parse(content);
+            await processData(backupData);
+        } else if (typeof dataSource === 'object') { // 判斷是否為直接傳入的資料物件 (來自雲端)
+            await processData(dataSource);
+        } else {
+            throw new Error("未知的資料來源。");
+        }
+    } catch (error) {
+        console.error("全站資料匯入失敗:", error);
+        alert(`❌ 匯入失敗：${error.message}`);
+        if (dataSource?.target?.value) dataSource.target.value = '';
+    }
+}, []);
 
   const clearAllData = useCallback(async () => { // ✨ 1. 將函式改為 async
     // ✨ 2. 使用更嚴厲的警告文字
@@ -5280,7 +5367,9 @@ const formatStDate = (date, type = 'send_date') => {
               onOpenThemeSwitcher={() => setIsThemeSwitcherOpen(true)}
               fontSize={fontSize}
               setFontSize={setFontSize}
-              exportChatHistory={handleExportAllData} // ✨ 將舊的 prop 替換為新的匯出函式
+              getBackupData={() => handleExportAllData(true)} // 傳入一個呼叫匯出函式並要求回傳資料的版本
+              restoreFromBackupData={handleImportAllData}     // 直接傳入可以接收資料物件的匯入函式
+              exportChatHistory={() => handleExportAllData(false)} // 手動匯出的按鈕，呼叫不回傳資料的版本
               handleImportChat={handleImportAllData}  // ✨ 將舊的 prop 替換為新的匯入函式
               clearAllData={clearAllData}
               apiConfigs={apiConfigs}
@@ -5293,6 +5382,7 @@ const formatStDate = (date, type = 'send_date') => {
               // ❌ 不再需要 saveApiConfiguration 這個 prop 了
               loadApiConfiguration={loadApiConfiguration}
               deleteApiConfiguration={deleteApiConfiguration}
+              onOpenDisclaimer={() => setIsDisclaimerModalOpen(true)}
             />
           )}
         </div>
@@ -5441,6 +5531,13 @@ const formatStDate = (date, type = 'send_date') => {
           isGlobal={!editingLocalRegex.charId} // 告訴編輯器是不是全域模式
         />
       )}
+      {/* ✨ 在這裡渲染我們全新的免責聲明 Modal ✨ */}
+      {isDisclaimerModalOpen && (
+        <DisclaimerModal
+          show={isDisclaimerModalOpen}
+          onClose={() => setIsDisclaimerModalOpen(false)}
+        />
+      )}
     </>
   );
 };
@@ -5517,6 +5614,30 @@ const applyPlaceholders = (text, character, user) => {
   newText = newText.replaceAll(/<user>/gi, userName);
   
   return newText;
+};
+
+// ==================== 全新！解析並過濾 AI 思考過程的函式 ====================
+const filterCoT = (rawText) => {
+  if (!rawText) return { cleanedText: '', thought: null };
+
+  // 這個正規表示式會尋找 <thinking>...</thinking> 或 <Thoughts>...</Thoughts> 標籤
+  // 使用 's' 旗標讓 . 可以匹配換行符
+  const cotRegex = /<(thinking|Thoughts)>(.*?)<\/(thinking|Thoughts)>/is;
+  
+  const match = rawText.match(cotRegex);
+
+  if (match) {
+    // match[2] 就是標籤中間的內容
+    const thought = match[2].trim(); 
+    // 將整個匹配到的區塊 (包含標籤本身) 替換成空字串
+    const cleanedText = rawText.replace(cotRegex, '').trim();
+    
+    // 回傳一個物件，包含乾淨的文字和提取出的思考過程
+    return { cleanedText, thought };
+  }
+
+  // 如果沒有找到任何匹配，就直接回傳原始文字
+  return { cleanedText: rawText, thought: null };
 };
 
 // ==================== ✨ 全新升級版！引號高亮函式 ✨ ====================

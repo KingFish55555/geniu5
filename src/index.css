@@ -4419,3 +4419,199 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .edit-module-btn.delete:hover {
     background-color: var(--danger-background-hover);
 }
+
+/* =================================== */
+/* ✨ 全新！AI 思考過程區塊樣式 ✨ */
+/* =================================== */
+
+/* <details> 容器的整體樣式 */
+.ai-thought-details {
+  background-color: var(--surface-color); /* 比聊天泡泡稍深一點的背景 */
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 12px; /* 和下方的正式回應之間留點空隙 */
+  overflow: hidden; /* 確保圓角效果 */
+}
+
+/* <summary> 標題列 (可點擊的部分) */
+.ai-thought-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 0.85em;
+  font-weight: 500;
+  outline: none; /* 移除點擊時的預設外框 */
+  transition: background-color 0.2s;
+}
+
+/* 移除 Chrome/Safari 預設的三角形箭頭 */
+.ai-thought-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* 滑鼠移上去時的樣式 */
+.ai-thought-summary:hover {
+  background-color: var(--background-color);
+}
+
+/* 展開後的內容區塊 */
+.ai-thought-content {
+  background-color: var(--background-color);
+  padding: 12px;
+  margin: 0; /* 移除 <pre> 標籤的預設 margin */
+  border-top: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 0.8em;
+  white-space: pre-wrap; /* 讓長文字可以自動換行 */
+  word-break: break-all;
+  max-height: 200px; /* 給一個最大高度，超過會出現滾動條 */
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace; /* 使用等寬字體，方便閱讀 */
+}
+
+/* 思考內容區塊的滾動條樣式 */
+.ai-thought-content::-webkit-scrollbar {
+  width: 6px;
+}
+.ai-thought-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ai-thought-content::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 3px;
+}
+
+/* =================================== */
+/* ✨ 全新！Google 雲端同步 UI 樣式 ✨ */
+/* =================================== */
+
+.google-sync-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.google-sync-status {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.user-email {
+  font-size: 0.85em;
+  color: var(--text-muted);
+}
+
+.not-connected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  padding: 12px 0;
+}
+
+.google-sync-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.google-sync-actions .auth-btn {
+  grid-column: 1 / -1; /* 讓登入/登出按鈕獨佔一行 */
+}
+
+.google-sync-actions button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.9em;
+}
+
+.google-sync-actions button.login {
+  background-color: #4285F4; /* Google Blue */
+  color: white;
+}
+.google-sync-actions button.login:hover {
+  background-color: #357ae8;
+}
+
+.google-sync-actions button.logout {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+.google-sync-actions button.logout:hover {
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
+}
+
+.google-sync-actions button:disabled {
+  background-color: var(--text-muted) !important;
+  color: var(--background-color) !important;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 備份選擇列表樣式 */
+#backup-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.backup-file-item {
+  padding: 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.backup-file-item:hover {
+  background-color: var(--background-color);
+}
+.backup-file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.backup-file-info strong {
+  color: var(--text-primary);
+}
+.backup-file-info span {
+  font-size: 0.8em;
+  color: var(--text-muted);
+}

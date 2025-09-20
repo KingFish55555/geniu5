@@ -1,7 +1,7 @@
 {
   "name": "geniu5",
-  "version": "0.5.544",
-  "homepage": "https://KingFish55555.github.io/geniu5",
+  "version": "0.5.55",
+  "homepage": "https://kingfish55555.github.io/geniu5/",
   "private": true,
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
