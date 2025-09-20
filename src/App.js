@@ -2443,6 +2443,7 @@ const ChatApp = () => {
         // --- OpenAI ---
         'openai/ChatGPT-4o',
         'openai/GPT-4.1',
+        'x-ai/grok-4-fast',
       ],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
