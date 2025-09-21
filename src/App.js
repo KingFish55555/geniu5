@@ -149,7 +149,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
       const draftData = draft.data;
 
       if ((!character && draftId === null) || (character && draftId === character.id)) {
-        console.log("發現並載入匹配的草稿...", draftData);
+        console.log("發現並載入匹配的草稿... - App.js:152", draftData);
         setName(draftData.name || '');
         setDescription(draftData.description || '');
         setFirstMessage(draftData.firstMessage || '');
@@ -225,7 +225,7 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
   const handleRegexRuleChange = (index, field, value) => { const updatedRules = [...embeddedRegex]; updatedRules[index] = { ...updatedRules[index], [field]: value }; setEmbeddedRegex(updatedRules); };
   const handleToggleRegexRule = (index) => { const updatedRules = [...embeddedRegex]; updatedRules[index] = { ...updatedRules[index], enabled: !updatedRules[index].enabled }; setEmbeddedRegex(updatedRules); };
   const handleDeleteRegexRule = (index) => { const updatedRules = embeddedRegex.filter((_, i) => i !== index); setEmbeddedRegex(updatedRules); };
-  const handleAvatarUpload = (event) => { const file = event.target.files[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { alert('⚠️ 圖片檔案不能超過 5MB - App.js:185'); return; } const reader = new FileReader(); reader.onload = async (e) => { const originalBase64 = e.target.result; try { const compressedBase64 = await compressImage(originalBase64); setAvatar({ type: 'image', data: compressedBase64 }); } catch (error) { console.error("角色頭像壓縮失敗:", error); setAvatar({ type: 'image', data: originalBase64 }); } }; reader.readAsDataURL(file); event.target.value = ''; };
+  const handleAvatarUpload = (event) => { const file = event.target.files[0]; if (!file) return; if (file.size > 5 * 1024 * 1024) { alert('⚠️ 圖片檔案不能超過 5MB - App.js:228'); return; } const reader = new FileReader(); reader.onload = async (e) => { const originalBase64 = e.target.result; try { const compressedBase64 = await compressImage(originalBase64); setAvatar({ type: 'image', data: compressedBase64 }); } catch (error) { console.error("角色頭像壓縮失敗:", error); setAvatar({ type: 'image', data: originalBase64 }); } }; reader.readAsDataURL(file); event.target.value = ''; };
   const handleAddGreeting = () => { setAlternateGreetings([...alternateGreetings, '']); };
   const handleGreetingChange = (index, value) => { const updatedGreetings = [...alternateGreetings]; updatedGreetings[index] = value; setAlternateGreetings(updatedGreetings); };
   const handleRemoveGreeting = (index) => { const updatedGreetings = alternateGreetings.filter((_, i) => i !== index); setAlternateGreetings(updatedGreetings); };
@@ -246,11 +246,12 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
                   
               <div className="form-group world-book-section">
                 <label className="world-book-label"><Globe size={16} /><span>主要知識書</span></label>
-                <p className="setting-description">選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。</p>
-                <select className="setting-select" value={mainLorebookId} onChange={handleMainLorebookChange}>
+                <p className="setting-description">　選定的知識書將作為此角色的主要背景，並會跟隨角色卡一併匯出。
+                                  <select className="setting-select" value={mainLorebookId} onChange={handleMainLorebookChange}>
                     <option value="">--- None ---</option>
                     {worldBooks.map(book => (<option key={book.id} value={book.id}>{book.name}</option>))}
                 </select>
+                </p>
                 <div className="form-label-group">
                     <label className="world-book-label" style={{ marginBottom: '0' }}>
                         <FileText size={16} /> <span>區域正規表示式 ({embeddedRegex.length} 條)</span>
@@ -1000,7 +1001,7 @@ const AuthorsNoteModal = ({ initialNote, onSave, onClose }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Author's Note (作者備註)</h3>
+          <h3>Author's Note (Author's Note)</h3>
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body">
@@ -1161,7 +1162,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
 
       // 判斷是否應該載入這個草稿
       if ((!profile && draftId === null) || (profile && draftId === profile.id)) {
-        console.log("發現並載入匹配的使用者個人檔案草稿...", draftData);
+        console.log("發現並載入匹配的使用者個人檔案草稿... - App.js:1165", draftData);
         setName(draftData.name || '');
         setNotes(draftData.notes || '');
         setDescription(draftData.description || '');
@@ -1225,7 +1226,7 @@ const UserProfileEditor = ({ profile, onSave, onClose }) => {
         const compressedBase64 = await compressImage(originalBase64);
         setAvatar({ type: 'image', data: compressedBase64 });
       } catch (error) {
-        console.error("使用者頭像壓縮失敗: - App.js:1104", error);
+        console.error("使用者頭像壓縮失敗: - App.js:1229", error);
         setAvatar({ type: 'image', data: originalBase64 });
       }
     };
@@ -1473,7 +1474,7 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
         processedText = processedText.replace(regex, rule.replace);
 
       } catch (error) {
-        console.error(`無效的 Regex 規則 (備註: ${rule.notes}): "${rule.find}"`, error);
+        console.error(`無效的 Regex 規則 (備註: ${rule.notes}): "${rule.find}" - App.js:1477`, error);
       }
     }
     return processedText;
@@ -1855,21 +1856,21 @@ const SettingsPage = ({
                 </div>
                 <div className="editor-buttons">
                   <button
-                    onClick={onSaveAsNewConfiguration}
-                    className="save-btn secondary" // 您可以為它新增一個次要樣式
-                    disabled={!configName.trim() || !apiKey.trim()}
-                  >
-                    <Plus size={16} />
-                    建立新配置
-                  </button>
-                  <button
                     onClick={onUpdateConfiguration}
                     className="save-btn" // 可以繼續使用現有樣式
                     disabled={!loadedConfigId} // ✨ 核心：只有載入了配置才能更新
                   >
                     <Save size={16} />
-                    儲存配置
-                  </button>                  
+                    更新配置
+                  </button>
+                  <button
+                    onClick={onSaveAsNewConfiguration}
+                    className="save-btn secondary" // 您可以為它新增一個次要樣式
+                    disabled={!configName.trim() || !apiKey.trim()}
+                  >
+                    <Plus size={16} />
+                    另存新配置
+                  </button>
                 </div>
               </div>
             )}
@@ -2228,12 +2229,10 @@ const SettingsPage = ({
                     <FileText size={16} />
                     公告 x 說明 x 回饋
                   </a>
-                  {/* ▼▼▼ ✨ 在這裡加上新的按鈕 ✨ ▼▼▼ */}
                   <button onClick={onOpenDisclaimer} className="about-btn">
                     <MessageSquareWarning size={16} />
                     免責聲明
                   </button>
-                  {/* ▲▲▲ ✨ 新增按鈕結束 ✨ ▲▲▲ */}
                 </div>
               </div>
             )}
@@ -2569,7 +2568,7 @@ const ChatApp = () => {
 useEffect(() => {
   const loadData = async () => {
     try {
-      console.log("正在從 IndexedDB 載入資料... - App.js:2294");
+      console.log("正在從 IndexedDB 載入資料... - App.js:2571");
 
       // 1. 先嘗試從 IndexedDB 讀取所有資料
       const [
@@ -2626,7 +2625,7 @@ useEffect(() => {
         if (lastUsedPrompt) {
           // 如果找到了上次用的提示詞，就直接設定它
           setCurrentPrompt(lastUsedPrompt);
-          console.log(`成功載入上次使用的提示詞: ${lastUsedPrompt.name}`);
+          console.log(`成功載入上次使用的提示詞: ${lastUsedPrompt.name} - App.js:2628`);
         } else {
           // 如果找不到 (可能被刪了)，就預設選擇列表中的第一個
           setCurrentPrompt(allAvailablePrompts[0] || null);
@@ -2669,7 +2668,7 @@ useEffect(() => {
       if (activeConfigId && savedApiConfigs && savedApiConfigs.length > 0) {
         const configToLoad = savedApiConfigs.find(c => c.id == activeConfigId);
         if (configToLoad) {
-          console.log(`正在載入預設 API 配置：「${configToLoad.name}」`);
+          console.log(`正在載入預設 API 配置：「${configToLoad.name}」 - App.js:2671`);
           setLoadedConfigId(configToLoad.id);
           setApiProvider(configToLoad.provider);
           const loadedKeys = configToLoad.keysByProvider || {};
@@ -2689,7 +2688,7 @@ useEffect(() => {
 
       // 備用策略：如果沒有預設配置，則使用舊的「最後一次使用」邏輯
       if (!configLoaded) {
-        console.log("未找到預設配置，回退至載入上次使用的 API 設定。");
+        console.log("未找到預設配置，回退至載入上次使用的 API 設定。 - App.js:2691");
         const lastUsedApi = JSON.parse(localStorage.getItem('app_last_used_api'));
         if (lastUsedApi) {
           setApiProvider(lastUsedApi.provider || 'openai');
@@ -2700,7 +2699,7 @@ useEffect(() => {
       }
       setIsDataLoaded(true);
     } catch (error) {
-      console.error('從 IndexedDB 載入資料失敗: - App.js:2377', error);
+      console.error('從 IndexedDB 載入資料失敗: - App.js:2702', error);
     }
   };
 
@@ -2711,7 +2710,7 @@ useEffect(() => {
   useEffect(() => {
     // 確保 currentPrompt 有值，且資料已從 DB 載入完成，避免啟動時存入 null
     if (currentPrompt && isDataLoaded) {
-      console.log(`偵測到提示詞變更，正在儲存 ID: ${currentPrompt.id} 到 localStorage...`);
+      console.log(`偵測到提示詞變更，正在儲存 ID: ${currentPrompt.id} 到 localStorage... - App.js:2713`);
       localStorage.setItem('app_last_used_prompt_id', currentPrompt.id);
     }
   }, [currentPrompt, isDataLoaded]); // 這個管家會監控 currentPrompt 和 isDataLoaded 的變化
@@ -2720,7 +2719,7 @@ useEffect(() => {
   useEffect(() => {
       // 加上這個判斷，是為了避免在程式剛啟動、資料還沒載入時就存入一筆空資料
       if (Object.keys(chatHistories).length > 0) {
-          console.log("偵測到聊天記錄變更，正在存入 IndexedDB... - App.js:2388");
+          console.log("偵測到聊天記錄變更，正在存入 IndexedDB... - App.js:2722");
           db.kvStore.put({ key: 'chatHistories', value: chatHistories });
       }
   }, [chatHistories]); // 這個管家只監控 chatHistories
@@ -2728,7 +2727,7 @@ useEffect(() => {
   // ✨✨✨ 全新！聊天室元數據 (備註/作者備註) 的存檔管家 ✨✨✨
   useEffect(() => {
       if (Object.keys(chatMetadatas).length > 0) {
-          console.log("偵測到聊天室元數據變更，正在存入 IndexedDB... - App.js:2396");
+          console.log("偵測到聊天室元數據變更，正在存入 IndexedDB... - App.js:2730");
           db.kvStore.put({ key: 'chatMetadatas', value: chatMetadatas });
       }
   }, [chatMetadatas]); // 這個管家只監控 chatMetadatas
@@ -2736,7 +2735,7 @@ useEffect(() => {
   // ✨✨✨ 全新！長期記憶的存檔管家 ✨✨✨
   useEffect(() => {
       if (Object.keys(longTermMemories).length > 0) {
-          console.log("偵測到長期記憶變更，正在存入 IndexedDB... - App.js:2404");
+          console.log("偵測到長期記憶變更，正在存入 IndexedDB... - App.js:2738");
           db.kvStore.put({ key: 'longTermMemories', value: longTermMemories });
       }
   }, [longTermMemories]); // 這個管家只監控 longTermMemories
@@ -2745,20 +2744,20 @@ useEffect(() => {
   useEffect(() => {
     // 避免在程式剛啟動、資料還沒載入完成時，就用一個空陣列覆蓋掉資料庫
     if (!isDataLoaded) return; 
-    console.log("偵測到 OOC 指令變更，正在存入 IndexedDB... - App.js:2413");
+    console.log("偵測到 OOC 指令變更，正在存入 IndexedDB... - App.js:2747");
     db.kvStore.put({ key: 'oocCommands', value: oocCommands });
   }, [oocCommands, isDataLoaded]);
 
   // ✨ 全新！正規表示式規則的存檔管家 ✨
   useEffect(() => {
     if (!isDataLoaded) return;
-    console.log("偵測到正規表示式規則變更，正在存入 IndexedDB... - App.js:2420");
+    console.log("偵測到正規表示式規則變更，正在存入 IndexedDB... - App.js:2754");
     db.kvStore.put({ key: 'regexRules', value: regexRules });
   }, [regexRules, isDataLoaded]);
 
   useEffect(() => {
     if (!isDataLoaded) return;
-    console.log("偵測到世界書變更，正在存入 IndexedDB... - App.js:2426");
+    console.log("偵測到世界書變更，正在存入 IndexedDB... - App.js:2760");
     db.kvStore.put({ key: 'worldBooks', value: worldBooks });
   }, [worldBooks, isDataLoaded]);
 
@@ -2958,7 +2957,7 @@ useEffect(() => {
         link.click();
 
       } catch (error) {
-        console.error('截圖生成失敗: - App.js:2627', error);
+        console.error('截圖生成失敗: - App.js:2960', error);
         alert('抱歉，生成截圖時發生錯誤，請查看主控台以獲取詳細資訊。');
       } finally {
         document.body.removeChild(screenshotContainer);
@@ -3000,7 +2999,7 @@ const handleUpdateConfiguration = useCallback(async () => {
     return;
   }
 
-  console.log(`正在更新現有配置 ID: ${loadedConfigId} - App.js:2669`);
+  console.log(`正在更新現有配置 ID: ${loadedConfigId} - App.js:3002`);
   const configToUpdate = {
     id: loadedConfigId, // 使用已存在的 ID
     name: configName,   // 使用輸入框中當前的名稱
@@ -3023,7 +3022,7 @@ const handleUpdateConfiguration = useCallback(async () => {
     localStorage.setItem('app_active_api_config_id', loadedConfigId);
     alert(`✅ 已更新配置：「${configName}」`);
   } catch (error) {
-    console.error("更新 API 配置失敗: - App.js:2690", error);
+    console.error("更新 API 配置失敗: - App.js:3025", error);
     alert('❌ 更新 API 配置失敗！');
   }
 }, [
@@ -3045,7 +3044,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     return;
   }
   
-  console.log("正在另存為新配置... - App.js:2712");
+  console.log("正在另存為新配置... - App.js:3047");
   const newId = Date.now();
   const newConfig = {
     id: newId, // 使用全新的 ID
@@ -3070,7 +3069,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     
     alert(`✅ 已另存為新配置：「${configName}」`);
   } catch (error) {
-    console.error("另存新配置失敗: - App.js:2735", error);
+    console.error("另存新配置失敗: - App.js:3072", error);
     alert('❌ 另存新配置失敗！');
   }
 }, [
@@ -3112,7 +3111,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         setApiConfigs(updatedConfigs);
         alert('🗑️ 配置已刪除');
       } catch (error) {
-        console.error("刪除 API 配置失敗: - App.js:2776", error);
+        console.error("刪除 API 配置失敗: - App.js:3114", error);
         alert('❌ 刪除 API 配置失敗！');
       }
     }
@@ -3133,7 +3132,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert(existingIndex > -1 ? `✅ 已更新提示詞：「${promptData.name}」` : `✅ 已儲存新提示詞：「${promptData.name}」`);
       }
     } catch (error) {
-      console.error("儲存提示詞失敗:", error);
+      console.error("儲存提示詞失敗: - App.js:3135", error);
       // ✨ 在 silent 模式下，錯誤也只在 console 提示
       if (!silent) {
         alert('❌ 儲存提示詞失敗！');
@@ -3149,7 +3148,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       if (currentPrompt?.id === promptId) setCurrentPrompt(null);
       alert('🗑️ 提示詞已刪除');
     } catch (error) {
-      console.error("刪除提示詞失敗: - App.js:2805", error);
+      console.error("刪除提示詞失敗: - App.js:3151", error);
       alert('❌ 刪除提示詞失敗！');
     }
   }, [prompts, currentPrompt]);
@@ -3170,7 +3169,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert('✅ 所有內建提示詞已成功還原！');
       } catch (error)
       {
-        console.error("還原提示詞失敗: - App.js:2826", error);
+        console.error("還原提示詞失敗: - App.js:3172", error);
         alert('❌ 還原提示詞失敗！');
       }
     }
@@ -3349,7 +3348,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         URL.revokeObjectURL(link.href);
 
       } catch (error) {
-        console.error("生成角色卡失敗: - App.js:2888", error);
+        console.error("生成角色卡失敗: - App.js:3351", error);
         alert('❌ 生成 PNG 角色卡失敗，請檢查主控台中的錯誤訊息。');
       }
       return; // 匯出後，結束函式，不做儲存操作
@@ -3372,7 +3371,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
         alert(existingIndex > -1 ? `✅ 已更新角色：「${characterData.name}」` : `✅ 已創建新角色：「${characterData.name}」`);
       
       } catch (error) {
-        console.error("儲存角色失敗: - App.js:2908", error);
+        console.error("儲存角色失敗: - App.js:3374", error);
         alert('❌ 儲存角色失敗！');
       }
     }
@@ -3399,7 +3398,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
       closePreview();
 
     } catch (error) {
-      console.error("刪除角色失敗: - App.js:2932", error);
+      console.error("刪除角色失敗: - App.js:3401", error);
       alert('❌ 刪除角色失敗！');
     }
   }, [characters, currentCharacter, chatHistories]);
@@ -3422,7 +3421,7 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
     try {
       await db.characters.put(updatedCharacter);
     } catch (error) {
-      console.error("更新角色收藏狀態失敗: - App.js:2955", error);
+      console.error("更新角色收藏狀態失敗: - App.js:3424", error);
       // 如果儲存失敗，可以選擇是否要還原畫面狀態
     }
   }, [characters]);  
@@ -3565,7 +3564,7 @@ const parseRegexFromCard = (cardData) => {
         successCount++;
 
       } catch (error) {
-        console.error(`匯入檔案 ${file.name} 失敗:`, error);
+        console.error(`匯入檔案 ${file.name} 失敗: - App.js:3567`, error);
         failureCount++;
       }
     }
@@ -3663,7 +3662,7 @@ const parseRegexFromCard = (cardData) => {
     try {
       await db.kvStore.put({ key: 'worldBooks', value: updatedBooks });
     } catch (error) {
-      console.error("新增世界書後寫入 DB 失敗: - App.js:3155", error);
+      console.error("新增世界書後寫入 DB 失敗: - App.js:3665", error);
     }
   }, [worldBooks]); // 依賴項保持不變
 
@@ -3679,7 +3678,7 @@ const parseRegexFromCard = (cardData) => {
         });
         
         db.kvStore.put({ key: 'worldBooks', value: updatedBooks }).catch(error => {
-          console.error("儲存世界書後寫入 DB 失敗: - App.js:3171", error);
+          console.error("儲存世界書後寫入 DB 失敗: - App.js:3681", error);
         });
         
         return updatedBooks;
@@ -3727,7 +3726,7 @@ const parseRegexFromCard = (cardData) => {
 
       // 驗證是否為有效的世界書格式
       if (!data.entries || typeof data.entries !== 'object') {
-        console.warn(`檔案 ${file.name} 格式不正確，已跳過。 - App.js:3219`);
+        console.warn(`檔案 ${file.name} 格式不正確，已跳過。 - App.js:3729`);
         continue;
       }
 
@@ -3772,7 +3771,7 @@ if (Array.isArray(data.entries)) {
       importedBooks.push(newBook);
       
     } catch (error) {
-      console.error(`匯入世界書 ${file.name} 失敗: - App.js:3264`, error);
+      console.error(`匯入世界書 ${file.name} 失敗: - App.js:3774`, error);
       alert(`匯入檔案 "${file.name}" 時發生錯誤：${error.message}`);
     }
   }
@@ -3786,7 +3785,7 @@ if (Array.isArray(data.entries)) {
       await db.kvStore.put({ key: 'worldBooks', value: finalBooks });
       alert(`✅ 成功匯入 ${importedBooks.length} 本世界書！`);
     } catch (error) {
-      console.error("匯入世界書後寫入 DB 失敗: - App.js:3278", error);
+      console.error("匯入世界書後寫入 DB 失敗: - App.js:3788", error);
       alert('⚠️ 匯入成功但儲存時發生錯誤，請重新啟動應用。');
     }
   }
@@ -4025,7 +4024,7 @@ if (Array.isArray(data.entries)) {
     // 2. 遍歷所有金鑰，逐一測試
     for (let i = 0; i < allKeys.length; i++) {
       const currentKey = allKeys[i];
-      console.log(`正在測試金鑰 #${i + 1}... - App.js:3517`);
+      console.log(`正在測試金鑰 #${i + 1}... - App.js:4027`);
       try {
         const provider = apiProviders[apiProvider];
         // (這裡的測試邏輯和您原本的一樣，只是用了 currentKey)
@@ -4056,10 +4055,10 @@ if (Array.isArray(data.entries)) {
           isConnectionSuccessful = true;
           break; // 成功後就跳出 for 迴圈
         } else {
-           console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status} - App.js:3548`);
+           console.warn(`金鑰 #${i + 1} 失敗，狀態碼: ${response.status} - App.js:4058`);
         }
       } catch (error) {
-        console.error(`金鑰 #${i + 1} 發生錯誤: - App.js:3551`, error);
+        console.error(`金鑰 #${i + 1} 發生錯誤: - App.js:4061`, error);
       }
     }
   
@@ -4076,7 +4075,7 @@ if (Array.isArray(data.entries)) {
 // ✨✨✨ 全新！世界書處理引擎 (SillyTavern 邏輯復刻) ✨✨✨
 // =================================================================================
 const processWorldBookEntries = (activeBooks, contextScanSources) => {
-  console.log("世界書處理引擎啟動...");
+  console.log("世界書處理引擎啟動... - App.js:4078");
   let allEntries = [];
   activeBooks.forEach(book => {
     // 確保 entries 是一個物件，然後取得它的 values
@@ -4086,10 +4085,10 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   });
 
   if (allEntries.length === 0) {
-    console.log("沒有啟用任何世界書條目，處理結束。");
+    console.log("沒有啟用任何世界書條目，處理結束。 - App.js:4088");
     return []; // 如果沒有任何條目，直接返回
   }
-  console.log(`總共掃描 ${allEntries.length} 個條目...`);
+  console.log(`總共掃描 ${allEntries.length} 個條目... - App.js:4091`);
 
   // --- 階段一：掃描與觸發 ---
   const triggeredEntries = allEntries.filter(entry => {
@@ -4133,7 +4132,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     return primaryMatch;
   });
 
-  console.log(`階段一 (觸發)：有 ${triggeredEntries.length} 個條目被觸發`);
+  console.log(`階段一 (觸發)：有 ${triggeredEntries.length} 個條目被觸發 - App.js:4135`);
 
   // --- 階段二：過濾 (機率) ---
   const filteredByProbability = triggeredEntries.filter(entry => {
@@ -4143,7 +4142,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     return true; // 如果不使用機率或機率為100，則直接通過
   });
 
-  console.log(`階段二 (機率過濾)：剩下 ${filteredByProbability.length} 個條目`);
+  console.log(`階段二 (機率過濾)：剩下 ${filteredByProbability.length} 個條目 - App.js:4145`);
   // 注意：一個完整的實作還需要處理 Cooldown 和 Sticky，這需要一個持久化的狀態管理器，此處暫時簡化。
 
   // --- 階段三：排序 ---
@@ -4152,7 +4151,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   
   // 注意：一個完整的實作還需要處理內容預算 (Budgeting) 和分組競賽 (Group Competition)，此處暫時簡化。
   
-  console.log("世界書處理完成，最終將插入的條目:", sortedEntries.map(e => e.comment || '無標題條目'));
+  console.log("世界書處理完成，最終將插入的條目: - App.js:4154", sortedEntries.map(e => e.comment || '無標題條目'));
   return sortedEntries;
 };
 
@@ -4266,7 +4265,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
 
       // ✅ ==================== 3. 您期待已久的精確日誌！ ==================== ✅
       // ✨ 核心修改 4: 在這裡印出我們精心組合的、結構化的最終訊息陣列
-      console.log("【最終發送請求預覽 (結構化)】:", JSON.stringify(finalApiMessages, null, 4));
+      console.log("【最終發送請求預覽 (結構化)】: - App.js:4268", JSON.stringify(finalApiMessages, null, 4));
 
 
       // ✅ ==================== 4. API 請求格式化與發送階段 ==================== ✅
@@ -4309,7 +4308,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       }
       
       // ✨ 額外加一個日誌，顯示真正發送到網路上的 Body 內容
-      console.log(`【${apiProvider}】最終發送的請求 Body:`, JSON.stringify(requestBody, null, 2));
+      console.log(`【${apiProvider}】最終發送的請求 Body: - App.js:4311`, JSON.stringify(requestBody, null, 2));
       
       // --- 後續的 fetch 和錯誤處理邏輯保持不變 ---
       const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) }); 
@@ -4360,7 +4359,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         throw new Error('AI 回應為空或格式不正確'); 
       } 
     } catch (error) { 
-      console.error(`處理或發送請求時發生錯誤:`, error); 
+      console.error(`處理或發送請求時發生錯誤: - App.js:4362`, error); 
       throw error;
     }
   }, [ apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders, currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId, chatMetadatas, currentApiKeyIndex, worldBooks ]);
@@ -4394,7 +4393,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         
         return summary;
       } catch (error) {
-        console.error("記憶更新失敗: - App.js:3623", error);
+        console.error("記憶更新失敗: - App.js:4396", error);
         if (!isSilent) alert(`記憶更新失敗: ${error.message}`);
         return null;
       }
@@ -4456,7 +4455,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
 
       // 如果提取到了思考過程，就在主控台印出來
       if (thought) {
-        console.log("【AI 思考過程 (CoT)】:", thought);
+        console.log("【AI 思考過程 (CoT)】: - App.js:4458", thought);
       }
 
       const aiMessage = {
@@ -4479,12 +4478,12 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       }));
       
       if (finalHistoryArray.length > 0 && finalHistoryArray.length % MEMORY_UPDATE_INTERVAL === 0) {
-        console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶... - App.js:3699`);
+        console.log(`對話達到 ${finalHistoryArray.length} 則，正在背景自動更新長期記憶... - App.js:4481`);
         await triggerMemoryUpdate(true); 
-        console.log("背景記憶更新完成！ - App.js:3701");
+        console.log("背景記憶更新完成！ - App.js:4483");
       }
     } catch (error) {
-      console.error("訊息發送失敗: - App.js:3704", error);
+      console.error("訊息發送失敗: - App.js:4486", error);
       alert(`訊息發送失敗：\n\n${error.message}`);
 
       setChatHistories(prev => ({
@@ -4501,7 +4500,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       if (allKeys.length > 1) {
         setCurrentApiKeyIndex(prevIndex => {
           const newIndex = (prevIndex + 1) % allKeys.length;
-          console.log(`API 金鑰失敗，已準備切換至下一把金鑰 (索引 ${newIndex}) - App.js:3721`);
+          console.log(`API 金鑰失敗，已準備切換至下一把金鑰 (索引 ${newIndex}) - App.js:4503`);
           return newIndex;
         });
       }
@@ -4525,7 +4524,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       const { cleanedText, thought } = filterCoT(aiResponse);
 
       if (thought) {
-        console.log("【AI 思考過程 (CoT)】:", thought);
+        console.log("【AI 思考過程 (CoT)】: - App.js:4527", thought);
       }
 
       const aiMessage = {
@@ -4556,7 +4555,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         await triggerMemoryUpdate(true); 
       }
     } catch (error) {
-    console.error("續寫失敗: - App.js:3768", error);
+    console.error("續寫失敗: - App.js:4558", error);
     // 直接彈出警告視窗，不新增系統訊息
     alert(`續寫失敗：\n\n${error.message}`);
 
@@ -4594,7 +4593,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       const { cleanedText, thought } = filterCoT(aiResponse);
 
       if (thought) {
-        console.log("【AI 思考過程 (CoT)】:", thought);
+        console.log("【AI 思考過程 (CoT)】: - App.js:4596", thought);
       }
 
       if (typeof aiResponse !== 'undefined') { // 這裡還是用 aiResponse 判斷，因為 cleanedText 可能是空的
@@ -5094,7 +5093,7 @@ const handleExportAllData = useCallback(async (isForCloud = false) => {
     }
 
     try {
-        console.log("正在準備匯出所有資料...");
+        console.log("正在準備匯出所有資料... - App.js:5096");
         const dataToExport = await db.transaction('r', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
             const characters = await db.characters.toArray();
             const prompts = await db.prompts.toArray();
@@ -5137,7 +5136,7 @@ const handleExportAllData = useCallback(async (isForCloud = false) => {
         return null; // 手動下載完成後回傳 null
 
     } catch (error) {
-        console.error("全站資料匯出失敗:", error);
+        console.error("全站資料匯出失敗: - App.js:5139", error);
         alert(`❌ 匯出失敗：${error.message}`);
         return null; // 發生錯誤時回傳 null
     }
@@ -5188,7 +5187,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
             throw new Error("未知的資料來源。");
         }
     } catch (error) {
-        console.error("全站資料匯入失敗:", error);
+        console.error("全站資料匯入失敗: - App.js:5190", error);
         alert(`❌ 匯入失敗：${error.message}`);
         if (dataSource?.target?.value) dataSource.target.value = '';
     }
@@ -5203,7 +5202,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
         '這個動作【無法復原】！'
     )) {
       try {
-        console.log("正在清除所有 IndexedDB 資料... - App.js:4440");
+        console.log("正在清除所有 IndexedDB 資料... - App.js:5205");
 
         // ✨ 3. 核心修正：使用資料庫交易來清空所有資料表
         await db.transaction('rw', db.characters, db.prompts, db.apiConfigs, db.kvStore, async () => {
@@ -5222,7 +5221,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
         window.location.reload();
 
       } catch (error) {
-        console.error("清除所有資料失敗: - App.js:4459", error);
+        console.error("清除所有資料失敗: - App.js:5224", error);
         alert(`❌ 清除資料時發生錯誤：${error.message}`);
       }
     }
@@ -5583,7 +5582,7 @@ const compressImage = (base64Str, options = {}) => {
     };
 
     img.onerror = (error) => {
-      console.error("圖片載入失敗，無法壓縮: - App.js:4800", error);
+      console.error("圖片載入失敗，無法壓縮: - App.js:5585", error);
       resolve(base64Str); 
     };
   });
@@ -5718,7 +5717,7 @@ const utf8ToBase64 = (str) => {
     const binaryString = Array.from(bytes, byte => String.fromCharCode(byte)).join('');
     return btoa(binaryString);
   } catch (error) {
-    console.error("UTF8 to Base64 conversion failed: - App.js:4901", error);
+    console.error("UTF8 to Base64 conversion failed: - App.js:5720", error);
     // 提供一個備用方案，雖然在現代瀏覽器中很少需要
     return btoa(unescape(encodeURIComponent(str)));
   }
@@ -5731,7 +5730,7 @@ const base64ToUtf8 = (base64) => {
     const bytes = Uint8Array.from(binaryString, char => char.charCodeAt(0));
     return new TextDecoder().decode(bytes);
   } catch (error) {
-    console.error("Base64 to UTF8 conversion failed: - App.js:4914", error);
+    console.error("Base64 to UTF8 conversion failed: - App.js:5733", error);
     // 提供一個備用方案
     return decodeURIComponent(escape(atob(base64)));
   }
@@ -5820,7 +5819,7 @@ async function createPngWithCharaChunk(imageDataSource, characterData) {
     }
 
   } catch (error) {
-    console.error("在生成角色卡前處理圖片時發生錯誤: - App.js:5003", error);
+    console.error("在生成角色卡前處理圖片時發生錯誤: - App.js:5822", error);
     throw new Error(`無法準備圖片以生成角色卡。請確認圖片有效。錯誤: ${error.message}`);
   }
 

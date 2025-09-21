@@ -28,8 +28,8 @@
   --text-primary: #f2f3f4;
   --text-secondary: #d1d5db;
   --text-muted: #9ca3af;
-  --shadow-light: rgba(0, 0, 0, 0.4);
-  --shadow-medium: rgba(0, 0, 0, 0.6);
+  --shadow-light: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
   --gradient-bg: #161616;
   --quote-text-color: #8ac2e6;
   --middle-color: #505050;
@@ -46,8 +46,8 @@
   --text-primary: rgb(17, 24, 39);       /* 深黑 */
   --text-secondary: #6b7280;     /* 中灰 */
   --text-muted: #9ca3af;         /* 淺灰 */
-  --shadow-light: rgba(12, 16, 26, 0.15);
-  --shadow-medium: rgba(12, 16, 26, 0.25);
+  --shadow-light: rgba(12, 16, 26, 0.1);
+  --shadow-medium: rgba(12, 16, 26, 0.15);
   --gradient-bg: #f9fafb;
   --quote-text-color: #587c9a;
   --middle-color: #e7e7e7;
@@ -80,8 +80,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgba(168, 168, 168, 0.438);
   --middle-color: #e7e7e7;
-  --shadow-light: rgba(83, 48, 9, 0.15);
-  --shadow-medium: rgba(83, 48, 9, 0.25);
+  --shadow-light: rgba(83, 48, 9, 0.1);
+  --shadow-medium: rgba(83, 48, 9, 0.15);
 }
 
 /* ✨ 牛奶可可主題 ✨ */
@@ -110,8 +110,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgba(188, 165, 146, 0.5); /* 邊框 */
   --middle-color: #e7e7e7;
-  --shadow-light: rgba(62, 42, 30, 0.15);
-  --shadow-medium: rgba(62, 42, 30, 0.25);
+  --shadow-light: rgba(62, 42, 30, 0.1);
+  --shadow-medium: rgba(62, 42, 30, 0.15);
 }
 
 /* ✨ 懷舊書頁主題 ✨ */
@@ -140,8 +140,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgb(192, 144, 144);
   --middle-color: #d4bdb2;
-  --shadow-light: rgba(91, 68, 73, 0.15);
-  --shadow-medium: rgba(91, 68, 73, 0.25);
+  --shadow-light: rgba(91, 68, 73, 0.1);
+  --shadow-medium: rgba(91, 68, 73, 0.15);
 }
 
 /* ✨ 舊時光藍主題 ✨ */
@@ -170,8 +170,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgb(148, 177, 211);
   --middle-color: #c9bdc8;
-  --shadow-light: rgba(67, 71, 102, 0.15);
-  --shadow-medium: rgba(67, 71, 102,, 0.25);
+  --shadow-light: rgba(67, 71, 102, 0.1);
+  --shadow-medium: rgba(67, 71, 102,, 0.15);
 }
 
 /* ✨ 芋泥奶凍主題 ✨ */
@@ -200,8 +200,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgb(163, 138, 183);
   --middle-color: #cebbc8;
-  --shadow-light: rgba(68, 58, 80, 0.15);
-  --shadow-medium: rgba(68, 58, 80, 0.25);
+  --shadow-light: rgba(68, 58, 80, 0.1);
+  --shadow-medium: rgba(68, 58, 80, 0.15);
 }
 
 /* ✨ 靜霧森語主題 ✨ */
@@ -227,8 +227,8 @@
   /* --- 其他顏色 --- */
   --border-color: #657163;
   --middle-color: #252e28;
-  --shadow-light: rgba(0, 0, 0, 0.3);
-  --shadow-medium: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
 }
 
 /* ✨ 深林莓果主題 ✨ */
@@ -257,8 +257,8 @@
   /* --- 其他顏色 --- */
   --border-color: rgb(82, 70, 104);
   --middle-color: #373043;
-  --shadow-light: rgba(0, 0, 0, 0.3);
-  --shadow-medium: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
 }
 
 /* ✨ 夜色月輪主題 ✨ */
@@ -287,8 +287,8 @@
   /* --- 其他顏色 --- */
   --border-color: #5b4f48;
   --middle-color: #1b2841;
-  --shadow-light: rgba(0, 0, 0, 0.3);
-  --shadow-medium: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(0, 0, 0, 0.25);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
 }
 
 /* ✨ 塵墜滝下主題 ✨ */
@@ -317,8 +317,8 @@
 /* --- 其他顏色 --- */
 --border-color: #676da3;
 --middle-color: #515686;
-  --shadow-light: rgba(0, 0, 0, 0.3);
-  --shadow-medium: rgba(0, 0, 0, 0.5);
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
 }
 
 /* 引號內文字的專屬樣式 */
@@ -388,7 +388,6 @@ body {
   background: var(--topline-color);
   border-bottom: 1px solid var(--border-color);
   padding: 0 20px;
-  box-shadow: 0 1px 3px var(--shadow-light);
 }
 
 .nav-icon {
@@ -406,8 +405,7 @@ body {
 }
 
 .nav-icon:hover {
-  color: var(--primary-color);
-  background: rgba(107, 114, 128, 0.1);
+  color: var(--quote-text-color);
 }
 
 .nav-icon.active {
@@ -462,7 +460,7 @@ body {
 
 .create-button {
   background: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
   border: none;
   padding: 12px 20px;
   border-radius: 8px;
@@ -610,7 +608,6 @@ body {
   top: 8px;
   right: 15px;
   z-index: 6; /* 確保按鈕在面板之上，永遠可以點擊 */
-  
   background: var(--text-muted);
   color: var(--topline-color);
   border: none;
@@ -621,12 +618,14 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  opacity: 50% !important;
 }
 
 .info-panel-toggle-btn:hover {
   background: var(--topline-color);
   color: var(--text-muted);
+  opacity: 100% !important;
 }
 
 /* ✨ 4. 這些是原本就在的樣式，我們把它們保留下來 */
@@ -695,7 +694,7 @@ body {
   align-items: center;
   justify-content: center;
   background: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
   border-radius: 50%;
 }
 
@@ -926,7 +925,8 @@ body {
 }
 
 .card-content {
-  padding: 20px;
+  padding: 20px 20px 20px 20px;
+  margin: 0px;
   border-top: 1px solid var(--border-color);
   background: var(--surface-color);
   animation: slideDown 0.3s ease;
@@ -961,7 +961,7 @@ body {
 .setting-select {
   width: 100%;
   padding: 12px;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 16px;
   outline: none;
@@ -969,6 +969,7 @@ body {
   background: var(--background-color);
   color: var(--text-primary);
   font-family: inherit;
+  cursor: pointer;
 }
 
 .setting-textarea {
@@ -1026,7 +1027,7 @@ body {
 .avatar-btn:hover {
   border-color: var(--primary-color);
   background: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
 }
 
 /* Provider Grid */
@@ -1038,7 +1039,7 @@ body {
 
 .provider-btn {
   padding: 8px 12px;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--background-color);
   color: var(--text-primary);
@@ -1049,13 +1050,15 @@ body {
 }
 
 .provider-btn:hover {
+  background: var(--primary-color);
   border-color: var(--primary-color);
+  color: var(--background-color);
 }
 
 .provider-btn.active {
   background: var(--primary-color);
   border-color: var(--primary-color);
-  color: white;
+  color: var(--background-color);
 }
 
 /* API Key Input */
@@ -1070,7 +1073,7 @@ body {
 }
 
 .api-key-input .setting-input::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 0px; /* 垂直滾動條寬度 */
 }
 
 .api-key-input .setting-input::-webkit-scrollbar-track {
@@ -1089,12 +1092,12 @@ body {
 
 .test-btn {
   background: var(--text-muted);
-  color: var(--text-secondary);
+  color: var(--text-primary);
   border: none;
   padding: 12px 16px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
   white-space: nowrap;
   font-size: 0.9em;
   display: flex;
@@ -1104,6 +1107,7 @@ body {
 
 .test-btn:hover:not(:disabled) {
   background: var(--quote-text-color);
+  color: var(--background-color);
 }
 
 .test-btn:disabled {
@@ -1123,7 +1127,7 @@ body {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--background-color);
   color: var(--text-primary);
@@ -1134,6 +1138,8 @@ body {
 
 .theme-btn:hover {
   border-color: var(--primary-color);
+  background: var(--primary-color);
+  color: var(--surface-color);
 }
 
 .theme-btn.active {
@@ -1150,19 +1156,19 @@ body {
 }
 
 .data-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 10px;
-  border: 1px solid;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 0.75em;
-  font-weight: 500;
-  text-decoration: none;
-  justify-content: center;
-  background: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--background-color);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    justify-content: center;
+    cursor: pointer;
 }
 
 .data-btn.export {
@@ -1257,13 +1263,15 @@ body {
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  border: 2px solid var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--background-color);
   color: var(--text-primary);
   text-decoration: none;
+  font-size: 0.9em; /* 統一字體大小 */
   transition: all 0.3s ease;
   justify-content: center;
+  cursor: pointer;
 }
 
 .about-btn:hover {
@@ -1276,7 +1284,7 @@ body {
 .messages-area::-webkit-scrollbar,
 .settings-content::-webkit-scrollbar,
 .content-area::-webkit-scrollbar {
-  width: 6px;
+  width: 0px;
 }
 
 .messages-area::-webkit-scrollbar-track,
@@ -1379,7 +1387,7 @@ body {
 
 .delete-btn {
   background:  var(--quote-text-color);
-  color: white;
+  color: var(--text-primary);
   border: none;
   padding: 8px 12px;
   border-radius: 4px;
@@ -1472,7 +1480,7 @@ body {
   border-radius: 6px;
   background-color: var(--background-color);
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .editor-form textarea {
@@ -1488,28 +1496,32 @@ body {
 
 .editor-buttons button, .import-btn {
   padding: 10px 15px;
-  border: none;
+  border: 1px solid var(--background-color);
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  font-weight: 400;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
 .editor-buttons .save-btn {
-  background-color: var(--text-muted);
+  background: var(--quote-text-color);
   color: var(--background-color);
 }
 .editor-buttons .save-btn:hover {
-  background-color: var(--primary-color);
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
+  background: var(--background-color);
 }
 
 .editor-buttons .delete-btn {
   background-color: var(--text-muted);
   color: var(--background-color);
 }
+
 .editor-buttons .delete-btn:hover:not(:disabled) {
   background-color: var(--text-muted);
 }
@@ -1552,12 +1564,12 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .restore-btn:hover {
   background-color: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
   border-color: var(--primary-color);
 }
 /* Modal Styles */
@@ -1589,7 +1601,7 @@ body {
 }
 .setting-description{
  font-size: 0.8em !important;
- margin: 16px;
+ margin: 16px 0px 16px 0px;
 }
 
 @keyframes slideInUp {
@@ -1630,7 +1642,7 @@ body {
   cursor: pointer;
   padding: 1px;
   border-radius: 50%;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .close-btn:hover {
@@ -1645,7 +1657,7 @@ body {
 }
 
 .modal-body::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 0px; /* 垂直滾動條寬度 */
 }
 
 .modal-body::-webkit-scrollbar-track {
@@ -1668,7 +1680,7 @@ body {
 .modal-body label {
   display: block;
   margin-bottom: 8px;
-  font-weight: 500;
+  font-size: 0.9em !important;
   color: var(--text-secondary);
 }
 .modal-body input[type="text"],
@@ -1680,13 +1692,14 @@ body {
   background-color: var(--background-color);
   color: var(--text-primary);
   font-size: 0.88em !important;
+  font-weight: 500;
 }
 .modal-body textarea {
   resize: vertical;
 }
 
 .modal-body textarea::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 6px; /* 垂直滾動條寬度 */
 }
 
 .modal-body textarea::-webkit-scrollbar-track {
@@ -1739,7 +1752,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   text-decoration: none;
 }
 
@@ -1761,7 +1774,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .delete-character-icon-btn:hover {
   background-color: var(--quote-text-color);
@@ -1787,7 +1800,7 @@ body {
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   background-color: var(--text-muted);
   color: var(--surface-color);
 }
@@ -1849,9 +1862,9 @@ body {
   flex-shrink: 0;
 }
 .remove-greeting-btn:hover {
-  background-color: #ef4444;
-  color: white;
-  border-color: #ef4444;
+  background-color: var(--primary-color);
+  color: var(--text-primary);
+  border-color: var(--primary-color);
 }
 
 /* CharactersPage */
@@ -1871,15 +1884,16 @@ body {
   background: var(--background-color);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   padding: 8px;
   margin: 2px;
 }
 
 .character-list-item.active {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px var(--primary-color);
+  box-shadow: 0 0 0 1px var(--primary-color);
 }
+
 
 .character-select-area {
   flex: 1;
@@ -1948,13 +1962,13 @@ body {
   cursor: pointer;
   margin-left: 16px;
   margin-right: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .edit-character-btn:hover {
   background: var(--primary-color);
   color: var(--surface-color);
-  border-color: var(--primary-color);
+  border-color: var(--surface-color);
 }
 
 .empty-state-buttons {
@@ -2021,7 +2035,7 @@ body {
   align-items: center;
   gap: 16px;
   z-index: 100;
-  animation: fadeIn 0.2s ease-in-out;
+  animation: fadeIn 0.3s ease-in-out;
   transform: translateX(calc(56px / 2)) translateX(-50%);
 }
 
@@ -2127,7 +2141,7 @@ body {
   border: 2px solid var(--border-color);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 .greeting-option p {
   margin: 0;
@@ -2173,7 +2187,7 @@ body {
 }
 
 .world-book-entries::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 0px; /* 垂直滾動條寬度 */
 }
 
 .world-book-entries::-webkit-scrollbar-track {
@@ -2252,7 +2266,7 @@ body {
   right: 0;
   bottom: 0;
   background-color: var(--text-muted);
-  transition: .4s;
+  transition: .3s;
   border-radius: 22px;
 }
 
@@ -2264,7 +2278,7 @@ body {
   left: 3px;
   bottom: 3px;
   background-color: var(--text-muted);
-  transition: .4s;
+  transition: .3s;
   border-radius: 50%;
 }
 
@@ -2335,7 +2349,7 @@ input:checked + .slider:before {
   opacity: 0; /* 平時透明 */
   visibility: hidden; /* 平時隱藏，無法點擊 */
   transform: scale(0.8);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 14px;
 }
 
@@ -2356,7 +2370,7 @@ input:checked + .slider:before {
   opacity: 0;
   visibility: hidden;
   transform: scale(0.8);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 14px;
 }
 
@@ -2448,7 +2462,7 @@ select:focus {
   font-size: 20px;
   cursor: pointer;
   opacity: 0.5;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   padding: 8px;
 }
 .pin-chat-btn:hover {
@@ -2474,7 +2488,7 @@ select:focus {
   align-items: center;
   gap: 4px;
   box-shadow: 0 2px 8px var(--shadow-light);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   z-index: 10;
   opacity: 0;
   visibility: hidden;
@@ -2498,7 +2512,7 @@ select:focus {
   justify-content: center;
   font-size: 1.5em;
   line-height: 1;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .action-btn:hover:not(:disabled) {
@@ -2534,7 +2548,7 @@ select:focus {
   opacity: 0;
   visibility: hidden;
   transform: scale(0.8);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 14px;
   right: -40px;
 }
@@ -2577,7 +2591,7 @@ select:focus {
 }
 
 .message-input::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 6px; /* 垂直滾動條寬度 */
 }
 
 .message-input::-webkit-scrollbar-track {
@@ -2636,7 +2650,7 @@ select:focus {
   flex-direction: column;
   gap: 8px;
   z-index: 10;
-  animation: slideInUp 0.2s ease-out; /* 重複利用您寫好的動畫 */
+  animation: slideInUp 0.3s ease-out; /* 重複利用您寫好的動畫 */
 }
 
 .input-menu-item {
@@ -2649,7 +2663,7 @@ select:focus {
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
   text-align: left;
   font-size: 0.9em;
   width: 100%; /* 讓按鈕填滿選單寬度 */
@@ -2706,7 +2720,7 @@ select:focus {
   justify-content: center;
   margin-top: 2px;
   margin-bottom: 2px;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
 }
 
 .swipe-action-btn.pin {
@@ -2752,6 +2766,7 @@ select:focus {
 .swipe-item-wrapper .character-list-item {
   border: none;
   padding: 8px 0 8px 8px; /* 移除右邊的 padding，給 "..." 按鈕留空間 */
+    transition: 0.3s;
 }
 
 /* =================================== */
@@ -2781,7 +2796,7 @@ select:focus {
 
   /* ✨ 核心修改：直接設定 SVG 圖示本身的顏色 ✨ */
   /* color 屬性會被 SVG 的 fill="currentColor" 或 stroke="currentColor" 繼承 */
-  color: var(--quote-text-color); /*您可以換成您喜歡的任何顏色，例如粉紅色 #ff69b4 */
+  color: var(--quote-text-color); /*您可以換成您喜歡的任何顏色 */
   
   /* 為了讓圖示更清晰，我們可以加一點點描邊或陰影 */
   /* 方案A: 描邊 (效果較明顯) */
@@ -2830,7 +2845,7 @@ select:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .wb-delete-btn:hover {
@@ -2942,6 +2957,7 @@ select:focus {
   background-color: var(--surface-color);
   color: var(--text-primary);
   font-size: 1rem;
+  font-weight: 500;
   font-family: inherit;
   display: flex;
   align-items: center;
@@ -3001,7 +3017,7 @@ select:focus {
   gap: 10px;
   padding: 10px 12px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
 }
 
 .custom-select-option:hover {
@@ -3010,7 +3026,7 @@ select:focus {
 
 .custom-select-option.selected {
   background-color: var(--primary-color);
-  color: white;
+  color: var(--text-primary);
 }
 
 /* in index.css */
@@ -3023,7 +3039,7 @@ select:focus {
 /* 當滑鼠移到可選擇的訊息上時，稍微放大 */
 .message.screenshot-mode {
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .message.screenshot-mode:hover {
@@ -3068,7 +3084,7 @@ select:focus {
   gap: 8px;
   font-size: 0.9em;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .screenshot-btn.cancel:hover {
@@ -3118,16 +3134,17 @@ select:focus {
   justify-content: center;
   cursor: pointer;
   margin-left: 8px; /* 和編輯按鈕保持一致的間距 */
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .fav-character-btn svg {
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 /* 按鈕懸停時的效果 */
 .fav-character-btn:hover {
   border-color: var(--quote-text-color);
+  background: var(--primary-color);
   color: var(--quote-text-color);
 }
 
@@ -3191,7 +3208,7 @@ select:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .sort-control-button:hover {
@@ -3214,7 +3231,7 @@ select:focus {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown 0.3s ease-out;
 }
 
 /* 單一排序選項按鈕 */
@@ -3259,13 +3276,12 @@ select:focus {
   padding: 10px 12px;
   border-radius: 6px;
   font-size: 0.9em;
-  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   border: 1px solid var(--border-color);
   background-color: var(--surface-color);
   color: var(--text-primary);
@@ -3297,6 +3313,7 @@ select:focus {
   align-items: center;
   gap: 12px;
   padding: 10px 14px;
+  margin: 1px;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -3320,15 +3337,13 @@ select:focus {
   color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
 }
 
 .edit-module-btn:hover {
-  background-color: var(--surface-color);
   color: var(--text-primary);
 }
 
@@ -3355,8 +3370,8 @@ select:focus {
   right: 0;
   bottom: 0;
   background-color: var(--background-color);
-  -webkit-transition: .4s;
-  transition: .4s;
+  -webkit-transition: .3s;
+  transition: .3s;
 }
 
 .slider:before {
@@ -3367,8 +3382,8 @@ select:focus {
   left: 3px;
   bottom: 3px;
   background-color: rgba(255, 255, 255, 0.75);
-  -webkit-transition: .4s;
-  transition: .4s;
+  -webkit-transition: .3s;
+  transition: .3s;
 }
 
 input:checked + .slider {
@@ -3476,7 +3491,7 @@ input[type="range"]::-webkit-slider-thumb {
   border: 3px solid var(--background-color);
   box-shadow: 0 0 4px rgba(0,0,0,0.5);
   margin-top: -7px; /* 垂直置中拖曳鈕 */
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 /* 拖曳鈕樣式 (Firefox) */
@@ -3501,8 +3516,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 .character-list-item .character-info h4 {
   margin: 0 0 4px 0;
   color: var(--text-primary);
-  font-size: 1em; /* 確保字體大小一致 */
-  font-weight: 600; /* 確保字重一致 */
+  font-size: 0.9em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3672,7 +3686,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding: 8px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.3s;
 }
 
 .wb-selector-item:hover {
@@ -3873,7 +3887,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.2s, border-color 0.2s;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
 .wb-mode-trigger:hover {
@@ -3906,7 +3920,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.3s;
   text-align: left;
   background-color: transparent;
   border: none;
@@ -3942,7 +3956,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding: 8px 12px;
   cursor: pointer;
   background-color: var(--surface-color-2);
-  transition: background-color 0.2s;
+  transition: background-color 0.3s;
 }
 .wb-entry-header-st:hover {
   background-color: var(--surface-color-3);
@@ -3962,7 +3976,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 /* --- 新的內容主體樣式 --- */
 .wb-entry-body-st {
-  padding: 12px;
+  padding: 12px 4px 12px 4px;
   display: flex;
   flex-direction: column;
   gap: 12px; /* 每個區塊之間的垂直間隔 */
@@ -4100,7 +4114,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 }
 
 .world-book-entries-detailed::-webkit-scrollbar {
-    width: 12px; /* 垂直滾動條寬度 */
+    width: 0px; /* 垂直滾動條寬度 */
 }
 
 .world-book-entries-detailed::-webkit-scrollbar-track {
@@ -4131,7 +4145,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding: 8px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.3s;
   background-color: transparent;
   border: none;
 }
@@ -4376,11 +4390,11 @@ input[type="range"]:hover::-webkit-slider-thumb {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border-color);
   background-color: var(--surface-color);
-  transition: background-color 0.2s, opacity 0.2s, border-color 0.2s;
+  transition: background-color 0.3s, opacity 0.3s, border-color 0.3s;
 }
 
 .module-list-item:last-child {
-  border-bottom: none;
+  border-bottom: 1px solid var(--border-color);
 }
 
 /* 拖曳握把的樣式 */
@@ -4413,11 +4427,12 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 /* 調整刪除按鈕樣式 */
 .edit-module-btn.delete {
-    color: var(--danger-color);
+    color: var(--text-muted);
     margin-left: auto; /* 將刪除按鈕推到最右邊 */
 }
 .edit-module-btn.delete:hover {
     background-color: var(--danger-background-hover);
+    color: var(--text-primary);
 }
 
 /* =================================== */
@@ -4444,7 +4459,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   font-size: 0.85em;
   font-weight: 500;
   outline: none; /* 移除點擊時的預設外框 */
-  transition: background-color 0.2s;
+  transition: background-color 0.3s;
 }
 
 /* 移除 Chrome/Safari 預設的三角形箭頭 */
@@ -4474,7 +4489,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 /* 思考內容區塊的滾動條樣式 */
 .ai-thought-content::-webkit-scrollbar {
-  width: 6px;
+  width: 0px;
 }
 .ai-thought-content::-webkit-scrollbar-track {
   background: transparent;
@@ -4550,11 +4565,13 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 .google-sync-actions button {
   padding: 10px 15px;
-  border: none;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4562,29 +4579,50 @@ input[type="range"]:hover::-webkit-slider-thumb {
   font-size: 0.9em;
 }
 
+.google-sync-actions button:hover {
+  border-color: var(--primary-color);
+  background-color: var(--background-color);
+}
+
 .google-sync-actions button.login {
-  background-color: #4285F4; /* Google Blue */
-  color: white;
+  border-color: var(--quote-text-color);
+  color: var(--quote-text-color);
+  background: var(--background-color);
 }
 .google-sync-actions button.login:hover {
-  background-color: #357ae8;
+  background: var(--quote-text-color);
+  color: var(--background-color);
 }
 
 .google-sync-actions button.logout {
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  background: var(--quote-text-color);
+  color: var(--background-color);
 }
 .google-sync-actions button.logout:hover {
   border-color: var(--quote-text-color);
   color: var(--quote-text-color);
+  background: var(--background-color);
 }
 
 .google-sync-actions button:disabled {
-  background-color: var(--text-muted) !important;
-  color: var(--background-color) !important;
-  opacity: 0.6;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.button {
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.button:hover {
+  border-color: var(--primary-color);
+  background-color: var(--background-color);
+  cursor: pointer;
 }
 
 /* 備份選擇列表樣式 */
@@ -4598,7 +4636,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
   border: 1px solid var(--border-color);
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.3s ease;
 }
 .backup-file-item:hover {
   background-color: var(--background-color);

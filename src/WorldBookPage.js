@@ -226,7 +226,7 @@ const WorldBookEntryEditor = ({ entry, onUpdate, onDelete, isCollapsed, onToggle
             <div className="form-group-st"><label>插入位置</label><select className="setting-select" value={currentPositionValue} onChange={handlePositionChange}>{positionOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select></div>
             <div className="form-group-st"><label>深度</label><input type="number" className="slider-value-input" value={getValue('depth', 4)} onChange={(e) => handleChange('depth', e.target.value, 'number')} disabled={entry.position !== 4} /></div>
             <div className="form-group-st"><label>順序</label><input type="number" className="slider-value-input" value={getValue('order', 100)} onChange={(e) => handleChange('order', e.target.value, 'number')} /></div>
-            <div className="form-group-st"><label>觸發機率 %</label><input type="number" className="slider-value-input" value={getValue('probability', 100)} max={100} min={0} onChange={(e) => handleChange('probability', e.target.value, 'number')} /></div>
+            <div className="form-group-st"><label>觸發%</label><input type="number" className="slider-value-input" value={getValue('probability', 100)} max={100} min={0} onChange={(e) => handleChange('probability', e.target.value, 'number')} /></div>
           </div>
           {/* 關鍵字區塊 */}
           <div className="form-group-st"><label>主要關鍵字 (用逗號, 分隔)</label><input type="text" value={getValue('key', []).join(', ')} onChange={(e) => handleKeysChange(e.target.value, 'key')} /></div>
