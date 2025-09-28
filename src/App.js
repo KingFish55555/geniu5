@@ -20,7 +20,6 @@ import RegexEditorModal from './RegexEditorModal.js';
 import WorldBookPage, { mapWorldBookEntryFields } from './WorldBookPage.js';
 import GoogleSyncManager from './GoogleSyncManager';
 import DisclaimerModal from './DisclaimerModal';
-import BranchSelectorModal from './BranchSelectorModal.js';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -518,26 +517,9 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
   );
 };
 
-const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat, onEditMetadata, onOpenBranchSelector }) => {
+const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat, onEditMetadata }) => {
 
-  // ✨ 步驟 1 (全新)：我們先從最原始的資料，計算出每個主線有多少個分支。
-  // 這樣就不會受到後續列表過濾的影響。
-  const branchCounts = useMemo(() => {
-    const counts = {};
-    if (!chatMetadatas) return counts;
-
-    Object.values(chatMetadatas).forEach(charMetas => {
-      Object.values(charMetas).forEach(meta => {
-        if (meta?.branchSource?.parentChatId) {
-          const parentId = meta.branchSource.parentChatId;
-          counts[parentId] = (counts[parentId] || 0) + 1;
-        }
-      });
-    });
-    return counts;
-  }, [chatMetadatas]); // 這個計算只依賴最原始的 chatMetadatas
-
-  // ✨ 步驟 2：現在才來建立要顯示在畫面上的列表，並過濾掉分支。
+  // ✨ 步驟 ：現在才來建立要顯示在畫面上的列表，並過濾掉分支。
   const allChats = [];
   for (const char of characters) {
     const charId = char.id;
@@ -547,8 +529,8 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
       const history = sessions[chatId];
       const metadata = metas[chatId] || { name: '', notes: '', pinned: false };
       
-      // 在這裡過濾，確保只有主線才被加入到顯示列表中
-      if (history && !metadata.branchSource) {
+      // ✨ 核心修改：移除過濾條件，讓所有聊天室都顯示
+      if (history) { 
         let lastMessage, lastMessageText, sortKey;
 
         if (history.length > 0) {
@@ -656,7 +638,6 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                     </div>
                     <div className="character-info">
                       <h4>
-                        {metadata.branchSource && <Split size={14} style={{ marginRight: '6px', opacity: 0.6 }} />}
                         {metadata.name || char.name}
                       </h4>
                       <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
@@ -669,21 +650,6 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                   */}
                   <div className="lobby-item-actions" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
                     
-                    {/* 分支按鈕 */}
-                    {branchCounts[chatId] > 0 && (
-                      <button
-                        className="edit-character-btn"
-                        style={{ marginRight: '0px' }} // 按鈕之間依然需要間距
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenBranchSelector(char.id, chatId);
-                        }}
-                        title="查看分支"
-                      >
-                        <Split size={16} />
-                      </button>
-                    )}
-
                     {/* 編輯備註 (齒輪) 按鈕 */}
                     <button 
                       className="edit-character-btn" 
@@ -1582,12 +1548,6 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
                 {/* ✨ 核心修改：動態顯示聊天室標題 ✨ */}
                 <span className="current-character">
                   正在與 {currentCharacter.name} 對話
-                  {/* 檢查當前聊天室是否為分支，如果是，就顯示它的自訂名稱 */}
-                  {chatMetadatas[currentCharacter.id]?.[activeChatId]?.branchSource && (
-                    <span style={{ display: 'block', opacity: 0.8, fontSize: '0.9em' }}>
-                      (分支: {chatMetadatas[currentCharacter.id]?.[activeChatId]?.name})
-                    </span>
-                  )}
                 </span>
                 {currentPrompt && (<span className="current-prompt" style={{ opacity: 0.7 }}>使用: {currentPrompt.name}</span>)}
                 
@@ -2555,7 +2515,6 @@ const ChatApp = () => {
   const [isPromptSwitcherOpen, setIsPromptSwitcherOpen] = useState(false);
   const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); // ✨ 標記資料是否已從 DB 載入
-  const [branchSelectorState, setBranchSelectorState] = useState({ isOpen: false, charId: null, parentChatId: null });
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
@@ -3138,36 +3097,6 @@ useEffect(() => {
     alert('✅ 已建立新分支，並自動切換！');
 
   }, [activeChatCharacterId, activeChatId, chatHistories, chatMetadatas, currentCharacter, currentUserProfile, setShowActionsMessageId, setActiveChatId]); // ✨ 修正點 2：補上完整的依賴項，避免 ESLint 警告
-
-  // 分支功能 //
-  // ✨ 1. 開啟分支選擇器
-  const handleOpenBranchSelector = useCallback((charId, parentChatId) => {
-    setBranchSelectorState({ isOpen: true, charId, parentChatId });
-  }, []);
-
-  // ✨ 2. 儲存分支的新名稱
-  const handleSaveBranchName = useCallback((branchChatId, newName) => {
-    // 這個函式會找到對應的分支，並只更新它的名字
-    setChatMetadatas(prev => {
-      const newMetas = JSON.parse(JSON.stringify(prev));
-      const charId = branchSelectorState.charId;
-      if (newMetas[charId] && newMetas[charId][branchChatId]) {
-        newMetas[charId][branchChatId].name = newName;
-      }
-      return newMetas;
-    });
-  }, [branchSelectorState.charId]); // 依賴項是 charId，因為我們需要它來定位
-
-  // ✨ 3. 從彈窗中選擇分支並跳轉
-  const handleSelectBranchFromModal = useCallback((charId, chatId) => {
-    const selectedChar = characters.find(c => c.id === charId);
-    if (selectedChar) {
-      setCurrentCharacter(selectedChar);
-      setActiveChatCharacterId(charId);
-      setActiveChatId(chatId);
-      setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null }); // 關閉視窗
-    }
-  }, [characters]); // 依賴項是 characters，因為需要從中尋找角色
 
 // =====================================================================
 // ✨✨✨ 全新！「更新」函式 ✨✨✨
@@ -4966,75 +4895,39 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   }, []);
 
   const handleDeleteChat = useCallback((charId, chatIdToDelete) => {
- // 確認視窗的邏輯不變
- if (window.confirm('確定要永久刪除這段對話紀錄嗎？\n\n此操作無法復原！')) {
-   
-   // 直接更新三個主要的 state，只移除指定的 chatIdToDelete
-   setChatHistories(prev => {
-     const newHistories = JSON.parse(JSON.stringify(prev));
-     if (newHistories[charId]) {
-       delete newHistories[charId][chatIdToDelete];
-     }
-     return newHistories;
-   });
+    if (window.confirm('確定要永久刪除這段對話紀錄嗎？\n\n此操作無法復原！')) {
+      
+      setChatHistories(prev => {
+        const newHistories = JSON.parse(JSON.stringify(prev));
+        if (newHistories[charId]) {
+          delete newHistories[charId][chatIdToDelete];
+        }
+        return newHistories;
+      });
 
-   setChatMetadatas(prev => {
-     const newMetadatas = JSON.parse(JSON.stringify(prev));
-     if (newMetadatas[charId]) {
-       delete newMetadatas[charId][chatIdToDelete];
-     }
-     return newMetadatas;
-   });
-   
-   setLongTermMemories(prev => {
-     const newMemories = JSON.parse(JSON.stringify(prev));
-     if (newMemories[charId]) {
-       delete newMemories[charId][chatIdToDelete];
-     }
-     return newMemories;
-   });
-   
-   // 如果正在看的聊天室被刪了，就跳回大廳
-   if (activeChatId === chatIdToDelete) {
-       setActiveChatCharacterId(null);
-       setActiveChatId(null);
-       setCurrentCharacter(null);
-   }
-
-   // ✨ 新增：如果是在分支選擇器中刪除，關閉該視窗
-   if (branchSelectorState.isOpen) {
-     setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null });
-   }
- }
-}, [activeChatId, branchSelectorState.isOpen]); // 更新依賴項
-
-// ✨✨✨ 在這裡加入新的、更可靠的分支計算邏輯 ✨✨✨
-  const activeBranchList = useMemo(() => {
-    if (!branchSelectorState.isOpen) return [];
-    
-    const { charId, parentChatId } = branchSelectorState;
-    
-    if (!chatMetadatas[charId]) return [];
-
-    // 1. 找出所有屬於這個角色的聊天室 ID
-    const allChatIdsForChar = Object.keys(chatMetadatas[charId]);
-    
-    // 2. 從中篩選出 parentChatId 的直屬孩子
-    const branches = allChatIdsForChar
-      .filter(id => chatMetadatas[charId][id]?.branchSource?.parentChatId === parentChatId)
-      .map(id => {
-        const characterForBranch = characters.find(c => c.id === charId);
-        return {
-          char: characterForBranch,
-          chatId: id,
-          metadata: chatMetadatas[charId][id]
-        };
-      })
-      // 可選：根據創建時間排序，讓最新的分支在最上面
-      .sort((a, b) => parseInt(b.chatId.split('_').pop()) - parseInt(a.chatId.split('_').pop()));
-
-    return branches;
-  }, [branchSelectorState, characters, chatMetadatas]); // 依賴項保持不變，但邏輯更清晰
+      setChatMetadatas(prev => {
+        const newMetadatas = JSON.parse(JSON.stringify(prev));
+        if (newMetadatas[charId]) {
+          delete newMetadatas[charId][chatIdToDelete];
+        }
+        return newMetadatas;
+      });
+      
+      setLongTermMemories(prev => {
+        const newMemories = JSON.parse(JSON.stringify(prev));
+        if (newMemories[charId]) {
+          delete newMemories[charId][chatIdToDelete];
+        }
+        return newMemories;
+      });
+      
+      if (activeChatId === chatIdToDelete) {
+          setActiveChatCharacterId(null);
+          setActiveChatId(null);
+          setCurrentCharacter(null);
+      }
+    }
+  }, [activeChatId]); // ✨ 核心修改：移除了 branchSelectorState.isOpen
 
   // ==================== 全新！SillyTavern 時間格式化輔助函式 ====================
 const formatStDate = (date, type = 'send_date') => {
@@ -5482,7 +5375,6 @@ const handleImportAllData = useCallback(async (dataSource) => {
                 setSwipedChatId={setSwipedChatId}
                 onDeleteChat={handleDeleteChat}
                 onEditMetadata={handleOpenMetadataEditor}
-                onOpenBranchSelector={handleOpenBranchSelector}
               />
             ) : (
               <ChatPage
@@ -5760,25 +5652,6 @@ const handleImportAllData = useCallback(async (dataSource) => {
           onClose={() => setIsDisclaimerModalOpen(false)}
         />
       )}
-      {/* ✨ Modal 的新版渲染邏輯 ✨ */}
-      <BranchSelectorModal
-        show={branchSelectorState.isOpen}
-        onClose={() => setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null })}
-        parentChat={
-          // 找出「父聊天室」的資料 (這部分邏輯不變)
-          useMemo(() => {
-            if (!branchSelectorState.isOpen) return null;
-            const { charId, parentChatId } = branchSelectorState;
-            const char = characters.find(c => c.id === charId);
-            const metadata = chatMetadatas[charId]?.[parentChatId];
-            return { char, metadata, chatId: parentChatId };
-          }, [branchSelectorState, characters, chatMetadatas])
-        }
-        branches={activeBranchList} // ✨ 核心修改：直接使用我們在上面計算好的、可靠的列表
-        onSelectBranch={handleSelectBranchFromModal}
-        onSaveBranchName={handleSaveBranchName}
-        onDeleteBranch={handleDeleteChat}
-      />
     </>
   );
 };
