@@ -1089,12 +1089,16 @@ const AuthorsNoteModal = ({ initialNote, onSave, onClose }) => {
   );
 };
 
-// ==================== 全新！聊天室備註編輯 Modal 元件 ====================
+// ==================== 全新！聊天室資訊編輯 Modal 元件 ====================
 const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
+  // ✨ 1. 新增一個 state 來管理「名稱」
+  const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
 
+  // ✨ 2. 當視窗打開時，同時載入名稱和備註
   useEffect(() => {
     if (metadata) {
+      setName(metadata.name || ''); // 如果沒有自訂名稱，就顯示空字串
       setNotes(metadata.notes || '');
     }
   }, [metadata]);
@@ -1103,33 +1107,47 @@ const ChatMetadataEditorModal = ({ metadata, onSave, onClose }) => {
     return null;
   }
   
+  // ✨ 3. 儲存時，把名稱和備註打包成一個物件傳出去
   const handleSave = () => {
-    onSave(notes);
+    onSave({ name: name.trim(), notes });
   };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>編輯聊天室備註</h3>
+          {/* 標題改得更通用 */}
+          <h3>編輯聊天室資訊</h3>
           <button onClick={onClose} className="close-btn"><X size={20} /></button>
         </div>
         <div className="modal-body">
-          <p className="setting-label" style={{ marginBottom: '12px' }}>
-            是不是聊天室太多記不過來了啊～😉
-          </p>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="edit-textarea"
-            style={{ minHeight: '150px' }}
-            placeholder="紀錄的文字會放在角色名下面，放心的寫吧，角色不會看到的"
-            autoFocus
-          />
+          {/* ✨ 4. 新增名稱輸入框 ✨ */}
+          <div className="form-group">
+            <label>聊天室自訂名稱 (可選)</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="留空則會顯示角色原名"
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label>聊天室備註</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="edit-textarea"
+              style={{ minHeight: '150px' }}
+              placeholder="紀錄的文字會放在名稱下面，角色不會看到的"
+            />
+          </div>
         </div>
         <div className="modal-footer">
           <button onClick={onClose} className="edit-btn cancel">取消</button>
-          <button onClick={handleSave} className="edit-btn save">儲存備註</button>
+          {/* 按鈕文字也改得更通用 */}
+          <button onClick={handleSave} className="edit-btn save">儲存變更</button>
         </div>
       </div>
     </div>
@@ -1561,7 +1579,16 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
               <div className="message-avatar"> <img src={currentUserProfile.avatar?.type === 'image' ? currentUserProfile.avatar.data : 'data:image/svg+xml;base64,...'} alt="User Avatar" className="avatar-image" /> </div>
               <div className="chat-info-details">
                 <span className="current-prompt">{currentUserProfile.name || '(未命名身份)'}{currentUserProfile.notes ? ` (${currentUserProfile.notes})` : ''}</span>
-                <span className="current-character">正在與 {currentCharacter.name} 對話</span>
+                {/* ✨ 核心修改：動態顯示聊天室標題 ✨ */}
+                <span className="current-character">
+                  正在與 {currentCharacter.name} 對話
+                  {/* 檢查當前聊天室是否為分支，如果是，就顯示它的自訂名稱 */}
+                  {chatMetadatas[currentCharacter.id]?.[activeChatId]?.branchSource && (
+                    <span style={{ display: 'block', opacity: 0.8, fontSize: '0.9em' }}>
+                      (分支: {chatMetadatas[currentCharacter.id]?.[activeChatId]?.name})
+                    </span>
+                  )}
+                </span>
                 {currentPrompt && (<span className="current-prompt" style={{ opacity: 0.7 }}>使用: {currentPrompt.name}</span>)}
                 
                 {/* ✨✨✨ 2. 在 JSX 中加入顯示主要知識書的 span ✨✨✨ */}
@@ -2279,7 +2306,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.61</p>
+                  <p>版本：0.5.62</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3078,7 +3105,7 @@ useEffect(() => {
     const newChatId = `chat_branch_${Date.now()}`;
     const newMetadata = {
       name: branchName, // ✨ 2. 直接使用傳入的名稱
-      notes: `從訊息 "${branchMessageText.substring(0, 20)}..." 分支出來`, // 備註可以照舊
+      notes: branchMessageText.substring(0, 40), // 備註
       pinned: false,
       userProfileId: originalMetadata.userProfileId || currentUserProfile.id,
       auxiliaryBookIds: originalMetadata.auxiliaryBookIds || [],
@@ -4886,24 +4913,25 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   }, [chatMetadatas]); // ✨ 非常重要：要把 chatMetadatas 加入依賴項！
 
   // ✨ 2. 新增儲存聊天備註的函式 ✨
-  const handleSaveChatNotes = useCallback((newNotes) => {
+  // ✨ 函式改名並升級，現在可以儲存所有 metadata
+  const handleSaveChatMetadata = useCallback((updatedMetadata) => {
     if (!editingMetadata) return;
     const { charId, chatId } = editingMetadata;
     
     setChatMetadatas(prev => {
       const newMetas = JSON.parse(JSON.stringify(prev));
-      // 確保物件路徑存在
       if (!newMetas[charId]) newMetas[charId] = {};
       if (!newMetas[charId][chatId]) newMetas[charId][chatId] = { pinned: false };
       
-      newMetas[charId][chatId].notes = newNotes;
+      // ✨ 核心修改：將傳入的新資料與舊資料合併
+      newMetas[charId][chatId] = { ...newMetas[charId][chatId], ...updatedMetadata };
+      
       return newMetas;
     });
 
     setEditingMetadata(null); // 關閉編輯視窗
-    alert('✅ 聊天備註已儲存！');
+    alert('✅ 聊天室資訊已更新！');
   }, [editingMetadata]);
-
 
   // ✨ 3. 全新！處理聊天中切換使用者身份的核心函式 (放到正確的位置) ✨
   const handleSwitchUserProfile = useCallback((newProfileId) => {
@@ -4937,47 +4965,76 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
     });
   }, []);
 
-  const handleDeleteChat = useCallback((charId, chatId) => {
-    // 步驟 1：彈出確認視窗，保持不變
-    if (window.confirm('確定要永久刪除這段對話紀錄嗎？\n\n無法復原喔！\n\n確定喔？')) {
-      
-      // 步驟 2：從聊天歷史中刪除，保持不變
-      setChatHistories(prev => {
-        const newHistories = JSON.parse(JSON.stringify(prev));
-        if (newHistories[charId]) {
-          delete newHistories[charId][chatId];
-        }
-        return newHistories;
-      });
+  const handleDeleteChat = useCallback((charId, chatIdToDelete) => {
+ // 確認視窗的邏輯不變
+ if (window.confirm('確定要永久刪除這段對話紀錄嗎？\n\n此操作無法復原！')) {
+   
+   // 直接更新三個主要的 state，只移除指定的 chatIdToDelete
+   setChatHistories(prev => {
+     const newHistories = JSON.parse(JSON.stringify(prev));
+     if (newHistories[charId]) {
+       delete newHistories[charId][chatIdToDelete];
+     }
+     return newHistories;
+   });
 
-      // 步驟 3：從 metadata (釘選狀態) 中刪除，保持不變
-      setChatMetadatas(prev => {
-        const newMetadatas = JSON.parse(JSON.stringify(prev));
-        if (newMetadatas[charId]) {
-          delete newMetadatas[charId][chatId];
-        }
-        return newMetadatas;
-      });
-      
-      // ✨✨✨ 步驟 4 (全新！)：從長期記憶中刪除 ✨✨✨
-      setLongTermMemories(prev => {
-        const newMemories = JSON.parse(JSON.stringify(prev));
-        // 同樣檢查該角色的記憶物件是否存在
-        if (newMemories[charId]) {
-          // 只刪除與這個被刪除的 chatId 對應的那一份記憶
-          delete newMemories[charId][chatId];
-        }
-        return newMemories;
-      });
-      
-      // 步驟 5：跳轉邏輯，保持不變
-      if (activeChatId === chatId) {
-          setActiveChatCharacterId(null);
-          setActiveChatId(null);
-          setCurrentCharacter(null);
-      }
-    }
-  }, [activeChatId]);
+   setChatMetadatas(prev => {
+     const newMetadatas = JSON.parse(JSON.stringify(prev));
+     if (newMetadatas[charId]) {
+       delete newMetadatas[charId][chatIdToDelete];
+     }
+     return newMetadatas;
+   });
+   
+   setLongTermMemories(prev => {
+     const newMemories = JSON.parse(JSON.stringify(prev));
+     if (newMemories[charId]) {
+       delete newMemories[charId][chatIdToDelete];
+     }
+     return newMemories;
+   });
+   
+   // 如果正在看的聊天室被刪了，就跳回大廳
+   if (activeChatId === chatIdToDelete) {
+       setActiveChatCharacterId(null);
+       setActiveChatId(null);
+       setCurrentCharacter(null);
+   }
+
+   // ✨ 新增：如果是在分支選擇器中刪除，關閉該視窗
+   if (branchSelectorState.isOpen) {
+     setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null });
+   }
+ }
+}, [activeChatId, branchSelectorState.isOpen]); // 更新依賴項
+
+// ✨✨✨ 在這裡加入新的、更可靠的分支計算邏輯 ✨✨✨
+  const activeBranchList = useMemo(() => {
+    if (!branchSelectorState.isOpen) return [];
+    
+    const { charId, parentChatId } = branchSelectorState;
+    
+    if (!chatMetadatas[charId]) return [];
+
+    // 1. 找出所有屬於這個角色的聊天室 ID
+    const allChatIdsForChar = Object.keys(chatMetadatas[charId]);
+    
+    // 2. 從中篩選出 parentChatId 的直屬孩子
+    const branches = allChatIdsForChar
+      .filter(id => chatMetadatas[charId][id]?.branchSource?.parentChatId === parentChatId)
+      .map(id => {
+        const characterForBranch = characters.find(c => c.id === charId);
+        return {
+          char: characterForBranch,
+          chatId: id,
+          metadata: chatMetadatas[charId][id]
+        };
+      })
+      // 可選：根據創建時間排序，讓最新的分支在最上面
+      .sort((a, b) => parseInt(b.chatId.split('_').pop()) - parseInt(a.chatId.split('_').pop()));
+
+    return branches;
+  }, [branchSelectorState, characters, chatMetadatas]); // 依賴項保持不變，但邏輯更清晰
 
   // ==================== 全新！SillyTavern 時間格式化輔助函式 ====================
 const formatStDate = (date, type = 'send_date') => {
@@ -5606,7 +5663,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
       {editingMetadata && (
         <ChatMetadataEditorModal
           metadata={editingMetadata}
-          onSave={handleSaveChatNotes}
+          onSave={handleSaveChatMetadata}
           onClose={() => setEditingMetadata(null)}
         />
       )}
@@ -5703,42 +5760,24 @@ const handleImportAllData = useCallback(async (dataSource) => {
           onClose={() => setIsDisclaimerModalOpen(false)}
         />
       )}
+      {/* ✨ Modal 的新版渲染邏輯 ✨ */}
       <BranchSelectorModal
         show={branchSelectorState.isOpen}
         onClose={() => setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null })}
         parentChat={
-          // 從所有聊天中找出「父聊天室」的資料
+          // 找出「父聊天室」的資料 (這部分邏輯不變)
           useMemo(() => {
             if (!branchSelectorState.isOpen) return null;
             const { charId, parentChatId } = branchSelectorState;
             const char = characters.find(c => c.id === charId);
             const metadata = chatMetadatas[charId]?.[parentChatId];
-            return { char, metadata };
+            return { char, metadata, chatId: parentChatId };
           }, [branchSelectorState, characters, chatMetadatas])
         }
-        branches={
-          // 從所有聊天中篩選出屬於這個父聊天室的「所有分支」
-          useMemo(() => {
-            if (!branchSelectorState.isOpen) return [];
-            const { charId: parentCharId, parentChatId } = branchSelectorState;
-            const allCharacterChats = chatHistories[parentCharId] || {};
-            const branches = [];
-            for (const chatId in allCharacterChats) {
-              const meta = chatMetadatas[parentCharId]?.[chatId];
-              if (meta?.branchSource?.parentChatId === parentChatId) {
-                branches.push({
-                  char: characters.find(c => c.id === parentCharId),
-                  chatId: chatId,
-                  metadata: meta
-                });
-              }
-            }
-            return branches;
-          }, [branchSelectorState, characters, chatHistories, chatMetadatas])
-        }
+        branches={activeBranchList} // ✨ 核心修改：直接使用我們在上面計算好的、可靠的列表
         onSelectBranch={handleSelectBranchFromModal}
         onSaveBranchName={handleSaveBranchName}
-        onDeleteBranch={handleDeleteChat} // ✨ 直接重複使用您現有的 handleDeleteChat 函式
+        onDeleteBranch={handleDeleteChat}
       />
     </>
   );
