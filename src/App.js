@@ -6,7 +6,7 @@ import {
   Download, Upload, Users, MessageCircle, Moon, Sun, Cloud,
   Bot, Database, Info, Camera, UserCircle, Plus, BookOpen, BookMarked, TrainTrack, MessageSquareWarning,
   FileInput, FileOutput,
-  MoveRightIcon, Pin, Star, Palette, ChevronDown, ChevronUp, Coffee, Dessert, Cherry, CloudMoon, Edit2, MessageSquarePlus, Waves, TreePine
+  MoveRightIcon, Pin, Star, Palette, ChevronDown, ChevronUp, Coffee, Dessert, Cherry, CloudMoon, Edit2, MessageSquarePlus, Waves, TreePine, Split
 } from 'lucide-react';
 import CaterpillarIcon from './CaterpillarIcon';
 import rehypeRaw from 'rehype-raw';
@@ -636,7 +636,11 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                         )}
                     </div>
                     <div className="character-info">
-                      <h4>{metadata.name || char.name}</h4>
+                      <h4>
+                        {/* ✨ 在聊天名稱旁邊加上分支圖示 ✨ */}
+                        {metadata.branchSource && <Split size={14} style={{ marginRight: '6px', opacity: 0.6 }} />}
+                        {metadata.name || char.name}
+                      </h4>
                       {/* ✨ 使用處理好的 lastMessageText，並優先顯示備註 ✨ */}
                       <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
                     </div>
@@ -728,7 +732,7 @@ const AuxiliaryLorebookSelectorModal = ({ show, worldBooks, selectedIds, onSave,
 };
 
 // ================== ✨ 最終版！完美支援 Markdown 和引號變色 ✨ ==================
-const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage }) => {
+const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEditingMessage, activeChatId, handleDeleteMessage, showActionsMessageId, setShowActionsMessageId, handleRegenerate, isLastMessage, onChangeVersion, isScreenshotMode, isSelected, onSelectMessage, onBranch }) => {
   const showActions = showActionsMessageId === msg.id;
 
   const handleBubbleClick = () => {
@@ -831,6 +835,7 @@ const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEdi
           {/* 下面的編輯、刪除、版本切換等按鈕，在截圖模式下也都不顯示 */}
           {!isScreenshotMode && (
             <>
+              {/* 1. 刪除按鈕 */}
               <button
                 onClick={onDelete}
                 className={`delete-message-btn ${showActions ? 'visible' : ''}`}
@@ -838,6 +843,23 @@ const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEdi
               >
                 <Trash2 size={14} />
               </button>
+
+              {/* 2. 分支按鈕 */}
+              {msg.sender !== 'system' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const branchName = window.prompt("請為這個新的分支命名：", "");
+                    if (branchName && branchName.trim() !== "") {
+                      onBranch(msg.id, branchName.trim());
+                    }
+                  }}
+                  className={`branch-message-btn ${showActions ? 'visible' : ''}`}
+                  title="從此訊息建立分支"
+                >
+                  <Split size={14} />
+                </button>
+              )}
 
               {msg.sender !== 'system' && (
                 <button onClick={onStartEditing} className={`edit-message-btn ${showActions ? 'visible' : ''}`} title="編輯訊息">
@@ -1414,7 +1436,7 @@ const UserProfileSwitcherModal = ({ profiles, currentProfileId, onSelect, onClos
   );
 };
 
-const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexRules, oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile }) => {
+const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexRules, oocCommands, onOpenOocSelector, onSelectOocCommand, messages, inputMessage, setInputMessage, isLoading, sendMessage, continueGeneration, currentUserProfile, currentCharacter, currentPrompt, isApiConnected, apiProviders, apiProvider, messagesEndRef, setEditingMessage, handleUpdateMessage, handleDeleteMessage, activeChatId, showActionsMessageId, setShowActionsMessageId, handleRegenerate, onChangeVersion, isInputMenuOpen, setIsInputMenuOpen, loadedConfigName, apiModel, setIsMemoryModalOpen, setIsAuthorsNoteModalOpen, exportChat, handleImport, isScreenshotMode, selectedMessageIds, handleToggleScreenshotMode, handleSelectMessage, handleGenerateScreenshot, onSwitchProfile, onBranch }) => {
   
   const textareaRef = useRef(null);
   const [isInfoPanelOpen, setIsInfoPanelOpen] = useState(false);
@@ -1527,7 +1549,7 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
     const originalText = message.contents[message.activeContentIndex]; 
     // ✨ 傳入 message.sender
     const processedTextForMessage = applyAllRegex(originalText, currentCharacter, message.sender); 
-    return ( <ChatMessage key={message.id} msg={message} processedText={processedTextForMessage} currentUserProfile={currentUserProfile} character={currentCharacter} activeChatId={activeChatId} setEditingMessage={setEditingMessage} handleDeleteMessage={handleDeleteMessage} showActionsMessageId={showActionsMessageId} setShowActionsMessageId={setShowActionsMessageId} handleRegenerate={handleRegenerate} onChangeVersion={onChangeVersion} isScreenshotMode={isScreenshotMode} isSelected={selectedMessageIds.includes(message.id)} onSelectMessage={handleSelectMessage} isLastMessage={index === messages.length - 1} /> ); })}
+    return ( <ChatMessage key={message.id} msg={message} processedText={processedTextForMessage} currentUserProfile={currentUserProfile} character={currentCharacter} activeChatId={activeChatId} setEditingMessage={setEditingMessage} handleDeleteMessage={handleDeleteMessage} showActionsMessageId={showActionsMessageId} setShowActionsMessageId={setShowActionsMessageId} handleRegenerate={handleRegenerate} onChangeVersion={onChangeVersion} isScreenshotMode={isScreenshotMode} isSelected={selectedMessageIds.includes(message.id)} onSelectMessage={handleSelectMessage} isLastMessage={index === messages.length - 1} onBranch={onBranch} /> ); })}
         {isLoading && ( <div className="loading-message"> <div className="loading-dots"><span></span><span></span><span></span></div> <p>{currentCharacter.name} 正在輸入中...</p> </div> )}
         <div ref={messagesEndRef} />
       </div>
@@ -2216,7 +2238,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.55</p>
+                  <p>版本：0.5.6</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2988,6 +3010,65 @@ useEffect(() => {
   setIsApiConnected(false);
   setLoadedConfigName('');
 }, [apiProvider]); // ✨ 依賴項現在是 apiProvider
+
+// =================================================================================
+  // ✨ 修正點 1：把 handleCreateBranch 整個函式區塊移動到這裡！ ✨
+  // =================================================================================
+  const handleCreateBranch = useCallback((branchMessageId, branchName) => {
+    if (!activeChatCharacterId || !activeChatId) return;
+
+    // 1. 取得原始聊天室的資料
+    const currentHistory = chatHistories[activeChatCharacterId]?.[activeChatId] || [];
+    const originalMetadata = chatMetadatas[activeChatCharacterId]?.[activeChatId] || {};
+    
+    // 2. 找到分支點在歷史紀錄中的位置
+    const branchMessageIndex = currentHistory.findIndex(msg => msg.id === branchMessageId);
+    if (branchMessageIndex === -1) {
+      alert('錯誤：找不到分支點訊息。');
+      return;
+    }
+
+    // 3. 複製從頭到分支點為止的所有歷史訊息
+    const historyToCopy = currentHistory.slice(0, branchMessageIndex + 1);
+    const branchMessageText = historyToCopy[historyToCopy.length - 1].contents[0];
+
+    // 4. 建立新的聊天室 ID 和 Metadata
+    const newChatId = `chat_branch_${Date.now()}`;
+    const newMetadata = {
+      name: branchName, // ✨ 2. 直接使用傳入的名稱
+      notes: `從訊息 "${branchMessageText.substring(0, 20)}..." 分支出來`, // 備註可以照舊
+      pinned: false,
+      userProfileId: originalMetadata.userProfileId || currentUserProfile.id,
+      auxiliaryBookIds: originalMetadata.auxiliaryBookIds || [],
+      branchSource: {
+        parentChatId: activeChatId,
+        branchMessageId: branchMessageId,
+      }
+    };
+
+    // 5. 更新 State
+    setChatHistories(prev => {
+      const newHistories = { ...prev };
+      if (!newHistories[activeChatCharacterId]) newHistories[activeChatCharacterId] = {};
+      newHistories[activeChatCharacterId][newChatId] = historyToCopy;
+      return newHistories;
+    });
+
+    setChatMetadatas(prev => {
+      const newMetas = { ...prev };
+      if (!newMetas[activeChatCharacterId]) newMetas[activeChatCharacterId] = {};
+      newMetas[activeChatCharacterId][newChatId] = newMetadata;
+      return newMetas;
+    });
+
+    // 6. 自動切換
+    setActiveChatId(newChatId);
+    
+    // 7. 提示使用者
+    setShowActionsMessageId(null);
+    alert('✅ 已建立新分支，並自動切換！');
+
+  }, [activeChatCharacterId, activeChatId, chatHistories, chatMetadatas, currentCharacter, currentUserProfile, setShowActionsMessageId, setActiveChatId]); // ✨ 修正點 2：補上完整的依賴項，避免 ESLint 警告
 
 // =====================================================================
 // ✨✨✨ 全新！「更新」函式 ✨✨✨
@@ -5320,6 +5401,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
                 handleGenerateScreenshot={handleGenerateScreenshot}
                 handleImport={handleImportFromSillyTavern}
                 onSwitchProfile={() => setIsProfileSwitcherOpen(true)}
+                onBranch={handleCreateBranch}
               />
             )
           )}

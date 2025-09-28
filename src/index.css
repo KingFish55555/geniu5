@@ -2335,31 +2335,10 @@ input:checked + .slider:before {
 /* 編輯按鈕 */
 .edit-message-btn {
   position: absolute;
-  bottom: 40px; 
+  bottom: 40px; /* 最下面的按鈕 */
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   color: var(--text-muted);
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0; /* 平時透明 */
-  visibility: hidden; /* 平時隱藏，無法點擊 */
-  transform: scale(0.8);
-  transition: all 0.3s ease;
-  font-size: 14px;
-}
-
-/* ✨ 新增：刪除按鈕 */
-.delete-message-btn {
-  position: absolute;
-  bottom: 76px; /* 比編輯按鈕高一點 */
-  background: var(--surface-color);
-  border: 1px solid var(--primary-color); /* 紅色邊框 */
-  color: var(--primary-color); /* 紅色文字 */
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -2374,9 +2353,56 @@ input:checked + .slider:before {
   font-size: 14px;
 }
 
-/* 顯示狀態 */
+/* ✨ 新增：分支按鈕 */
+.branch-message-btn {
+  position: absolute;
+  bottom: 76px; /* 中間的按鈕 */
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+.branch-message-btn:hover {
+  background: var(--text-muted);
+  color: var(--surface-color);
+}
+
+/* 刪除按鈕 */
+.delete-message-btn {
+  position: absolute;
+  bottom: 112px; /* 最上面的按鈕 */
+  background: var(--surface-color);
+  border: 1px solid var(--primary-color);
+  color: var(--primary-color);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.8);
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+/* 顯示狀態 (現在包含了分支按鈕) */
 .edit-message-btn.visible,
-.delete-message-btn.visible {
+.delete-message-btn.visible,
+.branch-message-btn.visible {
   opacity: 1;
   visibility: visible;
   transform: scale(1);
@@ -2388,15 +2414,17 @@ input:checked + .slider:before {
   color: var(--quote-text-color);
 }
 
-/* 用戶訊息的按鈕位置 */
+/* 用戶訊息的按鈕位置 (現在包含了分支按鈕) */
 .user-message .edit-message-btn,
-.user-message .delete-message-btn {
+.user-message .delete-message-btn,
+.user-message .branch-message-btn {
   left: -40px;
 }
 
-/* AI 訊息的按鈕位置 */
+/* AI 訊息的按鈕位置 (現在包含了分支按鈕) */
 .ai-message .edit-message-btn,
-.ai-message .delete-message-btn {
+.ai-message .delete-message-btn,
+.ai-message .branch-message-btn {
   right: -40px;
 }
 
