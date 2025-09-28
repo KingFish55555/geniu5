@@ -20,6 +20,7 @@ import RegexEditorModal from './RegexEditorModal.js';
 import WorldBookPage, { mapWorldBookEntryFields } from './WorldBookPage.js';
 import GoogleSyncManager from './GoogleSyncManager';
 import DisclaimerModal from './DisclaimerModal';
+import BranchSelectorModal from './BranchSelectorModal.js';
 
 // ==================== 長期記憶數量觸發數 ====================
 
@@ -517,8 +518,26 @@ const CharactersPage = ({ characters, onAdd, onEdit, onImport, onPreview, onTogg
   );
 };
 
-const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat, onEditMetadata }) => {
+const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onTogglePin, swipedChatId, setSwipedChatId, onDeleteChat, onEditMetadata, onOpenBranchSelector }) => {
 
+  // ✨ 步驟 1 (全新)：我們先從最原始的資料，計算出每個主線有多少個分支。
+  // 這樣就不會受到後續列表過濾的影響。
+  const branchCounts = useMemo(() => {
+    const counts = {};
+    if (!chatMetadatas) return counts;
+
+    Object.values(chatMetadatas).forEach(charMetas => {
+      Object.values(charMetas).forEach(meta => {
+        if (meta?.branchSource?.parentChatId) {
+          const parentId = meta.branchSource.parentChatId;
+          counts[parentId] = (counts[parentId] || 0) + 1;
+        }
+      });
+    });
+    return counts;
+  }, [chatMetadatas]); // 這個計算只依賴最原始的 chatMetadatas
+
+  // ✨ 步驟 2：現在才來建立要顯示在畫面上的列表，並過濾掉分支。
   const allChats = [];
   for (const char of characters) {
     const charId = char.id;
@@ -526,35 +545,30 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
     const metas = chatMetadatas[charId] || {};
     for (const chatId in sessions) {
       const history = sessions[chatId];
+      const metadata = metas[chatId] || { name: '', notes: '', pinned: false };
       
-      // ✨✨✨ 核心修正 1：只要聊天存在 (history 不是 undefined)，就顯示！✨✨✨
-      if (history) {
+      // 在這裡過濾，確保只有主線才被加入到顯示列表中
+      if (history && !metadata.branchSource) {
         let lastMessage, lastMessageText, sortKey;
 
         if (history.length > 0) {
-          // 如果聊天有內容，正常處理
           lastMessage = history[history.length - 1];
           lastMessageText = lastMessage.contents 
             ? lastMessage.contents[lastMessage.activeContentIndex] 
-            : lastMessage.text; // 向下相容舊格式
+            : lastMessage.text;
           sortKey = lastMessage.id || 0;
         } else {
-          // 如果聊天是空的，提供預設值
-          lastMessage = { sender: 'system' }; // 創建一個假的 lastMessage 以免程式出錯
+          lastMessage = { sender: 'system' };
           lastMessageText = "點此開始對話...";
-          // 使用聊天室 ID 中的時間戳來排序，確保新建立的空聊天室在最上面
           sortKey = parseInt(chatId.split('_')[1] || Date.now());
         }
-
-        const metadata = metas[chatId] || { name: '', notes: '', pinned: false };
         
         allChats.push({
           char,
           chatId,
-          lastMessage, // 雖然可能用不到，但保持結構完整
+          lastMessage,
           isPinned: metadata.pinned,
           sortKey,
-          // ✨ 直接把處理好的文字和 metadata 傳下去
           lastMessageText,
           metadata
         });
@@ -562,6 +576,7 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
     }
   }
 
+  // 排序邏輯不變
   allChats.sort((a, b) => {
     if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
     return b.sortKey - a.sortKey;
@@ -624,7 +639,11 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                     }
                   }}
                 >
-                  <div className="character-select-area">
+                  {/* 
+                    ✨ 核心修改 1：我們讓這個可點擊區域自動填滿所有剩餘空間。
+                    這就是那個「會自動長大的空白區域」。
+                  */}
+                  <div className="character-select-area" style={{ marginRight: 'auto' }}>
                     <div className="avatar-wrapper">
                         <div className="character-avatar-large">
                         {char.avatar?.type === 'image' ? (<img src={char.avatar.data} alt={char.name} className="avatar-image" />) : (<UserCircle size={32} />)}
@@ -637,29 +656,51 @@ const ChatLobby = ({ characters, chatHistories, chatMetadatas, onSelectChat, onT
                     </div>
                     <div className="character-info">
                       <h4>
-                        {/* ✨ 在聊天名稱旁邊加上分支圖示 ✨ */}
                         {metadata.branchSource && <Split size={14} style={{ marginRight: '6px', opacity: 0.6 }} />}
                         {metadata.name || char.name}
                       </h4>
-                      {/* ✨ 使用處理好的 lastMessageText，並優先顯示備註 ✨ */}
                       <p>{metadata.notes || (lastMessage.sender === 'user' ? '你: ' : '') + lastMessageText}</p>
                     </div>
                   </div>
 
-                  <button 
-                    className="edit-character-btn" 
-                    style={{ marginRight: '8px' }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditMetadata(char.id, chatId);
-                    }}
-                  >
-                    <Settings size={16} />
-                  </button>
+                  {/* 
+                    ✨ 核心修改 2：我們把所有右側的按鈕都放進一個新的 div 容器裡。
+                    這個容器會被上面那個空白區域「推」到最右邊。
+                  */}
+                  <div className="lobby-item-actions" style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                    
+                    {/* 分支按鈕 */}
+                    {branchCounts[chatId] > 0 && (
+                      <button
+                        className="edit-character-btn"
+                        style={{ marginRight: '0px' }} // 按鈕之間依然需要間距
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenBranchSelector(char.id, chatId);
+                        }}
+                        title="查看分支"
+                      >
+                        <Split size={16} />
+                      </button>
+                    )}
 
-                  <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-                  </button>
+                    {/* 編輯備註 (齒輪) 按鈕 */}
+                    <button 
+                      className="edit-character-btn" 
+                      style={{ marginRight: '8px' }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditMetadata(char.id, chatId);
+                      }}
+                    >
+                      <Settings size={16} />
+                    </button>
+
+                    {/* 更多 (...) 按鈕 */}
+                    <button className="more-actions-btn" onClick={(e) => handleSwipeToggle(chatId, e)}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2238,7 +2279,7 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.6</p>
+                  <p>版本：0.5.61</p>
                   <p>為了想要在手機上玩AI的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2487,6 +2528,7 @@ const ChatApp = () => {
   const [isPromptSwitcherOpen, setIsPromptSwitcherOpen] = useState(false);
   const [isDisclaimerModalOpen, setIsDisclaimerModalOpen] = useState(false);
   const [isDataLoaded, setIsDataLoaded] = useState(false); // ✨ 標記資料是否已從 DB 載入
+  const [branchSelectorState, setBranchSelectorState] = useState({ isOpen: false, charId: null, parentChatId: null });
 
   const [apiProvider, setApiProvider] = useState('openai');
   const [apiKey, setApiKey] = useState('');
@@ -3069,6 +3111,36 @@ useEffect(() => {
     alert('✅ 已建立新分支，並自動切換！');
 
   }, [activeChatCharacterId, activeChatId, chatHistories, chatMetadatas, currentCharacter, currentUserProfile, setShowActionsMessageId, setActiveChatId]); // ✨ 修正點 2：補上完整的依賴項，避免 ESLint 警告
+
+  // 分支功能 //
+  // ✨ 1. 開啟分支選擇器
+  const handleOpenBranchSelector = useCallback((charId, parentChatId) => {
+    setBranchSelectorState({ isOpen: true, charId, parentChatId });
+  }, []);
+
+  // ✨ 2. 儲存分支的新名稱
+  const handleSaveBranchName = useCallback((branchChatId, newName) => {
+    // 這個函式會找到對應的分支，並只更新它的名字
+    setChatMetadatas(prev => {
+      const newMetas = JSON.parse(JSON.stringify(prev));
+      const charId = branchSelectorState.charId;
+      if (newMetas[charId] && newMetas[charId][branchChatId]) {
+        newMetas[charId][branchChatId].name = newName;
+      }
+      return newMetas;
+    });
+  }, [branchSelectorState.charId]); // 依賴項是 charId，因為我們需要它來定位
+
+  // ✨ 3. 從彈窗中選擇分支並跳轉
+  const handleSelectBranchFromModal = useCallback((charId, chatId) => {
+    const selectedChar = characters.find(c => c.id === charId);
+    if (selectedChar) {
+      setCurrentCharacter(selectedChar);
+      setActiveChatCharacterId(charId);
+      setActiveChatId(chatId);
+      setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null }); // 關閉視窗
+    }
+  }, [characters]); // 依賴項是 characters，因為需要從中尋找角色
 
 // =====================================================================
 // ✨✨✨ 全新！「更新」函式 ✨✨✨
@@ -5353,6 +5425,7 @@ const handleImportAllData = useCallback(async (dataSource) => {
                 setSwipedChatId={setSwipedChatId}
                 onDeleteChat={handleDeleteChat}
                 onEditMetadata={handleOpenMetadataEditor}
+                onOpenBranchSelector={handleOpenBranchSelector}
               />
             ) : (
               <ChatPage
@@ -5630,6 +5703,43 @@ const handleImportAllData = useCallback(async (dataSource) => {
           onClose={() => setIsDisclaimerModalOpen(false)}
         />
       )}
+      <BranchSelectorModal
+        show={branchSelectorState.isOpen}
+        onClose={() => setBranchSelectorState({ isOpen: false, charId: null, parentChatId: null })}
+        parentChat={
+          // 從所有聊天中找出「父聊天室」的資料
+          useMemo(() => {
+            if (!branchSelectorState.isOpen) return null;
+            const { charId, parentChatId } = branchSelectorState;
+            const char = characters.find(c => c.id === charId);
+            const metadata = chatMetadatas[charId]?.[parentChatId];
+            return { char, metadata };
+          }, [branchSelectorState, characters, chatMetadatas])
+        }
+        branches={
+          // 從所有聊天中篩選出屬於這個父聊天室的「所有分支」
+          useMemo(() => {
+            if (!branchSelectorState.isOpen) return [];
+            const { charId: parentCharId, parentChatId } = branchSelectorState;
+            const allCharacterChats = chatHistories[parentCharId] || {};
+            const branches = [];
+            for (const chatId in allCharacterChats) {
+              const meta = chatMetadatas[parentCharId]?.[chatId];
+              if (meta?.branchSource?.parentChatId === parentChatId) {
+                branches.push({
+                  char: characters.find(c => c.id === parentCharId),
+                  chatId: chatId,
+                  metadata: meta
+                });
+              }
+            }
+            return branches;
+          }, [branchSelectorState, characters, chatHistories, chatMetadatas])
+        }
+        onSelectBranch={handleSelectBranchFromModal}
+        onSaveBranchName={handleSaveBranchName}
+        onDeleteBranch={handleDeleteChat} // ✨ 直接重複使用您現有的 handleDeleteChat 函式
+      />
     </>
   );
 };
