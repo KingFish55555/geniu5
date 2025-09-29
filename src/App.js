@@ -2267,7 +2267,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.63</p>
+                  <p>版本：0.5.64</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -4277,7 +4277,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
 };
 
 // =================================================================================
-// ✨✨✨ 最終版：sendToAI (v10) - 整合完整世界書觸發引擎 ✨✨✨
+// ✨✨✨ 最終版：sendToAI (v11) - 採用標準 System Prompt 結構 ✨✨✨
 // =================================================================================
   const sendToAI = useCallback(async (userInput, currentMessages) => {
     try {
@@ -4291,24 +4291,20 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       
       console.log(`正在使用金鑰 #${currentApiKeyIndex + 1} 進行請求...`);
 
-      // --- 步驟 2: 準備所有「文字原料」 ---
+      // --- 步驟 2: 準備所有「文字原料」(與舊版類似) ---
       const activeMemory = longTermMemories[activeChatCharacterId]?.[activeChatId] || null;
       const activeAuthorsNote = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.authorsNote || null;
       const userDescription = `[User Persona]\nName: ${currentUserProfile.name || 'Not Set'}\nDescription: ${currentUserProfile.description || 'Not Set'}`;
       
-      const chatHistoryForScanning = currentMessages.slice(-20) // 只掃描最近 20 則訊息以提高效率
+      const chatHistoryForScanning = currentMessages.slice(-20)
         .map(msg => msg.contents[msg.activeContentIndex]).join('\n');      
       
-      // --- 🔥🔥🔥 全新！世界書處理引擎 🔥🔥🔥 ---
-
-      // 1. 找出所有需要啟用的世界書
+      // --- 世界書處理引擎 (邏輯不變) ---
       const mainBookId = currentCharacter.mainLorebookId;
       const auxiliaryBookIds = chatMetadatas[activeChatCharacterId]?.[activeChatId]?.auxiliaryBookIds || [];
       const allActiveBookIds = [...new Set([mainBookId, ...auxiliaryBookIds].filter(Boolean))];
       const activeBooks = worldBooks.filter(book => allActiveBookIds.includes(book.id));
       
-      // ✨✨✨ 核心修改點：建立掃描來源物件 ✨✨✨
-      // 我們需要把所有可能被世界書掃描的文字來源都準備好
       const contextScanSources = {
           chatHistory: chatHistoryForScanning,
           personaDescription: userDescription,
@@ -4317,44 +4313,19 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
           scenario: currentCharacter.scenario || '',
           creatorNotes: currentCharacter.creatorNotes || ''
       };
-
-      // 2. 呼叫我們升級後的 processWorldBookEntries 引擎，並傳入掃描來源
       const triggeredEntries = processWorldBookEntries(activeBooks, contextScanSources);
-      
       console.log(`【世界書引擎】: 觸發了 ${triggeredEntries.length} 條目`);
-
-      // 3. 將觸發的條目內容，根據插入位置分類
-      // ✨✨✨ 在這裡加入核心修改！ ✨✨✨
+      
       const worldInfoByPosition = {
-        'before_char': triggeredEntries
-            .filter(e => e.position === 0)
-            // 在 map 處理時，先用 removeHiddenText 清理內容
-            .map(e => removeHiddenText(e.content)) 
-            .join('\n'),
-        'after_char': triggeredEntries
-            .filter(e => e.position === 1)
-            .map(e => removeHiddenText(e.content))
-            .join('\n'),
-        'before_example': triggeredEntries
-            .filter(e => e.position === 5)
-            .map(e => removeHiddenText(e.content))
-            .join('\n'),
-        'after_example': triggeredEntries
-            .filter(e => e.position === 6)
-            .map(e => removeHiddenText(e.content))
-            .join('\n'),
-        'before_an': triggeredEntries
-            .filter(e => e.position === 2)
-            .map(e => removeHiddenText(e.content))
-            .join('\n'),
-        'after_an': triggeredEntries
-            .filter(e => e.position === 3)
-            .map(e => removeHiddenText(e.content))
-            .join('\n'),
+        'before_char': triggeredEntries.filter(e => e.position === 0).map(e => removeHiddenText(e.content)).join('\n'),
+        'after_char': triggeredEntries.filter(e => e.position === 1).map(e => removeHiddenText(e.content)).join('\n'),
+        'before_example': triggeredEntries.filter(e => e.position === 5).map(e => removeHiddenText(e.content)).join('\n'),
+        'after_example': triggeredEntries.filter(e => e.position === 6).map(e => removeHiddenText(e.content)).join('\n'),
+        'before_an': triggeredEntries.filter(e => e.position === 2).map(e => removeHiddenText(e.content)).join('\n'),
+        'after_an': triggeredEntries.filter(e => e.position === 3).map(e => removeHiddenText(e.content)).join('\n'),
       };
       
-      // --- 🔥🔥🔥 世界書處理結束 🔥🔥🔥 ---
-
+      // --- 步驟 3: 【核心修改】建立符合 SillyTavern 邏輯的單一 System Prompt ---
       const chatHistoryForPrompt = currentMessages
         .map(msg => `${msg.sender === 'user' ? (currentUserProfile.name || 'User') : currentCharacter.name}: ${msg.contents[msg.activeContentIndex]}`)
         .join('\n');
@@ -4367,73 +4338,56 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         '{{personality}}': currentCharacter.personality || '',
         '{{scenario}}': currentCharacter.scenario || '',
         '{{example_dialogue}}': [worldInfoByPosition.before_example, currentCharacter.mes_example, worldInfoByPosition.after_example].filter(Boolean).join('\n'),
-        '{{chat_history}}': chatHistoryForPrompt,
+        '{{chat_history}}': chatHistoryForPrompt, // ✨ 聊天記錄現在會被直接插入
         '{{memory}}': activeMemory || '',
         '{{authors_note}}': [worldInfoByPosition.before_an, activeAuthorsNote, worldInfoByPosition.after_an].filter(Boolean).join('\n'),
         '{{post_history_instructions}}': currentCharacter.post_history_instructions || '',
       };
 
-      let systemPreamble = '';
-      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled && !m.content.includes('{{chat_history}}')) || [];
+      let finalSystemPrompt = '';
+      // ✨ 我們現在遍歷所有啟用的模組，不再過濾 chat_history
+      const enabledModules = currentPrompt?.modules?.filter(m => m.enabled) || [];
 
       for (const module of enabledModules) {
         let moduleContent = module.content || '';
-        
-        // 1. 先替換 {{char}}, {{user}} 等正常佔位符
         for (const [placeholder, value] of Object.entries(placeholderMap)) {
           const regex = new RegExp(placeholder.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'gi');
           moduleContent = moduleContent.replace(regex, value || '');
         }
-        // ✨✨✨ 在這裡加入我們的核心修改！ ✨✨✨
-        // 2. 在所有內容組合前，移除所有隱藏註解
         moduleContent = removeHiddenText(moduleContent);
-
-        // 3. 最後才將乾淨的內容加入到最終提示詞中
         if (moduleContent.trim()) {
-          systemPreamble += moduleContent + '\n';
+          finalSystemPrompt += moduleContent + '\n';
         }
       }
-
-      // --- 步驟 3: 【核心】建立符合 Gemini 多輪對話格式的 `contents` 陣列 ---
-      const geminiContents = [];
-
-      // 第一則 user 訊息永遠是我們的「系統指令大禮包」
-      geminiContents.push({
-        role: 'user',
-        parts: [{ text: systemPreamble.trim() }]
+      finalSystemPrompt = finalSystemPrompt.trim();
+      
+      // --- 步驟 4: 準備獨立的、乾淨的聊天記錄 ---
+      const chatHistoryForApi = currentMessages.map(msg => {
+          // 將我們的 sender 轉換為 API 需要的 role
+          const role = msg.sender === 'user' ? 'user' : 'assistant'; // Gemini/Claude 使用 'assistant'
+          const content = msg.contents[msg.activeContentIndex];
+          return { role, content };
       });
 
-      // 接著，我們遍歷真正的聊天歷史
-      for (const msg of currentMessages) {
-        // 將我們的 sender 轉換為 API 需要的 role
-        const role = msg.sender === 'user' ? 'user' : 'model';
-        const content = msg.contents[msg.activeContentIndex];
-        
-        // 如果目前這則訊息和上一則的角色相同，就合併內容，避免 API 報錯
-        const lastTurn = geminiContents[geminiContents.length - 1];
-        if (lastTurn && lastTurn.role === role) {
-          lastTurn.parts[0].text += '\n' + content;
-        } else {
-          geminiContents.push({ role, parts: [{ text: content }] });
-        }
-      }
-
-      // --- 步驟 4: 組合最終的 requestBody ---
+      // --- 步驟 5: 根據不同 API 供應商，組合最終的請求 Body ---
       let requestBody;
       let endpoint = provider.endpoint;
       const headers = provider.headers(currentKey);
       const maxOutputTokens = currentPrompt?.maxTokens || 4000;
-      const temperature = currentPrompt?.temperature || 1.0; // 溫度設為 1.0
+      const temperature = currentPrompt?.temperature || 1.0;
 
       if (provider.isGemini) {
+        // Gemini 的新格式支援 system_instruction
         endpoint = `${provider.endpoint}${apiModel}:generateContent?key=${currentKey}`;
         requestBody = {
-          contents: geminiContents,
+          system_instruction: { parts: [{ text: finalSystemPrompt }] },
+          contents: chatHistoryForApi.map(turn => ({
+              role: turn.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: turn.content }]
+          })),
           generationConfig: {
-            temperature,
-            maxOutputTokens,
-            topP: currentPrompt?.top_p ?? 0.95,
-            topK: currentPrompt?.top_k ?? 15,
+            temperature, maxOutputTokens,
+            topP: currentPrompt?.top_p ?? 0.95, topK: currentPrompt?.top_k ?? 15,
           },
           safetySettings: [
             { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
@@ -4442,18 +4396,31 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
             { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
           ]
         };
+      } else if (apiProvider === 'claude') {
+        // Claude V1 API 的標準格式
+        requestBody = {
+          model: apiModel,
+          system: finalSystemPrompt, // ✨ 使用專用的 system 欄位
+          messages: chatHistoryForApi,
+          max_tokens: maxOutputTokens,
+          temperature,
+        };
       } else {
-        // 其他 API 的處理邏輯 (可以保持原樣或簡化)
-        const messages = geminiContents.map(turn => ({
-            role: turn.role === 'model' ? 'assistant' : 'user',
-            content: turn.parts[0].text
-        }));
-        requestBody = { model: apiModel, messages, max_tokens: maxOutputTokens, temperature };
+        // OpenAI 和其他相容 API 的標準格式
+        requestBody = {
+          model: apiModel,
+          messages: [
+            { role: 'system', content: finalSystemPrompt }, // ✨ 將劇本放入 system 角色
+            ...chatHistoryForApi // ✨ 展開乾淨的聊天記錄
+          ],
+          max_tokens: maxOutputTokens,
+          temperature,
+        };
       }
 
-      console.log("【最終版多輪對話請求 Body】:", JSON.stringify(requestBody, null, 2));
+      console.log("【最終版 System Prompt 請求 Body】:", JSON.stringify(requestBody, null, 2));
 
-      // --- 步驟 5: 發送請求與處理回應 (保持不變) ---
+      // --- 步驟 6: 發送請求與處理回應 (保持不變) ---
       const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(requestBody) });
       if (!response.ok) {
         const errorText = await response.text();
