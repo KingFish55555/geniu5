@@ -38,21 +38,32 @@
 }
 
 :root[data-theme="light"] {
-  --primary-color: #a6afc0;      /* 中性灰 */
-  --accent-color: #4b5563;       /* 深灰 */
-  --background-color: #f4f4f4;   /* 極淺灰白 */
-  --surface-color: #e6e8ec;      /* 淺灰 */
-  --border-color: #bdbdbd;       /* 邊框灰 */
-  --text-primary: rgb(17, 24, 39);       /* 深黑 */
-  --text-secondary: #6b7280;     /* 中灰 */
-  --text-muted: #9ca3af;         /* 淺灰 */
-  --shadow-light: rgba(12, 16, 26, 0.1);
-  --shadow-medium: rgba(12, 16, 26, 0.15);
-  --gradient-bg: #f9fafb;
-  --quote-text-color: #587c9a;
-  --middle-color: #e7e7e7;
-  --topline-color: #f9fafb;
-  --user-color: #cfd8e7;
+  /* --- 互動與主要顏色 --- */
+  --primary-color: #79a0bd;
+  --accent-color: #7294c0;
+  --topline-color: rgba(145, 176, 217, 0.8);
+
+  /* --- 背景顏色 --- */
+  --background-color: #c9dbe2;
+  --surface-color: #e9e9eb;
+  --gradient-bg: #b5cfde;
+
+  /* --- 使用者聊天泡泡 --- */
+  --user-color: rgba(165, 197, 217, 0.35);
+
+  /* --- 文字顏色 --- */
+  --text-primary: #48597a;
+  --text-secondary: #799ab4;
+  --text-muted: #79a0bd;
+
+  /* --- 點綴色 --- */
+  --quote-text-color: #548dc9;
+
+  /* --- 其他顏色 --- */
+  --border-color: #689dcf;
+  --middle-color: #76a5bc;
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.15);
 }
 
 /* ✨ 蟲餡包綠主題 ✨ */

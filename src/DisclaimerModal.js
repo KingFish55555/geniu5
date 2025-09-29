@@ -58,6 +58,8 @@ const DisclaimerModal = ({ show, onClose }) => {
         <p>開發者可能隨時修訂本條款。您在條款變更後繼續使用本服務，將被視為已接受修訂後的條款。建議您定期查看本聲明。</p>
         <p>&nbsp;</p>
         <p>Regex（區域正規表示式）功能目前仍有bug，請斟酌使用，如影響正常遊玩請自行移除Regex，感謝配合！祝遊玩愉快！</p>
+        <p>&nbsp;</p>
+        <p style={{ textAlign: 'right' }}>2025年9月29日 GENIU5</p>
         </div>
 
       </div>

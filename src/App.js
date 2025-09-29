@@ -804,7 +804,7 @@ const ChatMessage = ({ msg, processedText, currentUserProfile, character, setEdi
           所以我們把 onClick 事件從 bubble-wrapper 移到了最外層的 div。
           但在正常模式下，我們保留原本的功能。
         */}
-        <div className="bubble-wrapper" onClick={isScreenshotMode ? (e) => e.stopPropagation() : handleBubbleClick}>
+        <div className="bubble-wrapper" onClick={!isScreenshotMode ? handleBubbleClick : undefined}>
 
           {/* ▼▼▼ ✨✨✨ 全新的思考過程渲染邏輯 ✨✨✨ ▼▼▼ */}
           {msg.thought && !isScreenshotMode && (
@@ -2266,8 +2266,9 @@ const SettingsPage = ({
               <div className="card-content">
                 <div className="about-info">
                   <h4>GENIU5</h4>
-                  <p>版本：0.5.62</p>
-                  <p>為了想要在手機上玩AI的小東西</p>
+                  <p>aka 55小手機</p>
+                  <p>版本：0.5.63</p>
+                  <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
                   <a
