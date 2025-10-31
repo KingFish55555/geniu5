@@ -2267,7 +2267,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.64</p>
+                  <p>版本：0.5.66</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2589,7 +2589,7 @@ const ChatApp = () => {
         // --- OpenAI ---
         'openai/ChatGPT-4o',
         'openai/GPT-4.1',
-        'x-ai/grok-4-fast:free',
+        'meituan/longcat-flash-chat:free',
       ],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
@@ -5731,9 +5731,10 @@ const highlightQuotedText = (text) => {
     '「': '」',
     '『': '』',
     '"': '"',
-    '"': '"',
     '【': '】',
-    '“':'”'
+    '“':'”',
+    '＂':'＂',
+    "'": "'"
   };
   
   const processText = (str) => {
@@ -5751,7 +5752,7 @@ const highlightQuotedText = (text) => {
         
         // 找到對應的結束引號
         while (j < str.length && depth > 0) {
-          if (str[j] === char) {
+          if (str[j] === char && char !== closeQuote) {
             depth++;
           } else if (str[j] === closeQuote) {
             depth--;
