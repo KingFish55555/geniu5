@@ -5734,7 +5734,6 @@ const highlightQuotedText = (text) => {
     '【': '】',
     '“':'”',
     '＂':'＂',
-    "'": "'"
   };
   
   const processText = (str) => {
