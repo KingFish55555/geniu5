@@ -2267,7 +2267,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.66</p>
+                  <p>版本：0.5.67</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2589,7 +2589,7 @@ const ChatApp = () => {
         // --- OpenAI ---
         'openai/ChatGPT-4o',
         'openai/GPT-4.1',
-        'meituan/longcat-flash-chat:free',
+        'openrouter/polaris-alpha',
       ],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
