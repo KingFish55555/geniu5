@@ -2383,6 +2383,7 @@ input:checked + .slider:before {
   transform: scale(0.8);
   transition: all 0.3s ease;
   font-size: 14px;
+  z-index: 10; /* 新增：確保按鈕浮在最上層，不會被遮蔽 */
 }
 .branch-message-btn:hover {
   background: var(--text-muted);
@@ -2408,6 +2409,7 @@ input:checked + .slider:before {
   transform: scale(0.8);
   transition: all 0.3s ease;
   font-size: 14px;
+  z-index: 10; /* 新增：確保按鈕浮在最上層 */
 }
 
 /* 顯示狀態 (現在包含了分支按鈕) */
@@ -2425,18 +2427,22 @@ input:checked + .slider:before {
   color: var(--quote-text-color);
 }
 
-/* 用戶訊息的按鈕位置 (現在包含了分支按鈕) */
+/* 用戶訊息的按鈕位置 (修復部分) */
 .user-message .edit-message-btn,
 .user-message .delete-message-btn,
 .user-message .branch-message-btn {
-  left: -40px;
+  /* 原本是 -40px，縮小距離至 -32px，讓按鈕更貼近氣泡，避免被螢幕左邊緣切掉 */
+  left: -32px; 
+  z-index: 10;
 }
 
-/* AI 訊息的按鈕位置 (現在包含了分支按鈕) */
+/* AI 訊息的按鈕位置 (修復部分) */
 .ai-message .edit-message-btn,
 .ai-message .delete-message-btn,
 .ai-message .branch-message-btn {
-  right: -40px;
+  /* 原本是 -40px，縮小距離至 -32px，讓按鈕更貼近氣泡，避免被螢幕右邊緣切掉 */
+  right: -32px;
+  z-index: 10;
 }
 
 /* 編輯相關的樣式保持不變 */
@@ -2589,7 +2595,8 @@ select:focus {
   transform: scale(0.8);
   transition: all 0.3s ease;
   font-size: 14px;
-  right: -40px;
+  right: -32px;
+  z-index: 10;
 }
 
 .regenerate-btn.visible,
