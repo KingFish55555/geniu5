@@ -4452,7 +4452,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       chatMetadatas, currentApiKeyIndex, worldBooks
   ]);
   
-  //*記憶摘要
+  //*記憶摘要 (已修正 400 錯誤與優化 Prompt)
   const triggerMemoryUpdate = useCallback(async (isSilent = false) => {
       if (!activeChatCharacterId || !activeChatId) {
         if (!isSilent) alert('請先選擇一個對話。');
@@ -4465,11 +4465,25 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       }
 
       try {
+        // 1. 準備對話文本
         const conversationText = history.map(m => `${m.sender === 'user' ? (currentUserProfile?.name || 'User') : currentCharacter.name}: ${m.contents[m.activeContentIndex]}`).join('\n');
-        const summaryPrompt = `請將以下的對話創造一個簡潔的總結，應以第三人稱書寫。重點關注關鍵情節點、人物發展以及關鍵訊息交流。這份總結將作為角色的長期記憶，因此準確性和客觀性至關重要。請不要使用任何粗體格式（**文字**）來回應，保持純文字格式即可。\n\n對話內容：\n${conversationText}`;
+        
+        // 2. 使用優化過的英文 Prompt (這就是我們剛剛討論的內容)
+        const summaryPrompt = `Ignore previous instructions. You are an objective narrator. Summarize the most important facts and events in the story so far based on the provided text. Write in third person. Do not use any bold formatting (**text**). Limit the summary to 200 words or less. Your response should include nothing but the summary.\n\nStory Context:\n${conversationText}`;
 
-        const summary = await sendToAI(summaryPrompt, []);
+        // 3. ✨【關鍵修正】✨
+        // 我們不能傳空陣列 [] 給 sendToAI，因為那會導致 Google API 收到空的 contents 而報錯 400。
+        // 我們必須假裝這是一個使用者傳送的訊息：
+        const payloadMessage = {
+            sender: 'user',
+            contents: [summaryPrompt],
+            activeContentIndex: 0
+        };
 
+        // 4. 發送請求 (第一個參數是為了觸發世界書掃描，第二參數才是真正送給 API 的內容)
+        const summary = await sendToAI(summaryPrompt, [payloadMessage]);
+
+        // 5. 更新狀態
         setLongTermMemories(prev => {
           const newMemories = JSON.parse(JSON.stringify(prev));
           if (!newMemories[activeChatCharacterId]) {
