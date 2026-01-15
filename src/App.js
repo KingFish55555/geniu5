@@ -1715,6 +1715,8 @@ const SettingsPage = ({
     onToggleRegexRule,
     onExportRegex,      // ✨ 新增
     onImportRegex,      // ✨ 新增
+    availableModels, // ✨ 新參數
+    onFetchModels,   // ✨ 新參數
     // ✨ 新傳入的 props
     userProfiles,
     onNewUserProfile,
@@ -1883,15 +1885,36 @@ const SettingsPage = ({
                   </div>
                 </div>
                 <div className="setting-group">
-                  <label className="setting-label">AI 模型</label>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <label className="setting-label">AI 模型</label>
+                    {/* ✨ 新增這個刷新按鈕 ✨ */}
+                    <button 
+                      onClick={onFetchModels} 
+                      className="add-greeting-btn" 
+                      style={{marginBottom: '4px'}}
+                      title="從 API 獲取最新模型列表"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                      更新列表
+                    </button>
+                  </div>
+                  
                   <select
                     value={apiModel}
                     onChange={(e) => setApiModel(e.target.value)}
                     className="setting-select"
                   >
-                    {apiProviders[apiProvider]?.models.map(model => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
+                    {/* ✨ 這裡改用 availableModels 來渲染，而不是寫死的 apiProviders[...].models ✨ */}
+                    {availableModels && availableModels.length > 0 ? (
+                        availableModels.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                        ))
+                    ) : (
+                        // 如果還沒抓到，就顯示預設的
+                        apiProviders[apiProvider]?.models.map(model => (
+                            <option key={model} value={model}>{model}</option>
+                        ))
+                    )}
                   </select>
                 </div>
                 <div className="setting-group">
@@ -2267,7 +2290,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.71</p>
+                  <p>版本：0.5.8</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -3015,30 +3038,6 @@ useEffect(() => {
         handleToggleScreenshotMode();
       }
     }, [selectedMessageIds, theme, handleToggleScreenshotMode, chatHistories, activeChatCharacterId, activeChatId]);
-  
-    const handleProviderChange = useCallback((provider) => {
-    setApiProvider(provider);
-    setApiModel(apiProviders[provider].models[0]);
-    // ✨✨✨ 核心邏輯：從 "通訊錄" 中讀取新供應商的金鑰，並更新到 "顯示器" ✨✨✨
-  setApiKey(apiKeysByProvider[provider] || '');
-
-  // 切換後，重置連線狀態
-  setIsApiConnected(false);
-  setLoadedConfigName('');
-  setCurrentApiKeyIndex(0); // 重置金鑰索引
-}, [apiProviders, apiKeysByProvider]); // ✨ 加入 apiKeysByProvider 作為依賴項
-
-  const handleApiKeyChange = useCallback((value) => {
-    setApiKey(value);
-    setApiKeysByProvider(prev => ({
-    ...prev,
-    [apiProvider]: value // 使用 [apiProvider] 作為動態的 object key
-  }));
-  
-  // 3. 任何修改都應該重置連線狀態
-  setIsApiConnected(false);
-  setLoadedConfigName('');
-}, [apiProvider]); // ✨ 依賴項現在是 apiProvider
 
 // =================================================================================
   // ✨ 修正點 1：把 handleCreateBranch 整個函式區塊移動到這裡！ ✨
@@ -4180,6 +4179,129 @@ if (Array.isArray(data.entries)) {
   
     setApiTestLoading(false);
   }, [apiKey, apiProvider, apiModel, apiProviders]);
+
+// ✨ 1. 補上缺少的狀態
+  const [availableModels, setAvailableModels] = useState([]);
+
+  // ✨ 2. 更新版的 handleProviderChange (切換供應商時重置列表)
+  const handleProviderChange = useCallback((provider) => {
+    setApiProvider(provider);
+    
+    // 先讀取該服務商的「預設寫死模型」
+    const defaultModels = apiProviders[provider].models;
+    setAvailableModels(defaultModels); // 更新列表狀態
+    setApiModel(defaultModels[0]);     // 預設選中第一個
+
+    // 從 "通訊錄" 中讀取新供應商的金鑰
+    setApiKey(apiKeysByProvider[provider] || '');
+
+    // 重置連線狀態
+    setIsApiConnected(false);
+    setLoadedConfigName('');
+    setCurrentApiKeyIndex(0);
+  }, [apiProviders, apiKeysByProvider]);
+
+  // ✨ 3. 找回遺失的 handleApiKeyChange (這是原本報錯的原因！)
+  const handleApiKeyChange = useCallback((value) => {
+    setApiKey(value);
+    setApiKeysByProvider(prev => ({
+      ...prev,
+      [apiProvider]: value 
+    }));
+    
+    // 任何修改都應該重置連線狀態
+    setIsApiConnected(false);
+    setLoadedConfigName('');
+  }, [apiProvider]);
+
+  // ✨ 4. 補上缺少的 fetchModels (抓取模型功能)
+  const fetchModels = useCallback(async () => {
+    if (!apiKey.trim()) {
+      alert('請先輸入 API 金鑰！');
+      return;
+    }
+    
+    const provider = apiProviders[apiProvider];
+    const allKeys = apiKey.split('\n').map(k => k.trim()).filter(Boolean);
+    const currentKey = allKeys[0]; // 抓取時我們先用第一把金鑰測試
+    
+    if (!currentKey) return;
+
+    alert(`正在向 ${provider.name} 請求最新的模型列表...`);
+    
+    try {
+      let fetchedModels = [];
+      
+      // === 情況 A: Google Gemini ===
+      if (provider.isGemini) {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${currentKey}`);
+        const data = await response.json();
+        
+        if (data.models) {
+          fetchedModels = data.models
+            .filter(m => m.supportedGenerationMethods && m.supportedGenerationMethods.includes('generateContent'))
+            .map(m => m.name.replace('models/', '')); 
+        }
+      } 
+      // === 情況 B: Claude (Anthropic) ===
+      else if (apiProvider === 'claude') {
+        try {
+           const response = await fetch(provider.endpoint.replace('/messages', '/models'), {
+             method: 'GET',
+             headers: { 
+               'x-api-key': currentKey,
+               'anthropic-version': '2023-06-01'
+             }
+           });
+           if (response.ok) {
+             const data = await response.json();
+             fetchedModels = data.data.map(m => m.id);
+           } else {
+             throw new Error("Proxy 不支援列表抓取");
+           }
+        } catch (e) {
+           alert('Claude API 通常不支援從瀏覽器直接抓取列表 (CORS 限制)。已保留預設列表。');
+           return;
+        }
+      }
+      // === 情況 C: OpenAI / OpenRouter / 其他標準格式 ===
+      else {
+        const listEndpoint = provider.endpoint.replace('chat/completions', 'models');
+        const response = await fetch(listEndpoint, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${currentKey}`,
+            ...(apiProvider === 'openrouter' ? {
+                'HTTP-Referer': 'https://your-app-url.com',
+                'X-Title': 'GENIU5'
+            } : {})
+          }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data = await response.json();
+        if (data.data && Array.isArray(data.data)) {
+          fetchedModels = data.data.map(m => m.id);
+          fetchedModels.sort();
+        }
+      }
+
+      if (fetchedModels.length > 0) {
+        setAvailableModels(fetchedModels);
+        alert(`✅ 成功抓取！共找到 ${fetchedModels.length} 個模型。`);
+        if (!fetchedModels.includes(apiModel)) {
+            setApiModel(fetchedModels[0]);
+        }
+      } else {
+        alert('⚠️ API 有回應，但沒有找到任何模型資料。');
+      }
+
+    } catch (error) {
+      console.error('抓取模型失敗:', error);
+      alert(`❌ 抓取模型列表失敗：${error.message}\n\n(將維持使用預設列表)`);
+    }
+  }, [apiKey, apiProvider, apiProviders, apiModel]);
 
 // =================================================================================
 // ✨✨✨ 全新升級！processWorldBookEntries v2 (SillyTavern 邏輯強化版) ✨✨✨
@@ -5463,6 +5585,8 @@ const handleImportAllData = useCallback(async (dataSource) => {
               onOpenThemeSwitcher={() => setIsThemeSwitcherOpen(true)}
               fontSize={fontSize}
               setFontSize={setFontSize}
+              availableModels={availableModels} // ✨ 傳入列表
+              onFetchModels={fetchModels}       // ✨ 傳入函式
               getBackupData={() => handleExportAllData(true)} // 傳入一個呼叫匯出函式並要求回傳資料的版本
               restoreFromBackupData={handleImportAllData}     // 直接傳入可以接收資料物件的匯入函式
               exportChatHistory={() => handleExportAllData(false)} // 手動匯出的按鈕，呼叫不回傳資料的版本
