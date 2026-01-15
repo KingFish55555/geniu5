@@ -1864,8 +1864,11 @@ const SettingsPage = ({
                 </div>
                 <div className="setting-group">
                   <label className="setting-label">API 金鑰 (每行一個金鑰)，輸入完按下測試連線。一定要保存好金鑰，請勿隨意分享</label>
-                  請一定不要隨意的分享您的 API 金鑰，尤其是在公開場合或是開源專案中！
-                  截圖的時候也請注意不要讓金鑰入鏡，謝謝您！
+                  <p className="setting-description">
+                      請一定不要隨意的分享您的 API 金鑰，尤其是在公開場合或是開源專案中！截圖的時候也請注意不要讓金鑰入鏡，謝謝您！<br/>
+                      先輸入API之後才可以按下【更新模型】，選好模型之後請務必按下【測試連線】確保API能夠使用<br/>
+                      別忘了最後在底下按下更新配置/另存新配置<br/>
+                  </p>
                   <div className="api-key-input">
                     {/* 🔥🔥🔥 核心修改：將 input 換成 textarea 🔥🔥🔥 */}
                     <textarea
