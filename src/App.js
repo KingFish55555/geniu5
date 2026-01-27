@@ -2293,7 +2293,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.8</p>
+                  <p>版本：0.5.81</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2612,10 +2612,10 @@ const ChatApp = () => {
       models: [
         // --- Anthropic ---
         'anthropic/claude-3.7-sonnet',
+        'anthropic/claude-sonnet-4.5',
         // --- OpenAI ---
         'openai/ChatGPT-4o',
         'openai/GPT-4.1',
-        'nex-agi/deepseek-v3.1-nex-n1:free',
       ],
       headers: (apiKey) => ({
         'Content-Type': 'application/json',
