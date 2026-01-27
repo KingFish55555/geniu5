@@ -4230,7 +4230,7 @@ if (Array.isArray(data.entries)) {
     
     if (!currentKey) return;
 
-    alert(`正在向 ${provider.name} 請求最新的模型列表...`);
+    alert(`正在向 ${provider.name} 請求最新的模型列表...按下【確定】後繼續`);
     
     try {
       let fetchedModels = [];
