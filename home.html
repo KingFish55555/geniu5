@@ -74,7 +74,7 @@
         .menu-text { font-size: 1.5rem; font-weight: bold; color: var(--text-main); }
         .menu-desc { font-size: 0.9rem; color: var(--text-sub); margin-top: 10px; }
 
-        /* --- 通用區塊標題 --- */
+        /* --- 標題區塊 --- */
         .section-header {
             text-align: center; padding: 80px 20px 40px;
             border-top: 2px solid #333;
@@ -84,7 +84,7 @@
             text-shadow: 0 0 10px var(--accent);
         }
 
-        /* --- 2. 使用說明書區塊 (新增!) --- */
+        /* --- 2. 使用說明書區塊 --- */
         #manual-section {
             background-color: var(--bg-color);
             min-height: 100vh;
@@ -92,7 +92,7 @@
         }
 
         .manual-container {
-            max-width: 800px; /* 閱讀區寬度限制，方便閱讀 */
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -125,7 +125,7 @@
 
         /* --- 3. 角色卡區 --- */
         #gallery-section {
-            background-color: #050608; /* 比背景再黑一點 */
+            background-color: #050608;
             min-height: 100vh;
             padding-bottom: 100px;
         }
@@ -175,7 +175,6 @@
 </head>
 <body>
 
-    <!-- 懸浮按鈕：隨時回到首頁 -->
     <a href="#home" class="fab" title="Back to Top"><i class="fa-solid fa-arrow-up"></i></a>
 
     <!-- 1. 首頁 Launcher -->
@@ -184,21 +183,19 @@
         <p style="color:var(--accent); margin-bottom: 50px;">Portal System</p>
 
         <div class="menu-grid">
-            <!-- 連結到原本的程式 -->
-            <a href="https://kingfish55555.github.io/geniu5/" target="_blank" class="menu-card">
+            <!-- 【關鍵改動】這裡指回你原本的 index.html -->
+            <a href="index.html" target="_blank" class="menu-card">
                 <i class="fa-solid fa-power-off menu-icon"></i>
                 <div class="menu-text">啟動 GENIU5</div>
                 <div class="menu-desc">Launch Application</div>
             </a>
             
-            <!-- 往下滑到說明書 -->
             <a href="#manual-section" class="menu-card">
                 <i class="fa-solid fa-book-open menu-icon"></i>
                 <div class="menu-text">閱讀使用說明</div>
                 <div class="menu-desc">User Manual</div>
             </a>
 
-            <!-- 往下滑到角色卡 -->
             <a href="#gallery-section" class="menu-card">
                 <i class="fa-solid fa-images menu-icon"></i>
                 <div class="menu-text">角色卡區</div>
@@ -207,7 +204,7 @@
         </div>
     </div>
 
-    <!-- 2. 使用說明書區塊 (在這裡打字!) -->
+    <!-- 2. 使用說明書區塊 -->
     <section id="manual-section">
         <div class="section-header">
             <h2><i class="fa-solid fa-book"></i> Manual</h2>
@@ -215,34 +212,19 @@
         </div>
 
         <div class="manual-container">
-            
-            <!-- 第一章：你可以複製這個區塊 -->
             <div class="manual-step">
                 <h3>01. 基礎介紹</h3>
                 <p>
-                    歡迎使用 GENIU5！這是一個專門為了...而設計的工具。<br>
-                    (在這裡輸入你的介紹文字，可以換行)<br>
-                    下面這張圖是介面預覽：
+                    歡迎使用 GENIU5！<br>
+                    這是一個專門為了...而設計的工具。
                 </p>
-                <!-- 圖片：請把 src 改成你的圖片檔名，例如 images/step1.jpg -->
-                <img src="https://via.placeholder.com/800x400/333/fff?text=Screenshot+Area" alt="介面截圖" class="manual-img">
+                <!-- 記得把圖片上傳並改檔名 -->
+                <!-- <img src="images/manual_01.png" class="manual-img"> -->
             </div>
-
-            <!-- 第二章 -->
-            <div class="manual-step">
-                <h3>02. 如何開始</h3>
-                <p>
-                    首先，請點擊首頁的「啟動」按鈕...<br>
-                    接著你會看到...
-                </p>
-                <!-- 如果這段沒有圖片，把 img 標籤刪掉就好 -->
-            </div>
-
-            <!-- 想要增加新章節？複製上面 <div class="manual-step"> ... </div> 整塊貼在這裡 -->
-
+            
+            <!-- 更多說明區塊可自行複製... -->
         </div>
     </section>
-
 
     <!-- 3. 角色卡展示區 -->
     <section id="gallery-section">
@@ -253,31 +235,30 @@
 
         <div class="char-grid">
             
-            <!-- 角色卡 1 -->
+            <!-- 卡片 1 -->
             <div class="char-card">
                 <div class="img-container">
-                    <!-- 改這裡的圖片檔名 -->
-                    <img src="images/char_01.png" alt="Char">
+                    <!-- 記得放圖片 -->
+                    <img src="https://via.placeholder.com/300x300/151b24/444?text=Upload+Image" alt="Char">
                 </div>
                 <div class="card-body">
                     <h3 style="color:white; margin:0;">Char</h3>
-                    <p style="color:#aaa; font-size:0.9rem;">老闆 / 腹黑 / 菸嗓</p>
-                    <!-- 下載連結 -->
-                    <a href="images/char_01.png" class="btn-dl" download>
+                    <p style="color:#aaa; font-size:0.9rem;">黑白兩道通吃的老闆</p>
+                    <a href="#" class="btn-dl" download>
                         <i class="fa-solid fa-download"></i> DOWNLOAD
                     </a>
                 </div>
             </div>
 
-            <!-- 角色卡 2 -->
+            <!-- 卡片 2 -->
             <div class="char-card">
                 <div class="img-container">
-                    <img src="images/user_01.png" alt="User">
+                    <img src="https://via.placeholder.com/300x300/151b24/444?text=Upload+Image" alt="User">
                 </div>
                 <div class="card-body">
                     <h3 style="color:white; margin:0;">User</h3>
-                    <p style="color:#aaa; font-size:0.9rem;">警察 / 熱血 / 易受騙</p>
-                    <a href="images/user_01.png" class="btn-dl" download>
+                    <p style="color:#aaa; font-size:0.9rem;">熱血過頭的小員警</p>
+                    <a href="#" class="btn-dl" download>
                         <i class="fa-solid fa-download"></i> DOWNLOAD
                     </a>
                 </div>
