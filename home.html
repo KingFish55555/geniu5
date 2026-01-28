@@ -3,273 +3,304 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GENIU5 - Portal</title>
+    <title>GENIU5 - Launcher</title>
+    <!-- 引入圖示庫 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- 核心設定 --- */
+        /* --- 1. 核心配色與設定 --- */
         :root {
             --bg-color: #0b0c10;       /* 極黑 */
-            --card-bg: #1f2833;        /* 深灰 */
-            --highlight: #66fcf1;      /* 螢光青 */
-            --accent: #45a29e;         /* 青藍 */
-            --text-main: #ffffff;
-            --text-sub: #c5c6c7;
+            --card-bg: #1f2833;        /* 深灰卡片 */
+            --highlight: #66fcf1;      /* 螢光青 (亮點) */
+            --accent: #45a29e;         /* 青藍 (邊框/次要) */
+            --text-main: #ffffff;      /* 白字 */
+            --text-sub: #c5c6c7;       /* 灰字 */
         }
 
-        html { scroll-behavior: smooth; }
+        html {
+            scroll-behavior: smooth; /* 讓點擊滑動時有動畫效果 */
+        }
+
         body {
-            font-family: 'Segoe UI', sans-serif;
-            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
             background-color: var(--bg-color);
             color: var(--text-sub);
             overflow-x: hidden;
         }
 
-        /* --- 1. 首頁 Launcher --- */
+        /* --- 2. 首頁全螢幕選單區 (Launcher) --- */
         .launcher-screen {
-            height: 100vh;
+            height: 100vh; /* 佔滿整個螢幕高度 */
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             background: radial-gradient(circle at center, #1a253a 0%, var(--bg-color) 80%);
-            text-align: center;
+            position: relative;
         }
 
         .main-title {
-            font-size: 5rem; margin: 0;
+            font-size: 5rem;
+            margin: 0 0 10px 0;
             color: var(--text-main);
             text-shadow: 0 0 20px var(--accent);
             letter-spacing: 5px;
             text-transform: uppercase;
         }
 
+        .sub-title {
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 60px;
+            opacity: 0.8;
+        }
+
+        /* 三個大選項的容器 */
         .menu-grid {
-            display: flex; gap: 30px; flex-wrap: wrap;
-            justify-content: center; margin-top: 50px;
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
             padding: 0 20px;
         }
 
+        /* 選單卡片樣式 */
         .menu-card {
             background: rgba(31, 40, 51, 0.6);
             border: 2px solid var(--accent);
-            width: 250px; height: 300px;
+            width: 250px;
+            height: 300px;
             border-radius: 15px;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             text-decoration: none;
-            transition: all 0.4s;
-            backdrop-filter: blur(5px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 彈性動畫 */
             cursor: pointer;
+            backdrop-filter: blur(5px);
         }
 
         .menu-card:hover {
-            transform: translateY(-15px) scale(1.05);
+            transform: translateY(-15px) scale(1.05); /* 上浮放大 */
+            background: rgba(69, 162, 158, 0.2);
             border-color: var(--highlight);
             box-shadow: 0 0 30px rgba(102, 252, 241, 0.3);
         }
 
-        .menu-icon { font-size: 4rem; color: var(--text-main); margin-bottom: 20px; }
-        .menu-text { font-size: 1.5rem; font-weight: bold; color: var(--text-main); }
-        .menu-desc { font-size: 0.9rem; color: var(--text-sub); margin-top: 10px; }
+        .menu-icon {
+            font-size: 4rem;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            transition: color 0.3s;
+        }
 
-        /* --- 標題區塊 --- */
-        .section-header {
-            text-align: center; padding: 80px 20px 40px;
+        .menu-card:hover .menu-icon {
+            color: var(--highlight);
+        }
+
+        .menu-text {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .menu-desc {
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-top: 10px;
+            opacity: 0.7;
+        }
+
+        /* --- 3. 角色卡片展示區 (隱藏在下方) --- */
+        #gallery-section {
+            min-height: 100vh;
+            padding: 80px 10%;
+            background-color: var(--bg-color);
             border-top: 2px solid #333;
         }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
         .section-header h2 {
-            font-size: 3rem; color: var(--text-main); margin: 0;
-            text-shadow: 0 0 10px var(--accent);
+            font-size: 2.5rem;
+            color: var(--text-main);
+            margin-bottom: 10px;
         }
 
-        /* --- 2. 使用說明書區塊 --- */
-        #manual-section {
-            background-color: var(--bg-color);
-            min-height: 100vh;
-            padding-bottom: 100px;
-        }
-
-        .manual-container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .manual-step {
-            background: var(--card-bg);
-            padding: 40px;
-            border-radius: 10px;
-            margin-bottom: 40px;
-            border-left: 5px solid var(--accent);
-        }
-
-        .manual-step h3 {
-            color: var(--highlight);
-            font-size: 1.8rem; margin-top: 0;
-            border-bottom: 1px solid #444; padding-bottom: 15px;
-        }
-
-        .manual-step p {
-            font-size: 1.1rem; line-height: 1.8;
-            color: #ddd;
-        }
-
-        .manual-img {
-            width: 100%;
-            border-radius: 5px;
-            margin-top: 20px;
-            border: 1px solid #444;
-        }
-
-        /* --- 3. 角色卡區 --- */
-        #gallery-section {
-            background-color: #050608;
-            min-height: 100vh;
-            padding-bottom: 100px;
-        }
-
+        /* 網格排版 (跟之前一樣好用) */
         .char-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 40px;
-            max-width: 1200px; margin: 0 auto; padding: 0 20px;
         }
 
         .char-card {
-            background: var(--card-bg);
-            border-radius: 10px; overflow: hidden;
-            border: 1px solid #333; transition: transform 0.3s;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #333;
+            transition: transform 0.3s;
+            position: relative;
         }
-        .char-card:hover { transform: translateY(-10px); border-color: var(--highlight); }
+
+        .char-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent);
+        }
 
         .img-container {
-            width: 100%; height: 300px; background: #151b24;
-            display: flex; justify-content: center; align-items: center;
+            width: 100%;
+            height: 300px;
+            background: #151b24;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
         }
-        .img-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
         
-        .card-body { padding: 20px; }
+        .img-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
         .btn-dl {
-            display: block; width: 100%; padding: 12px 0; margin-top: 15px;
-            background: var(--accent); color: #000; text-align: center;
-            text-decoration: none; font-weight: bold; border-radius: 5px;
+            display: block;
+            width: 100%;
+            padding: 12px 0;
+            margin-top: 15px;
+            background: var(--accent);
+            color: #000;
+            text-align: center;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
             transition: background 0.3s;
         }
-        .btn-dl:hover { background: var(--highlight); }
 
-        /* --- 回到頂部按鈕 --- */
-        .fab {
-            position: fixed; bottom: 30px; right: 30px;
-            background: var(--highlight); color: #000;
-            width: 50px; height: 50px; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 1.5rem; text-decoration: none;
-            box-shadow: 0 0 15px rgba(102, 252, 241, 0.5);
-            z-index: 100;
+        .btn-dl:hover {
+            background: var(--highlight);
         }
-        .fab:hover { transform: scale(1.1); }
+
+        /* 回到頂部按鈕 */
+        .back-home {
+            text-align: center;
+            margin-top: 50px;
+        }
+        .btn-top {
+            color: var(--text-sub);
+            text-decoration: none;
+            font-size: 1.2rem;
+            border-bottom: 1px solid transparent;
+        }
+        .btn-top:hover {
+            color: var(--highlight);
+            border-color: var(--highlight);
+        }
 
     </style>
 </head>
 <body>
 
-    <a href="#home" class="fab" title="Back to Top"><i class="fa-solid fa-arrow-up"></i></a>
-
-    <!-- 1. 首頁 Launcher -->
-    <div class="launcher-screen" id="home">
+    <!-- 1. 全螢幕 Launcher 選單區 -->
+    <div class="launcher-screen">
         <h1 class="main-title">GENIU5</h1>
-        <p style="color:var(--accent); margin-bottom: 50px;">Portal System</p>
+        <p class="sub-title">System Ready. Please Select a Module.</p>
 
         <div class="menu-grid">
-            <!-- 【關鍵改動】這裡指回你原本的 index.html -->
-            <a href="index.html" target="_blank" class="menu-card">
+            
+            <!-- 選項 1: 啟動程式 (開新視窗) -->
+            <a href="https://kingfish55555.github.io/geniu5/" target="_blank" class="menu-card">
                 <i class="fa-solid fa-power-off menu-icon"></i>
                 <div class="menu-text">啟動 GENIU5</div>
                 <div class="menu-desc">Launch Application</div>
             </a>
-            
-            <a href="#manual-section" class="menu-card">
-                <i class="fa-solid fa-book-open menu-icon"></i>
+
+            <!-- 選項 2: 使用說明 (開新視窗) -->
+            <a href="https://www.notion.so/GENIU5-2547bc2e84ff80aa8024d28b1c964afe" target="_blank" class="menu-card">
+                <i class="fa-solid fa-book-journal-whills menu-icon"></i>
                 <div class="menu-text">閱讀使用說明</div>
                 <div class="menu-desc">User Manual</div>
             </a>
 
+            <!-- 選項 3: 角色卡區 (往下滑動) -->
             <a href="#gallery-section" class="menu-card">
                 <i class="fa-solid fa-images menu-icon"></i>
                 <div class="menu-text">角色卡區</div>
                 <div class="menu-desc">Character Cards</div>
             </a>
+
         </div>
     </div>
 
-    <!-- 2. 使用說明書區塊 -->
-    <section id="manual-section">
-        <div class="section-header">
-            <h2><i class="fa-solid fa-book"></i> Manual</h2>
-            <p>使用教學與功能介紹</p>
-        </div>
-
-        <div class="manual-container">
-            <div class="manual-step">
-                <h3>01. 基礎介紹</h3>
-                <p>
-                    歡迎使用 GENIU5！<br>
-                    這是一個專門為了...而設計的工具。
-                </p>
-                <!-- 記得把圖片上傳並改檔名 -->
-                <!-- <img src="images/manual_01.png" class="manual-img"> -->
-            </div>
-            
-            <!-- 更多說明區塊可自行複製... -->
-        </div>
-    </section>
-
-    <!-- 3. 角色卡展示區 -->
+    <!-- 2. 角色卡展示區 (點上面的選項3才會滑下來看到) -->
     <section id="gallery-section">
         <div class="section-header">
-            <h2><i class="fa-solid fa-folder-open"></i> Characters</h2>
-            <p>無損 PNG 卡片下載</p>
+            <h2><i class="fa-solid fa-folder-open"></i> Character Database</h2>
+            <p style="color: var(--text-sub)">下載高清無損 PNG 圖檔</p>
         </div>
 
         <div class="char-grid">
-            
-            <!-- 卡片 1 -->
+
+            <!-- 角色卡 1 -->
             <div class="char-card">
                 <div class="img-container">
-                    <!-- 記得放圖片 -->
-                    <img src="https://via.placeholder.com/300x300/151b24/444?text=Upload+Image" alt="Char">
+                    <!-- 請放入圖片 -->
+                    <img src="images/char_01.png" alt="Char">
                 </div>
                 <div class="card-body">
                     <h3 style="color:white; margin:0;">Char</h3>
                     <p style="color:#aaa; font-size:0.9rem;">黑白兩道通吃的老闆</p>
-                    <a href="#" class="btn-dl" download>
+                    <a href="images/char_01.png" class="btn-dl" download>
                         <i class="fa-solid fa-download"></i> DOWNLOAD
                     </a>
                 </div>
             </div>
 
-            <!-- 卡片 2 -->
+            <!-- 角色卡 2 -->
             <div class="char-card">
                 <div class="img-container">
-                    <img src="https://via.placeholder.com/300x300/151b24/444?text=Upload+Image" alt="User">
+                    <img src="images/user_01.png" alt="User">
                 </div>
                 <div class="card-body">
                     <h3 style="color:white; margin:0;">User</h3>
                     <p style="color:#aaa; font-size:0.9rem;">熱血過頭的小員警</p>
-                    <a href="#" class="btn-dl" download>
+                    <a href="images/user_01.png" class="btn-dl" download>
                         <i class="fa-solid fa-download"></i> DOWNLOAD
                     </a>
                 </div>
             </div>
 
+            <!-- 角色卡 3 (待新增) -->
+            <div class="char-card">
+                <div class="img-container">
+                    <img src="https://via.placeholder.com/300x300/151b24/444?text=Next+Character" alt="Coming Soon">
+                </div>
+                <div class="card-body">
+                    <h3 style="color:white; margin:0;">???</h3>
+                    <p style="color:#aaa; font-size:0.9rem;">即將解鎖</p>
+                    <span class="btn-dl" style="background:#333; color:#666; cursor:default;">LOCKED</span>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="back-home">
+            <a href="#" class="btn-top">▲ Back to Top</a>
         </div>
     </section>
-
-    <footer style="text-align:center; padding:50px; color:#555;">
-        &copy; 2026 GENIU5 Project.
-    </footer>
 
 </body>
 </html>
