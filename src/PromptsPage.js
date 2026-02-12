@@ -85,7 +85,81 @@ const PromptsPage = ({
   };
   
   const handleExportPreset = () => { if (!currentPrompt) { alert("請先從列表中選擇一個已儲存的預設集來匯出。"); return; } try { const jsonString = JSON.stringify(currentPrompt, null, 2); const blob = new Blob([jsonString], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `${currentPrompt.name || 'prompt_preset'}.json`; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); } catch (error) { console.error("匯出失敗:", error); alert("匯出失敗！詳情請見主控台。"); } };
-  const handleImportPreset = (event) => { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = (e) => { try { const importedData = JSON.parse(e.target.result); let presetToLoad; if (Array.isArray(importedData.prompts) && Array.isArray(importedData.prompt_order)) { const presetName = file.name.replace(/\.json$/i, ''); const moduleMap = new Map(importedData.prompts.map(p => [p.identifier, p])); const orderGroup = importedData.prompt_order.find(group => group.character_id === 100001); const orderArray = orderGroup ? orderGroup.order : []; if (orderArray.length === 0) { throw new Error("在 SillyTavern 檔案中找不到有效的 'prompt_order' 順序列表。"); } const convertedModules = orderArray.map((orderItem, index) => { const moduleData = moduleMap.get(orderItem.identifier); if (!moduleData) return null; return { id: moduleData.identifier || `module_imported_${Date.now()}_${index}`, name: moduleData.name || `未命名模組 ${index + 1}`, content: moduleData.content || '', enabled: orderItem.enabled, locked: moduleData.forbid_overrides || false, readOnly: ['chatHistory', 'worldInfoAfter', 'worldInfoBefore', 'dialogueExamples'].includes(moduleData.identifier), role: moduleData.role || 'system', order: moduleData.insertion_order ?? 100, position: { type: 'relative', depth: 4 } }; }).filter(Boolean); presetToLoad = { id: 'imported_' + Date.now(), name: presetName, temperature: importedData.temperature || 1.0, maxTokens: importedData.openai_max_tokens || 1024, contextLength: importedData.openai_max_context || 24000, modules: convertedModules, }; } else if (typeof importedData.name === 'string' && Array.isArray(importedData.modules)) { presetToLoad = importedData; } else { throw new Error("無法識別的檔案格式。"); } savePrompt(presetToLoad); alert(`✅ 提示詞「${presetToLoad.name}」已成功匯入並儲存！`); } catch (error) { alert(`❌ 匯入失敗：${error.message}`); } finally { if (event.target) { event.target.value = ''; } } }; reader.readAsText(file); };
+  // ✨ SillyTavern 特殊模組的預設占位符映射
+  const SPECIAL_MODULE_PLACEHOLDERS = {
+    'personaDescription': '{{persona}}',
+    'charDescription': '{{description}}',
+    'charPersonality': '{{personality}}',
+    'scenario': '{{scenario}}',
+    'dialogueExamples': '{{example_dialogue}}',
+    'chatHistory': '{{chat_history}}',
+    'worldInfoBefore': '',  // 世界書內容由系統動態處理
+    'worldInfoAfter': '',
+  };
+
+  const handleImportPreset = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target.result);
+        let presetToLoad;
+        if (Array.isArray(importedData.prompts) && Array.isArray(importedData.prompt_order)) {
+          const presetName = file.name.replace(/\.json$/i, '');
+          const moduleMap = new Map(importedData.prompts.map(p => [p.identifier, p]));
+          const orderGroup = importedData.prompt_order.find(group => group.character_id === 100001);
+          const orderArray = orderGroup ? orderGroup.order : [];
+          if (orderArray.length === 0) {
+            throw new Error("在 SillyTavern 檔案中找不到有效的 'prompt_order' 順序列表。");
+          }
+          const convertedModules = orderArray.map((orderItem, index) => {
+            const moduleData = moduleMap.get(orderItem.identifier);
+            if (!moduleData) return null;
+
+            // ✨ 核心修正：為特殊模組設置預設占位符
+            let moduleContent = moduleData.content || '';
+            if (!moduleContent && SPECIAL_MODULE_PLACEHOLDERS.hasOwnProperty(moduleData.identifier)) {
+              moduleContent = SPECIAL_MODULE_PLACEHOLDERS[moduleData.identifier];
+            }
+
+            return {
+              id: moduleData.identifier || `module_imported_${Date.now()}_${index}`,
+              name: moduleData.name || `未命名模組 ${index + 1}`,
+              content: moduleContent,
+              enabled: orderItem.enabled,
+              locked: moduleData.forbid_overrides || false,
+              readOnly: ['chatHistory', 'worldInfoAfter', 'worldInfoBefore', 'dialogueExamples'].includes(moduleData.identifier),
+              role: moduleData.role || 'system',
+              order: moduleData.insertion_order ?? 100,
+              position: { type: 'relative', depth: 4 }
+            };
+          }).filter(Boolean);
+          presetToLoad = {
+            id: 'imported_' + Date.now(),
+            name: presetName,
+            temperature: importedData.temperature || 1.0,
+            maxTokens: importedData.openai_max_tokens || 1024,
+            contextLength: importedData.openai_max_context || 24000,
+            modules: convertedModules,
+          };
+        } else if (typeof importedData.name === 'string' && Array.isArray(importedData.modules)) {
+          presetToLoad = importedData;
+        } else {
+          throw new Error("無法識別的檔案格式。");
+        }
+        savePrompt(presetToLoad);
+        alert(`✅ 提示詞「${presetToLoad.name}」已成功匯入並儲存！`);
+      } catch (error) {
+        alert(`❌ 匯入失敗：${error.message}`);
+      } finally {
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
+    };
+    reader.readAsText(file);
+  };
   const handleToggleModule = (moduleId) => {
     if (!currentPrompt) return;
     let isLocked = false;

@@ -25,6 +25,62 @@ import DisclaimerModal from './DisclaimerModal';
 
 const MEMORY_UPDATE_INTERVAL = 5;
 
+// =================================================================================
+// ✨✨✨ 獨立 Regex 處理函數（可被多個組件共用）✨✨✨
+// =================================================================================
+const applyRegexRules = (text, globalRules, localRules, sender, contextType = 'chat', options = {}) => {
+  if (!text) return '';
+  let processedText = text;
+
+  const {
+    isPrompt = false,
+    isWorldInfo = false,
+    depth = 0,
+  } = options;
+
+  const enabledGlobalRules = globalRules?.filter(r => r.enabled) || [];
+  const enabledLocalRules = localRules?.filter(r => r.enabled) || [];
+  const allRules = [...enabledLocalRules, ...enabledGlobalRules];
+
+  for (const rule of allRules) {
+    const isUser = sender === 'user';
+    const placement = rule.placement || [];
+
+    let shouldApply = false;
+
+    // 檢查 promptOnly
+    if (rule.promptOnly && !isPrompt) continue;
+
+    // 檢查 minDepth/maxDepth
+    if (rule.minDepth !== null && rule.minDepth !== undefined && depth < rule.minDepth) continue;
+    if (rule.maxDepth !== null && rule.maxDepth !== undefined && depth > rule.maxDepth) continue;
+
+    // 根據上下文判斷
+    if (isWorldInfo) {
+      shouldApply = placement.includes(4);
+    } else if (contextType === 'chat') {
+      if (placement.includes(0) && isUser) shouldApply = true;
+      if (placement.includes(1) && !isUser) shouldApply = true;
+    } else if (contextType === 'slash') {
+      shouldApply = placement.includes(3);
+    }
+
+    if (!shouldApply) continue;
+
+    try {
+      const regex = new RegExp(rule.find, rule.flags || 'g');
+      let newText = processedText.replace(regex, rule.replace);
+      if (rule.trimStrings) {
+        newText = newText.replace(/\n{3,}/g, '\n\n').trim();
+      }
+      processedText = newText;
+    } catch (error) {
+      console.error(`無效的 Regex 規則 (${rule.notes}): "${rule.find}"`, error);
+    }
+  }
+  return processedText;
+};
+
 // 頂部導航組件
 const TopNavigation = ({ currentPage, navigateToPage }) => (
   <div className="top-navigation">
@@ -125,15 +181,20 @@ const UserProfileSelector = ({ profiles, selectedProfileId, onChange }) => {
 };
 // 角色編輯器組件 (彈出式視窗)
 const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onOpenLocalRegexEditor }) => {
-  // State definitions remain the same
+  // State definitions
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [personality, setPersonality] = useState('');           // ✨ 新增
+  const [scenario, setScenario] = useState('');                 // ✨ 新增
+  const [mes_example, setMesExample] = useState('');            // ✨ 新增
   const [firstMessage, setFirstMessage] = useState('');
   const [alternateGreetings, setAlternateGreetings] = useState([]);
   const [avatar, setAvatar] = useState({ type: 'icon', data: 'UserCircle' });
   const [creatorNotes, setCreatorNotes] = useState('');
   const [embeddedRegex, setEmbeddedRegex] = useState([]);
   const [mainLorebookId, setMainLorebookId] = useState('');
+  const [fav, setFav] = useState(false);                        // ✨ 新增
+  const [post_history_instructions, setPostHistoryInstructions] = useState(''); // ✨ 新增
 
   // ✨ 核心修正 1：引入 useRef 作為我們的「旗標」
   const isInitialMount = useRef(true);
@@ -152,12 +213,17 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
         console.log("發現並載入匹配的草稿... - App.js:152", draftData);
         setName(draftData.name || '');
         setDescription(draftData.description || '');
+        setPersonality(draftData.personality || '');           // ✨ 新增
+        setScenario(draftData.scenario || '');                 // ✨ 新增
+        setMesExample(draftData.mes_example || '');            // ✨ 新增
         setFirstMessage(draftData.firstMessage || '');
         setAlternateGreetings(draftData.alternateGreetings || []);
         setAvatar(draftData.avatar || { type: 'icon', data: 'UserCircle' });
         setMainLorebookId(draftData.mainLorebookId || '');
         setCreatorNotes(draftData.creatorNotes || '');
         setEmbeddedRegex(draftData.embeddedRegex || []);
+        setFav(draftData.fav || false);                        // ✨ 新增
+        setPostHistoryInstructions(draftData.post_history_instructions || ''); // ✨ 新增
         return;
       }
     } catch (error) {
@@ -167,16 +233,22 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
     if (character) {
       setName(character.name || '');
       setDescription(character.description || '');
+      setPersonality(character.personality || '');             // ✨ 新增
+      setScenario(character.scenario || '');                   // ✨ 新增
+      setMesExample(character.mes_example || '');              // ✨ 新增
       setFirstMessage(character.firstMessage || '');
       setAlternateGreetings(character.alternateGreetings || []);
       setAvatar(character.avatar || { type: 'icon', data: 'UserCircle' });
       setMainLorebookId(character.mainLorebookId || '');
       setCreatorNotes(character.creatorNotes || '');
       setEmbeddedRegex(character.embeddedRegex ? structuredClone(character.embeddedRegex) : []);
+      setFav(character.fav || false);                          // ✨ 新增
+      setPostHistoryInstructions(character.post_history_instructions || ''); // ✨ 新增
     } else {
-      setName(''); setDescription(''); setFirstMessage(''); setAlternateGreetings([]);
+      setName(''); setDescription(''); setPersonality(''); setScenario(''); setMesExample('');
+      setFirstMessage(''); setAlternateGreetings([]);
       setAvatar({ type: 'icon', data: 'UserCircle' }); setMainLorebookId('');
-      setCreatorNotes(''); setEmbeddedRegex([]);
+      setCreatorNotes(''); setEmbeddedRegex([]); setFav(false); setPostHistoryInstructions('');
     }
   }, []);
 
@@ -190,8 +262,10 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
 
     // 從第二次渲染開始，這個 effect 才會真正執行寫入操作
     const draftData = {
-      name, description, firstMessage, alternateGreetings,
-      avatar, mainLorebookId, creatorNotes, embeddedRegex
+      name, description, personality, scenario, mes_example,  // ✨ 新增字段
+      firstMessage, alternateGreetings,
+      avatar, mainLorebookId, creatorNotes, embeddedRegex,
+      fav, post_history_instructions                          // ✨ 新增字段
     };
     const draftToStore = {
       id: character ? character.id : null,
@@ -199,9 +273,9 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
     };
     localStorage.setItem('character_editor_draft', JSON.stringify(draftToStore));
 
-  }, [character, name, description, firstMessage, alternateGreetings, avatar, mainLorebookId, creatorNotes, embeddedRegex]);
+  }, [character, name, description, personality, scenario, mes_example, firstMessage, alternateGreetings, avatar, mainLorebookId, creatorNotes, embeddedRegex, fav, post_history_instructions]);
 
-  // handleSave 和其他函式保持不變
+  // handleSave - ✨ 已更新：保存所有字段
   const handleSave = () => {
     if (!name.trim()) {
       alert('請為您的角色命名！');
@@ -209,12 +283,19 @@ const CharacterEditor = ({ character, onSave, onClose, onDelete, worldBooks, onO
     }
     const characterData = {
       id: character ? character.id : Date.now(),
-      name, description, firstMessage,
+      name,
+      description,
+      personality,                    // ✨ 新增
+      scenario,                       // ✨ 新增
+      mes_example,                    // ✨ 新增
+      firstMessage,
       alternateGreetings: alternateGreetings.filter(g => g.trim() !== ''),
       avatar,
       mainLorebookId: mainLorebookId,
       creatorNotes,
       embeddedRegex: embeddedRegex,
+      fav,                            // ✨ 新增
+      post_history_instructions,      // ✨ 新增
     };
     onSave(characterData);
   };
@@ -1485,46 +1566,10 @@ const ChatPage = ({ worldBooks, chatMetadatas, onOpenAuxLorebookSelector, regexR
 
     
 // =================================================================================
-// ✨✨✨ Ultimate Version! applyAllRegex v4 (Full ST Compatibility & New Format) ✨✨✨
+// ✨✨✨ applyAllRegex - 使用獨立函數的 wrapper ✨✨✨
 // =================================================================================
-  const applyAllRegex = useCallback((text, char, sender, contextType = 'chat') => {
-    if (!text) return '';
-    let processedText = text;
-    
-    // ✨ 修正：確保 filter 邏輯正確，使用 enabled 屬性
-    const enabledGlobalRules = regexRules?.filter(r => r.enabled) || [];
-    const enabledLocalRules = char?.embeddedRegex?.filter(r => r.enabled) || [];
-
-    const allRules = [...enabledLocalRules, ...enabledGlobalRules];
-
-    for (const rule of allRules) {
-      // --- 判斷是否執行 ---
-      const isUser = sender === 'user';
-      const placement = rule.placement || [];
-      
-      let shouldApply = false;
-      if (contextType === 'chat') {
-          if (placement.includes(2)) { // Both
-              shouldApply = true;
-          } else {
-              if (isUser && placement.includes(0)) shouldApply = true; // User input
-              if (!isUser && placement.includes(1)) shouldApply = true; // AI output
-          }
-      }
-      
-      if (!shouldApply) continue;
-      
-      // --- 執行替換 ---
-      try {
-        // ✨✨✨ 核心升級：直接使用 rule.find 和 rule.flags ✨✨✨
-        const regex = new RegExp(rule.find, rule.flags || 'g');
-        processedText = processedText.replace(regex, rule.replace);
-
-      } catch (error) {
-        console.error(`無效的 Regex 規則 (備註: ${rule.notes}): "${rule.find}" - App.js:1477`, error);
-      }
-    }
-    return processedText;
+  const applyAllRegex = useCallback((text, char, sender, contextType = 'chat', options = {}) => {
+    return applyRegexRules(text, regexRules, char?.embeddedRegex, sender, contextType, options);
   }, [regexRules]);
 
   // ✨ 同時，我們也需要更新 ChatPage 中呼叫它的地方 ✨
@@ -2293,7 +2338,7 @@ const SettingsPage = ({
                 <div className="about-info">
                   <h4>GENIU5</h4>
                   <p>aka 55小手機</p>
-                  <p>版本：0.5.81</p>
+                  <p>版本：0.5.9</p>
                   <p>為了想要在手機上玩AI聊天的小東西</p>
                 </div>
                 <div className="about-links">
@@ -2623,6 +2668,15 @@ const ChatApp = () => {
         // OpenRouter 建議加上這兩行，讓他們知道流量來自哪個應用
         'HTTP-Referer': 'https://your-app-url.com', // 您可以換成您的應用網址
         'X-Title': 'GENIU5' // 您的應用名稱
+      })
+    },
+    deepseek: {
+      name: 'DeepSeek',
+      endpoint: 'https://api.deepseek.com/chat/completions',
+      models: ['deepseek-chat', 'deepseek-reasoner'], 
+      headers: (apiKey) => ({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
       })
     }
   };
@@ -3539,47 +3593,87 @@ const handleSaveAsNewConfiguration = useCallback(async () => {
   }, [characters]);  
   
 // =================================================================================
-// ✨✨✨ 全新！更強大的角色卡 Regex 解析引擎 (V3 - 支援完整欄位) ✨✨✨
+// ✨✨✨ 全新！更強大的角色卡 Regex 解析引擎 (V4 - 完整 SillyTavern 兼容版) ✨✨✨
 // =================================================================================
-const parseRegexFromCard = (cardData) => {
+const parseRegexFromCard = (cardData, originalJsonData = null) => {
   let rawRegexArray = [];
 
-  // 1. 檢查所有已知的 Regex 儲存路徑
-  if (cardData.extensions?.regex && Array.isArray(cardData.extensions.regex)) {
-    rawRegexArray = cardData.extensions.regex;
-  } else if (cardData.extensions?.regex_scripts && Array.isArray(cardData.extensions.regex_scripts)) {
-    rawRegexArray = cardData.extensions.regex_scripts;
-  } else if (cardData.regex && Array.isArray(cardData.regex)) {
-    rawRegexArray = cardData.regex;
+  // 1. 檢查所有已知的 Regex 儲存路徑（按優先順序）
+  // SillyTavern 可能將 regex 存在多個位置
+  const possiblePaths = [
+    cardData?.extensions?.regex_scripts,
+    cardData?.extensions?.regex,
+    cardData?.regex_scripts,
+    cardData?.regex,
+    originalJsonData?.extensions?.regex_scripts,
+    originalJsonData?.extensions?.regex,
+    originalJsonData?.data?.extensions?.regex_scripts,
+    originalJsonData?.data?.extensions?.regex,
+  ];
+
+  for (const path of possiblePaths) {
+    if (Array.isArray(path) && path.length > 0) {
+      rawRegexArray = path;
+      console.log(`【Regex 導入】找到 ${path.length} 條規則`);
+      break;
+    }
   }
 
-  if (rawRegexArray.length === 0) return [];
+  if (rawRegexArray.length === 0) {
+    console.log('【Regex 導入】未找到任何 regex 規則');
+    return [];
+  }
 
   // 2. 將讀取到的原始資料，"翻譯" 成我們應用程式內部統一且完整的格式
-  const translatedRegex = rawRegexArray.map(rule => {
+  const translatedRegex = rawRegexArray.map((rule, index) => {
     // 從 findRegex 欄位中分離出 pattern 和 flags
     let find = rule.findRegex || rule.find || '';
     let flags = rule.flags || 'g'; // 預設 flag
+
+    // 處理 /pattern/flags 格式
     if (find.startsWith('/') && find.lastIndexOf('/') > 0) {
       const lastSlash = find.lastIndexOf('/');
-      flags = find.substring(lastSlash + 1);
+      flags = find.substring(lastSlash + 1) || 'g';
       find = find.substring(1, lastSlash);
     }
-    
+
+    // ✨ SillyTavern placement 格式轉換
+    // ST: [0=user input, 1=AI output, 2=slash command (舊), 3=slash command, 4=world info]
+    // 我們: [0=user, 1=AI, 2=both (不使用), 3=slash, 4=world info]
+    let placement = rule.placement;
+    if (!Array.isArray(placement) || placement.length === 0) {
+      // 預設為 AI 輸出
+      placement = [1];
+    }
+
+    // 驗證 regex 是否有效
+    try {
+      new RegExp(find, flags);
+    } catch (e) {
+      console.warn(`【Regex 導入】跳過無效規則 #${index}: ${find}`, e.message);
+      return null;
+    }
+
     return {
       id: generateUniqueId(),
       find: find,
       flags: flags,
-      replace: rule.replaceString || rule.replace || '',
-      notes: rule.scriptName || rule.notes || '從卡片匯入的規則',
-      enabled: rule.disabled === undefined ? true : !rule.disabled,
-      // ✨ 新增欄位 ✨
-      runOnEdit: rule.runOnEdit || false,
-      promptOnly: rule.promptOnly || false,
-      placement: rule.placement || [1], // 預設 AI 輸出
+      replace: rule.replaceString ?? rule.replace ?? '',
+      notes: rule.scriptName || rule.name || rule.notes || `導入規則 #${index + 1}`,
+      enabled: rule.disabled === undefined ? (rule.enabled !== false) : !rule.disabled,
+      runOnEdit: Boolean(rule.runOnEdit),
+      promptOnly: Boolean(rule.promptOnly),
+      markdownOnly: Boolean(rule.markdownOnly),
+      placement: placement,
+      // ✨ 新增 SillyTavern 特有欄位
+      trimStrings: Boolean(rule.trimStrings),
+      substituteRegex: Number(rule.substituteRegex) || 0,
+      minDepth: rule.minDepth ?? null,
+      maxDepth: rule.maxDepth ?? null,
     };
-  }).filter(rule => rule.find);
+  }).filter(rule => rule !== null && rule.find);
 
+  console.log(`【Regex 導入】成功解析 ${translatedRegex.length} 條規則`);
   return translatedRegex;
 };
 
@@ -3619,9 +3713,15 @@ const parseRegexFromCard = (cardData) => {
           creatorNotes: cardData.creator_notes || characterJsonData.creatorcomment || '',
           avatar: characterAvatar,
           fav: cardData.fav || false,
-          
+
+          // ✨ 範例對話 (mes_example)
+          mes_example: cardData.mes_example || '',
+
+          // ✨ 歷史後指令 (post_history_instructions)
+          post_history_instructions: cardData.post_history_instructions || '',
+
           // ✨✨✨ 核心修改！我們用新的解析引擎來處理 Regex ✨✨✨
-          embeddedRegex: parseRegexFromCard(cardData),
+          embeddedRegex: parseRegexFromCard(cardData, characterJsonData),
 
           mainLorebookId: '',
         };
@@ -4307,10 +4407,10 @@ if (Array.isArray(data.entries)) {
   }, [apiKey, apiProvider, apiProviders, apiModel]);
 
 // =================================================================================
-// ✨✨✨ 全新升級！processWorldBookEntries v2 (SillyTavern 邏輯強化版) ✨✨✨
+// ✨✨✨ 全新升級！processWorldBookEntries v3 (完整 SillyTavern 邏輯版) ✨✨✨
 // =================================================================================
 const processWorldBookEntries = (activeBooks, contextScanSources) => {
-  console.log("世界書處理引擎 v2 啟動...");
+  console.log("世界書處理引擎 v3 啟動...");
   let allEntries = [];
   activeBooks.forEach(book => {
     if (book.entries && typeof book.entries === 'object') {
@@ -4324,79 +4424,172 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   }
   console.log(`總共掃描 ${allEntries.length} 個條目...`);
 
+  // ✨ 輔助函數：關鍵字匹配（支援大小寫敏感和全字匹配）
+  const matchKeyword = (text, keyword, caseSensitive, matchWholeWords) => {
+    if (!keyword || keyword.trim() === '') return false;
+
+    let searchText = text;
+    let searchKeyword = keyword;
+
+    // 處理大小寫敏感
+    if (!caseSensitive) {
+      searchText = text.toLowerCase();
+      searchKeyword = keyword.toLowerCase();
+    }
+
+    // 處理全字匹配
+    if (matchWholeWords) {
+      // 使用正則表達式進行全字匹配
+      const escapedKeyword = searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`\\b${escapedKeyword}\\b`, caseSensitive ? 'g' : 'gi');
+      return regex.test(text);
+    }
+
+    return searchText.includes(searchKeyword);
+  };
+
   // --- 階段一：掃描與觸發 ---
   const triggeredEntries = allEntries.filter(entry => {
     // 規則 1：如果條目被停用，直接跳過
     if (entry.disable) return false;
 
     // 規則 2：處理 🔵 常駐模式 (藍燈)
-    // 只要是 constant: true，就無條件觸發
     if (entry.constant) return true;
 
     // 規則 3：處理 🟢 選擇模式 (綠燈) - 關鍵字掃描
     if (entry.selective) {
-        // 組合需要掃描的文本來源
-        let scanText = contextScanSources.chatHistory;
-    if (entry.matchPersonaDescription) scanText += '\n' + contextScanSources.personaDescription;
-    if (entry.matchCharacterDescription) scanText += '\n' + contextScanSources.characterDescription;
-    if (entry.matchCharacterPersonality) scanText += '\n' + contextScanSources.characterPersonality;
-    if (entry.matchScenario) scanText += '\n' + contextScanSources.scenario;
-    if (entry.matchCreatorNotes) scanText += '\n' + contextScanSources.creatorNotes;
+      // 組合需要掃描的文本來源
+      let scanText = contextScanSources.chatHistory || '';
 
-    const primaryKeys = entry.key || [];
-    if (primaryKeys.length === 0) return false; // 沒有關鍵字且不是常駐，則不觸發
+      // ✨ 支援自訂掃描深度 (scanDepth)
+      if (entry.scanDepth && entry.scanDepth > 0) {
+        const lines = (contextScanSources.chatHistory || '').split('\n');
+        scanText = lines.slice(-entry.scanDepth).join('\n');
+      }
 
-    // ✨✨✨ 核心升級：實作完整的 selectiveLogic ✨✨✨
-        const logic = entry.selectiveLogic || 0; // 預設為 0 (包含任一)
-        let primaryMatch = false;
+      if (entry.matchPersonaDescription) scanText += '\n' + (contextScanSources.personaDescription || '');
+      if (entry.matchCharacterDescription) scanText += '\n' + (contextScanSources.characterDescription || '');
+      if (entry.matchCharacterPersonality) scanText += '\n' + (contextScanSources.characterPersonality || '');
+      if (entry.matchScenario) scanText += '\n' + (contextScanSources.scenario || '');
+      if (entry.matchCreatorNotes) scanText += '\n' + (contextScanSources.creatorNotes || '');
 
-        switch (logic) {
-          case 0: // 包含任一 (OR)
-            primaryMatch = primaryKeys.some(k => scanText.includes(k));
-            break;
-          case 3: // 包含全部 (AND)
-            primaryMatch = primaryKeys.every(k => scanText.includes(k));
-            break;
-          case 2: // 完全不含 (NOR)
-            primaryMatch = !primaryKeys.some(k => scanText.includes(k));
-            break;
-          case 1: // 未完全包含 (NAND + OR)
-            primaryMatch = !primaryKeys.every(k => scanText.includes(k)) && primaryKeys.some(k => scanText.includes(k));
-            break;
-          default: // 預設回到 OR
-            primaryMatch = primaryKeys.some(k => scanText.includes(k));
-        }
-        
-        // 未來可以在此處擴展次要關鍵字 (keysecondary) 的邏輯
-        
-        return primaryMatch;
+      const primaryKeys = entry.key || [];
+      const secondaryKeys = entry.keysecondary || [];
+
+      // 取得匹配設定（預設值）
+      const caseSensitive = entry.caseSensitive ?? false;
+      const matchWholeWords = entry.matchWholeWords ?? false;
+
+      // 如果沒有主要關鍵字且不是常駐，則不觸發
+      if (primaryKeys.length === 0) return false;
+
+      // ✨✨✨ 核心升級：實作完整的 selectiveLogic ✨✨✨
+      const logic = entry.selectiveLogic || 0;
+      let primaryMatch = false;
+
+      // 主要關鍵字匹配
+      const checkPrimaryKey = (k) => matchKeyword(scanText, k, caseSensitive, matchWholeWords);
+
+      switch (logic) {
+        case 0: // ANY (包含任一)
+          primaryMatch = primaryKeys.some(checkPrimaryKey);
+          break;
+        case 1: // NOT ALL (未完全包含) - 至少有一個但不是全部
+          primaryMatch = primaryKeys.some(checkPrimaryKey) && !primaryKeys.every(checkPrimaryKey);
+          break;
+        case 2: // NOT ANY (完全不含)
+          primaryMatch = !primaryKeys.some(checkPrimaryKey);
+          break;
+        case 3: // ALL (包含全部)
+          primaryMatch = primaryKeys.every(checkPrimaryKey);
+          break;
+        default:
+          primaryMatch = primaryKeys.some(checkPrimaryKey);
+      }
+
+      // ✨✨✨ 新增：次要關鍵字邏輯 ✨✨✨
+      // 如果有次要關鍵字，則主要和次要都必須通過
+      if (primaryMatch && secondaryKeys.length > 0) {
+        const checkSecondaryKey = (k) => matchKeyword(scanText, k, caseSensitive, matchWholeWords);
+        // 次要關鍵字使用 AND 邏輯：必須包含全部次要關鍵字
+        const secondaryMatch = secondaryKeys.every(checkSecondaryKey);
+        return primaryMatch && secondaryMatch;
+      }
+
+      return primaryMatch;
     }
-    
-    // 如果不是 constant 也不是 selective，則預設不觸發
+
+    // 如果不是 constant 也不是 selective，則預設進行關鍵字掃描
+    // （這是 SillyTavern 的預設行為）
+    const primaryKeys = entry.key || [];
+    if (primaryKeys.length > 0) {
+      const scanText = contextScanSources.chatHistory || '';
+      const caseSensitive = entry.caseSensitive ?? false;
+      const matchWholeWords = entry.matchWholeWords ?? false;
+      return primaryKeys.some(k => matchKeyword(scanText, k, caseSensitive, matchWholeWords));
+    }
+
     return false;
   });
 
   console.log(`階段一 (觸發)：有 ${triggeredEntries.length} 個條目被觸發`);
 
   // --- 階段二：過濾 (機率) ---
-  // ✨✨✨ 核心升級：加入機率判斷 ✨✨✨
   const filteredByProbability = triggeredEntries.filter(entry => {
-    // 檢查 useProbability 是否為 true 且機率不是 100%
     if (entry.useProbability && entry.probability < 100) {
-      // 產生一個 0-99.99 的隨機數，如果小於設定的機率，則通過
       return (Math.random() * 100) < (entry.probability || 100);
     }
-    return true; // 如果不使用機率或機率為 100，則直接通過
+    return true;
   });
 
   console.log(`階段二 (機率過濾)：剩下 ${filteredByProbability.length} 個條目`);
-  // 注意：一個完整的實作還需要處理 Cooldown 和 Sticky，這需要一個持久化的狀態管理器來追蹤每個條目的觸發回合數，此處暫時簡化。
 
-  // --- 階段三：排序 ---
-  const sortedEntries = filteredByProbability.sort((a, b) => (a.order || 100) - (b.order || 100));
-  
-  // 注意：一個完整的實作還需要處理內容預算 (Budgeting) 和分組競賽 (Group Competition)，此處暫時簡化。
-  
+  // --- 階段三：群組競賽 ---
+  // ✨✨✨ 新增：同一群組內只保留權重最高的條目 ✨✨✨
+  const groupedEntries = new Map();
+  const ungroupedEntries = [];
+
+  filteredByProbability.forEach(entry => {
+    if (entry.group && entry.group.trim() !== '') {
+      const groupName = entry.group.trim();
+      if (!groupedEntries.has(groupName)) {
+        groupedEntries.set(groupName, []);
+      }
+      groupedEntries.get(groupName).push(entry);
+    } else {
+      ungroupedEntries.push(entry);
+    }
+  });
+
+  // 從每個群組中選擇一個條目（基於權重的加權隨機）
+  const selectedFromGroups = [];
+  groupedEntries.forEach((entries, groupName) => {
+    if (entries.length === 1) {
+      selectedFromGroups.push(entries[0]);
+    } else {
+      // 加權隨機選擇
+      const totalWeight = entries.reduce((sum, e) => sum + (e.groupWeight || 100), 0);
+      let random = Math.random() * totalWeight;
+      for (const entry of entries) {
+        random -= (entry.groupWeight || 100);
+        if (random <= 0) {
+          selectedFromGroups.push(entry);
+          break;
+        }
+      }
+      // 備用：如果沒選到就選第一個
+      if (random > 0 && entries.length > 0) {
+        selectedFromGroups.push(entries[0]);
+      }
+    }
+  });
+
+  const afterGroupCompetition = [...ungroupedEntries, ...selectedFromGroups];
+  console.log(`階段三 (群組競賽)：剩下 ${afterGroupCompetition.length} 個條目`);
+
+  // --- 階段四：排序 ---
+  const sortedEntries = afterGroupCompetition.sort((a, b) => (a.order || 100) - (b.order || 100));
+
   console.log("世界書處理完成，最終將插入的條目:", sortedEntries.map(e => e.comment || '無標題條目'));
   return sortedEntries;
 };
@@ -4441,14 +4634,24 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
       const triggeredEntries = processWorldBookEntries(activeBooks, contextScanSources);
       console.log(`【世界書引擎】: 觸發了 ${triggeredEntries.length} 條目`);
       
-      const worldInfoByPosition = {
-        'before_char': triggeredEntries.filter(e => e.position === 0).map(e => removeHiddenText(e.content)).join('\n'),
-        'after_char': triggeredEntries.filter(e => e.position === 1).map(e => removeHiddenText(e.content)).join('\n'),
-        'before_example': triggeredEntries.filter(e => e.position === 5).map(e => removeHiddenText(e.content)).join('\n'),
-        'after_example': triggeredEntries.filter(e => e.position === 6).map(e => removeHiddenText(e.content)).join('\n'),
-        'before_an': triggeredEntries.filter(e => e.position === 2).map(e => removeHiddenText(e.content)).join('\n'),
-        'after_an': triggeredEntries.filter(e => e.position === 3).map(e => removeHiddenText(e.content)).join('\n'),
+      // ✨ 輔助函數：處理世界資訊內容（移除隱藏文字 + 應用 regex）
+      const processWorldInfoContent = (content) => {
+        let processed = removeHiddenText(content);
+        processed = applyRegexRules(processed, regexRules, currentCharacter?.embeddedRegex, 'system', 'chat', { isWorldInfo: true });
+        return processed;
       };
+
+      const worldInfoByPosition = {
+        'before_char': triggeredEntries.filter(e => e.position === 0).map(e => processWorldInfoContent(e.content)).join('\n'),
+        'after_char': triggeredEntries.filter(e => e.position === 1).map(e => processWorldInfoContent(e.content)).join('\n'),
+        'before_example': triggeredEntries.filter(e => e.position === 5).map(e => processWorldInfoContent(e.content)).join('\n'),
+        'after_example': triggeredEntries.filter(e => e.position === 6).map(e => processWorldInfoContent(e.content)).join('\n'),
+        'before_an': triggeredEntries.filter(e => e.position === 2).map(e => processWorldInfoContent(e.content)).join('\n'),
+        'after_an': triggeredEntries.filter(e => e.position === 3).map(e => processWorldInfoContent(e.content)).join('\n'),
+      };
+
+      // ✨ 處理深度模式 (at_depth, position=4) 的條目
+      const atDepthEntries = triggeredEntries.filter(e => e.position === 4);
       
       // --- 步驟 3: 【核心修改】建立符合 SillyTavern 邏輯的單一 System Prompt ---
       const chatHistoryForPrompt = currentMessages
@@ -4485,14 +4688,49 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
         }
       }
       finalSystemPrompt = finalSystemPrompt.trim();
-      
+
+      // ✨ 應用 promptOnly 的 Regex 規則到系統提示詞
+      finalSystemPrompt = applyRegexRules(finalSystemPrompt, regexRules, currentCharacter?.embeddedRegex, 'system', 'chat', { isPrompt: true });
+
       // --- 步驟 4: 準備獨立的、乾淨的聊天記錄 ---
-      const chatHistoryForApi = currentMessages.map(msg => {
+      let chatHistoryForApi = currentMessages.map(msg => {
           // 將我們的 sender 轉換為 API 需要的 role
           const role = msg.sender === 'user' ? 'user' : 'assistant'; // Gemini/Claude 使用 'assistant'
           const content = msg.contents[msg.activeContentIndex];
           return { role, content };
       });
+
+      // ✨ 處理深度模式：將 at_depth 條目插入到聊天歷史的指定深度
+      if (atDepthEntries.length > 0) {
+        // 按深度分組
+        const entriesByDepth = {};
+        atDepthEntries.forEach(entry => {
+          const depth = entry.depth || 4;
+          if (!entriesByDepth[depth]) entriesByDepth[depth] = [];
+          entriesByDepth[depth].push(entry);
+        });
+
+        // 從最大深度開始插入（避免索引錯位）
+        const depths = Object.keys(entriesByDepth).map(Number).sort((a, b) => b - a);
+        depths.forEach(depth => {
+          const entries = entriesByDepth[depth];
+          const combinedContent = entries.map(e => removeHiddenText(e.content)).join('\n');
+
+          // 計算插入位置（從聊天歷史末尾往前數）
+          const insertIndex = Math.max(0, chatHistoryForApi.length - depth);
+
+          // 決定插入的角色（預設為 system，但某些 API 不支援）
+          const insertRole = entries[0]?.role === 1 ? 'assistant' : 'user';
+
+          // 插入深度內容
+          chatHistoryForApi.splice(insertIndex, 0, {
+            role: insertRole,
+            content: `[World Info]\n${combinedContent}`
+          });
+        });
+
+        console.log(`【深度模式】: 已將 ${atDepthEntries.length} 個條目插入到聊天歷史中`);
+      }
 
       // --- 步驟 5: 根據不同 API 供應商，組合最終的請求 Body ---
       let requestBody;
@@ -4574,7 +4812,7 @@ const processWorldBookEntries = (activeBooks, contextScanSources) => {
   }, [
       apiKey, apiProvider, apiModel, currentCharacter, currentPrompt, apiProviders,
       currentUserProfile, longTermMemories, activeChatCharacterId, activeChatId,
-      chatMetadatas, currentApiKeyIndex, worldBooks
+      chatMetadatas, currentApiKeyIndex, worldBooks, regexRules
   ]);
   
   //*記憶摘要 (已修正 400 錯誤與優化 Prompt)
